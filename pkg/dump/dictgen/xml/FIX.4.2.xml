@@ -1,0 +1,3821 @@
+<?xml version="1.0"?>
+<spec xmlns="http://www.ga-group.nl/libfixc_0_1" version="FIX.4.2">
+  <message fix="0" fixml="" name="Heartbeat" cat="Session" sec="Session" not_req_xml="1">
+    <description>The Heartbeat monitors the status of the communication link and identifies when the last of a string of messages was not received.</description>
+    <component name="StandardHeader"/>
+    <field aid="112"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="1" fixml="" name="TestRequest" cat="Session" sec="Session" not_req_xml="1">
+    <description>The test request message forces a heartbeat from the opposing application.</description>
+    <component name="StandardHeader"/>
+    <field aid="112"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="2" fixml="" name="ResendRequest" cat="Session" sec="Session" not_req_xml="1">
+    <description>The resend request is sent by the receiving application to initiate the retransmission of messages. This function is utilized if a sequence number gap is detected, if the receiving application lost a message, or as a function of the initialization process.</description>
+    <component name="StandardHeader"/>
+    <field aid="7"/>
+    <field aid="16"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="3" fixml="" name="Reject" cat="Session" sec="Session" not_req_xml="1">
+    <description>The reject message should be issued when a message is received but cannot be properly processed due to a session-level rule violation.</description>
+    <component name="StandardHeader"/>
+    <field aid="45"/>
+    <field aid="371"/>
+    <field aid="372"/>
+    <field aid="373"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="4" fixml="" name="SequenceReset" cat="Session" sec="Session" not_req_xml="1">
+    <description>The sequence reset message is used by the sending application to reset the incoming sequence number on the opposing side.</description>
+    <component name="StandardHeader"/>
+    <field aid="123"/>
+    <field aid="36"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="5" fixml="" name="Logout" cat="Session" sec="Session" not_req_xml="1">
+    <description>The logout message initiates or confirms the termination of a FIX session.</description>
+    <component name="StandardHeader"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="6" fixml="" name="IOI" cat="Indication" sec="Pre Trade" not_req_xml="1">
+    <description>Indication of interest messages market merchandise which the broker is buying or selling in either a proprietary or agency capacity.</description>
+    <component name="StandardHeader"/>
+    <field aid="23"/>
+    <field aid="28"/>
+    <field aid="26"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="54"/>
+    <field aid="27"/>
+    <field aid="44"/>
+    <field aid="15"/>
+    <field aid="62"/>
+    <field aid="25"/>
+    <field aid="130"/>
+    <field aid="199"/>
+    <field aid="104"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="60"/>
+    <field aid="149"/>
+    <field aid="215"/>
+    <field aid="216"/>
+    <field aid="217"/>
+    <field aid="218"/>
+    <field aid="219"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="7" fixml="" name="Advertisement" cat="Indication" sec="Pre Trade" not_req_xml="1">
+    <description>Advertisement messages are used to announce completed transactions.</description>
+    <component name="StandardHeader"/>
+    <field aid="2"/>
+    <field aid="5"/>
+    <field aid="3"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="4"/>
+    <field aid="53"/>
+    <field aid="44"/>
+    <field aid="15"/>
+    <field aid="75"/>
+    <field aid="60"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="149"/>
+    <field aid="30"/>
+    <field aid="336"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="8" fixml="" name="ExecutionReport" cat="SingleGeneralOrderHandling" sec="Trade" not_req_xml="1">
+    <description>The execution report message is used to:
+1. Confirm the receipt of an order
+2. Confirm changes to an existing order (i.e. accept cancel and replace requests)
+3. Relay order status information
+4. Relay fill information on working orders
+5. Reject orders
+6. Report post-trade fees calculations associated with a trade</description>
+    <component name="StandardHeader"/>
+    <field aid="37"/>
+    <field aid="198"/>
+    <field aid="11"/>
+    <field aid="41"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="382"/>
+    <field aid="375"/>
+    <field aid="337"/>
+    <field aid="437"/>
+    <field aid="438"/>
+    <field aid="66"/>
+    <field aid="17"/>
+    <field aid="20"/>
+    <field aid="19"/>
+    <field aid="150"/>
+    <field aid="39"/>
+    <field aid="103"/>
+    <field aid="378"/>
+    <field aid="1"/>
+    <field aid="63"/>
+    <field aid="64"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="54"/>
+    <field aid="38"/>
+    <field aid="152"/>
+    <field aid="40"/>
+    <field aid="44"/>
+    <field aid="99"/>
+    <field aid="211"/>
+    <field aid="388"/>
+    <field aid="389"/>
+    <field aid="15"/>
+    <field aid="376"/>
+    <field aid="377"/>
+    <field aid="59"/>
+    <field aid="168"/>
+    <field aid="432"/>
+    <field aid="126"/>
+    <field aid="18"/>
+    <field aid="47"/>
+    <field aid="32"/>
+    <field aid="31"/>
+    <field aid="194"/>
+    <field aid="195"/>
+    <field aid="30"/>
+    <field aid="336"/>
+    <field aid="29"/>
+    <field aid="151"/>
+    <field aid="14"/>
+    <field aid="6"/>
+    <field aid="424"/>
+    <field aid="425"/>
+    <field aid="426"/>
+    <field aid="427"/>
+    <field aid="75"/>
+    <field aid="60"/>
+    <field aid="113"/>
+    <field aid="12"/>
+    <field aid="13"/>
+    <field aid="381"/>
+    <field aid="119"/>
+    <field aid="120"/>
+    <field aid="155"/>
+    <field aid="156"/>
+    <field aid="21"/>
+    <field aid="110"/>
+    <field aid="111"/>
+    <field aid="77"/>
+    <field aid="210"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="193"/>
+    <field aid="192"/>
+    <field aid="439"/>
+    <field aid="440"/>
+    <field aid="442"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="9" fixml="" name="OrderCancelReject" cat="SingleGeneralOrderHandling" sec="Trade" not_req_xml="1">
+    <description>The order cancel reject message is issued by the broker upon receipt of a cancel request or cancel/replace request message which cannot be honored.</description>
+    <component name="StandardHeader"/>
+    <field aid="37"/>
+    <field aid="198"/>
+    <field aid="11"/>
+    <field aid="41"/>
+    <field aid="39"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="66"/>
+    <field aid="1"/>
+    <field aid="60"/>
+    <field aid="434"/>
+    <field aid="102"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="A" fixml="" name="Logon" cat="Session" sec="Session" not_req_xml="1">
+    <description>The logon message authenticates a user establishing a connection to a remote system.</description>
+    <component name="StandardHeader"/>
+    <field aid="98"/>
+    <field aid="108"/>
+    <field aid="95"/>
+    <field aid="96"/>
+    <field aid="141"/>
+    <field aid="383"/>
+    <field aid="384"/>
+    <field aid="372"/>
+    <field aid="385"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="B" fixml="" name="News" cat="EventCommunication" sec="Pre Trade" not_req_xml="1">
+    <description>The news message is a general free format message between the broker and institution.</description>
+    <component name="StandardHeader"/>
+    <field aid="42"/>
+    <field aid="61"/>
+    <field aid="148"/>
+    <field aid="358"/>
+    <field aid="359"/>
+    <field aid="215"/>
+    <field aid="216"/>
+    <field aid="217"/>
+    <field aid="146"/>
+    <field aid="46"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="33"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="149"/>
+    <field aid="95"/>
+    <field aid="96"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="C" fixml="" name="Email" cat="EventCommunication" sec="Pre Trade" not_req_xml="1">
+    <description>The email message is similar to the format and purpose of to the News message, however, it is intended for private use between two parties.</description>
+    <component name="StandardHeader"/>
+    <field aid="164"/>
+    <field aid="94"/>
+    <field aid="42"/>
+    <field aid="147"/>
+    <field aid="356"/>
+    <field aid="357"/>
+    <field aid="215"/>
+    <field aid="216"/>
+    <field aid="217"/>
+    <field aid="146"/>
+    <field aid="46"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="37"/>
+    <field aid="11"/>
+    <field aid="33"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="95"/>
+    <field aid="96"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="D" fixml="" name="OrderSingle" cat="SingleGeneralOrderHandling" sec="Trade" not_req_xml="1">
+    <description>The new order message type is used by institutions wishing to electronically submit securities and forex orders to a broker for execution.</description>
+    <component name="StandardHeader"/>
+    <field aid="11"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="1"/>
+    <field aid="78"/>
+    <field aid="79"/>
+    <field aid="80"/>
+    <field aid="63"/>
+    <field aid="64"/>
+    <field aid="21"/>
+    <field aid="18"/>
+    <field aid="110"/>
+    <field aid="111"/>
+    <field aid="100"/>
+    <field aid="386"/>
+    <field aid="336"/>
+    <field aid="81"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="140"/>
+    <field aid="54"/>
+    <field aid="114"/>
+    <field aid="60"/>
+    <field aid="38"/>
+    <field aid="152"/>
+    <field aid="40"/>
+    <field aid="44"/>
+    <field aid="99"/>
+    <field aid="15"/>
+    <field aid="376"/>
+    <field aid="377"/>
+    <field aid="23"/>
+    <field aid="117"/>
+    <field aid="59"/>
+    <field aid="168"/>
+    <field aid="432"/>
+    <field aid="126"/>
+    <field aid="427"/>
+    <field aid="12"/>
+    <field aid="13"/>
+    <field aid="47"/>
+    <field aid="121"/>
+    <field aid="120"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="193"/>
+    <field aid="192"/>
+    <field aid="77"/>
+    <field aid="203"/>
+    <field aid="204"/>
+    <field aid="210"/>
+    <field aid="211"/>
+    <field aid="388"/>
+    <field aid="389"/>
+    <field aid="439"/>
+    <field aid="440"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="E" fixml="" name="OrderList" cat="ProgramTrading" sec="Trade" not_req_xml="1">
+    <description>The NewOrderList Message can be used in one of two ways depending on which market conventions are being followed.</description>
+    <component name="StandardHeader"/>
+    <field aid="66"/>
+    <field aid="390"/>
+    <field aid="391"/>
+    <field aid="414"/>
+    <field aid="394"/>
+    <field aid="415"/>
+    <field aid="433"/>
+    <field aid="69"/>
+    <field aid="352"/>
+    <field aid="353"/>
+    <field aid="68"/>
+    <field aid="73"/>
+    <field aid="11"/>
+    <field aid="67"/>
+    <field aid="160"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="1"/>
+    <field aid="78"/>
+    <field aid="79"/>
+    <field aid="80"/>
+    <field aid="63"/>
+    <field aid="64"/>
+    <field aid="21"/>
+    <field aid="18"/>
+    <field aid="110"/>
+    <field aid="111"/>
+    <field aid="100"/>
+    <field aid="386"/>
+    <field aid="336"/>
+    <field aid="81"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="140"/>
+    <field aid="54"/>
+    <field aid="401"/>
+    <field aid="114"/>
+    <field aid="60"/>
+    <field aid="38"/>
+    <field aid="152"/>
+    <field aid="40"/>
+    <field aid="44"/>
+    <field aid="99"/>
+    <field aid="15"/>
+    <field aid="376"/>
+    <field aid="377"/>
+    <field aid="23"/>
+    <field aid="117"/>
+    <field aid="59"/>
+    <field aid="168"/>
+    <field aid="432"/>
+    <field aid="126"/>
+    <field aid="427"/>
+    <field aid="12"/>
+    <field aid="13"/>
+    <field aid="47"/>
+    <field aid="121"/>
+    <field aid="120"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="193"/>
+    <field aid="192"/>
+    <field aid="77"/>
+    <field aid="203"/>
+    <field aid="204"/>
+    <field aid="210"/>
+    <field aid="211"/>
+    <field aid="388"/>
+    <field aid="389"/>
+    <field aid="439"/>
+    <field aid="440"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="F" fixml="" name="OrderCancelRequest" cat="SingleGeneralOrderHandling" sec="Trade" not_req_xml="1">
+    <description>The order cancel request message requests the cancellation of all of the remaining quantity of an existing order.</description>
+    <component name="StandardHeader"/>
+    <field aid="41"/>
+    <field aid="37"/>
+    <field aid="11"/>
+    <field aid="66"/>
+    <field aid="1"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="54"/>
+    <field aid="60"/>
+    <field aid="38"/>
+    <field aid="152"/>
+    <field aid="376"/>
+    <field aid="377"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="G" fixml="" name="OrderCancelReplaceRequest" cat="SingleGeneralOrderHandling" sec="Trade" not_req_xml="1">
+    <description>The order cancel/replace request is used to change the parameters of an existing order.</description>
+    <component name="StandardHeader"/>
+    <field aid="37"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="41"/>
+    <field aid="11"/>
+    <field aid="66"/>
+    <field aid="1"/>
+    <field aid="78"/>
+    <field aid="79"/>
+    <field aid="80"/>
+    <field aid="63"/>
+    <field aid="64"/>
+    <field aid="21"/>
+    <field aid="18"/>
+    <field aid="110"/>
+    <field aid="111"/>
+    <field aid="100"/>
+    <field aid="386"/>
+    <field aid="336"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="54"/>
+    <field aid="60"/>
+    <field aid="38"/>
+    <field aid="152"/>
+    <field aid="40"/>
+    <field aid="44"/>
+    <field aid="99"/>
+    <field aid="211"/>
+    <field aid="388"/>
+    <field aid="389"/>
+    <field aid="376"/>
+    <field aid="377"/>
+    <field aid="15"/>
+    <field aid="59"/>
+    <field aid="168"/>
+    <field aid="432"/>
+    <field aid="126"/>
+    <field aid="427"/>
+    <field aid="12"/>
+    <field aid="13"/>
+    <field aid="47"/>
+    <field aid="121"/>
+    <field aid="120"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="193"/>
+    <field aid="192"/>
+    <field aid="77"/>
+    <field aid="203"/>
+    <field aid="204"/>
+    <field aid="210"/>
+    <field aid="114"/>
+    <field aid="439"/>
+    <field aid="440"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="H" fixml="" name="OrderStatusRequest" cat="SingleGeneralOrderHandling" sec="Trade" not_req_xml="1">
+    <description>The order status request message is used by the institution to generate an order status message back from the broker.</description>
+    <component name="StandardHeader"/>
+    <field aid="37"/>
+    <field aid="11"/>
+    <field aid="109"/>
+    <field aid="1"/>
+    <field aid="76"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="54"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="J" fixml="" name="Allocation" cat="Allocation" sec="Post Trade" not_req_xml="1">
+    <description>The Allocation message provides the ability to specify how an order or set of orders should be subdivided amongst one or more accounts.</description>
+    <component name="StandardHeader"/>
+    <field aid="70"/>
+    <field aid="71"/>
+    <field aid="72"/>
+    <field aid="196"/>
+    <field aid="197"/>
+    <field aid="73"/>
+    <field aid="11"/>
+    <field aid="37"/>
+    <field aid="198"/>
+    <field aid="66"/>
+    <field aid="105"/>
+    <field aid="124"/>
+    <field aid="32"/>
+    <field aid="17"/>
+    <field aid="31"/>
+    <field aid="29"/>
+    <field aid="54"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="53"/>
+    <field aid="30"/>
+    <field aid="336"/>
+    <field aid="6"/>
+    <field aid="15"/>
+    <field aid="74"/>
+    <field aid="75"/>
+    <field aid="60"/>
+    <field aid="63"/>
+    <field aid="64"/>
+    <field aid="381"/>
+    <field aid="118"/>
+    <field aid="77"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="157"/>
+    <field aid="158"/>
+    <field aid="78"/>
+    <field aid="79"/>
+    <field aid="366"/>
+    <field aid="80"/>
+    <field aid="81"/>
+    <field aid="92"/>
+    <field aid="208"/>
+    <field aid="209"/>
+    <field aid="161"/>
+    <field aid="360"/>
+    <field aid="361"/>
+    <field aid="76"/>
+    <field aid="109"/>
+    <field aid="12"/>
+    <field aid="13"/>
+    <field aid="153"/>
+    <field aid="154"/>
+    <field aid="119"/>
+    <field aid="120"/>
+    <field aid="155"/>
+    <field aid="156"/>
+    <field aid="159"/>
+    <field aid="160"/>
+    <field aid="136"/>
+    <field aid="137"/>
+    <field aid="138"/>
+    <field aid="139"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="K" fixml="" name="ListCancelRequest" cat="ProgramTrading" sec="Trade" not_req_xml="1">
+    <description>The list cancel request message type is used by institutions wishing to cancel previously submitted lists either before or during execution.</description>
+    <component name="StandardHeader"/>
+    <field aid="66"/>
+    <field aid="60"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="L" fixml="" name="ListExecute" cat="ProgramTrading" sec="Trade" not_req_xml="1">
+    <description>The list execute message type is used by institutions to instruct the broker to begin execution of a previously submitted list.</description>
+    <component name="StandardHeader"/>
+    <field aid="66"/>
+    <field aid="391"/>
+    <field aid="390"/>
+    <field aid="60"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="M" fixml="" name="ListStatusRequest" cat="ProgramTrading" sec="Trade" not_req_xml="1">
+    <description>The list status request message type is used by institutions to instruct the broker to generate status messages for a list.</description>
+    <component name="StandardHeader"/>
+    <field aid="66"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="N" fixml="" name="ListStatus" cat="ProgramTrading" sec="Trade" not_req_xml="1">
+    <description>The list status message is issued as the response to a List Status Request message sent in an unsolicited fashion by the sell-side.</description>
+    <component name="StandardHeader"/>
+    <field aid="66"/>
+    <field aid="429"/>
+    <field aid="82"/>
+    <field aid="431"/>
+    <field aid="83"/>
+    <field aid="444"/>
+    <field aid="445"/>
+    <field aid="446"/>
+    <field aid="60"/>
+    <field aid="68"/>
+    <field aid="73"/>
+    <field aid="11"/>
+    <field aid="14"/>
+    <field aid="39"/>
+    <field aid="151"/>
+    <field aid="84"/>
+    <field aid="6"/>
+    <field aid="103"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="P" fixml="" name="AllocationInstructionAck" cat="Allocation" sec="Post Trade" not_req_xml="1">
+    <description>The allocation ACK message is used to acknowledge the receipt and status of an allocation message received from the institution.</description>
+    <component name="StandardHeader"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="70"/>
+    <field aid="75"/>
+    <field aid="60"/>
+    <field aid="87"/>
+    <field aid="88"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="Q" fixml="" name="DontKnowTrade" cat="SingleGeneralOrderHandling" sec="Trade" not_req_xml="1">
+    <description>The Don’t Know Trade (DK) message notifies a trading partner that an electronically received execution has been rejected.</description>
+    <component name="StandardHeader"/>
+    <field aid="37"/>
+    <field aid="17"/>
+    <field aid="127"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="54"/>
+    <field aid="38"/>
+    <field aid="152"/>
+    <field aid="32"/>
+    <field aid="31"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="R" fixml="" name="QuoteRequest" cat="QuotationNegotiation" sec="Pre Trade" not_req_xml="1">
+    <description>In some markets it is the practice to request quotes from brokers prior to placement of an order. The quote request message is used for this purpose.</description>
+    <component name="StandardHeader"/>
+    <field aid="131"/>
+    <field aid="146"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="140"/>
+    <field aid="303"/>
+    <field aid="336"/>
+    <field aid="54"/>
+    <field aid="38"/>
+    <field aid="64"/>
+    <field aid="40"/>
+    <field aid="193"/>
+    <field aid="192"/>
+    <field aid="126"/>
+    <field aid="60"/>
+    <field aid="15"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="S" fixml="" name="Quote" cat="QuotationNegotiation" sec="Pre Trade" not_req_xml="1">
+    <description>The quote message is used as the response to a Quote Request message and can be used to publish unsolicited quotes.</description>
+    <component name="StandardHeader"/>
+    <field aid="131"/>
+    <field aid="117"/>
+    <field aid="301"/>
+    <field aid="336"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="132"/>
+    <field aid="133"/>
+    <field aid="134"/>
+    <field aid="135"/>
+    <field aid="62"/>
+    <field aid="188"/>
+    <field aid="190"/>
+    <field aid="189"/>
+    <field aid="191"/>
+    <field aid="60"/>
+    <field aid="64"/>
+    <field aid="40"/>
+    <field aid="193"/>
+    <field aid="192"/>
+    <field aid="15"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="T" fixml="" name="SettlementInstructions" cat="SettlementInstruction" sec="Post Trade" not_req_xml="1">
+    <description>The Settlement Instructions message provides either the broker’s or the institution’s instructions for trade settlement.</description>
+    <component name="StandardHeader"/>
+    <field aid="162"/>
+    <field aid="163"/>
+    <field aid="214"/>
+    <field aid="160"/>
+    <field aid="165"/>
+    <field aid="79"/>
+    <field aid="166"/>
+    <field aid="75"/>
+    <field aid="70"/>
+    <field aid="30"/>
+    <field aid="336"/>
+    <field aid="54"/>
+    <field aid="167"/>
+    <field aid="168"/>
+    <field aid="60"/>
+    <field aid="109"/>
+    <field aid="76"/>
+    <field aid="169"/>
+    <field aid="170"/>
+    <field aid="171"/>
+    <field aid="172"/>
+    <field aid="173"/>
+    <field aid="174"/>
+    <field aid="175"/>
+    <field aid="176"/>
+    <field aid="177"/>
+    <field aid="178"/>
+    <field aid="179"/>
+    <field aid="180"/>
+    <field aid="181"/>
+    <field aid="182"/>
+    <field aid="183"/>
+    <field aid="184"/>
+    <field aid="185"/>
+    <field aid="186"/>
+    <field aid="187"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="V" fixml="" name="MarketDataRequest" cat="MarketData" sec="Pre Trade" not_req_xml="1">
+    <description>Some systems allow the transmission of real-time quote, order, trade and/or other price information on a subscription basis.</description>
+    <component name="StandardHeader"/>
+    <field aid="262"/>
+    <field aid="263"/>
+    <field aid="264"/>
+    <field aid="265"/>
+    <field aid="266"/>
+    <field aid="267"/>
+    <field aid="269"/>
+    <field aid="146"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="336"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="W" fixml="" name="MarketDataSnapshotFullRefresh" cat="MarketData" sec="Pre Trade" not_req_xml="1">
+    <description>The Market Data messages are used as the response to a Market Data Request message.</description>
+    <component name="StandardHeader"/>
+    <field aid="262"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="291"/>
+    <field aid="292"/>
+    <field aid="387"/>
+    <field aid="268"/>
+    <field aid="269"/>
+    <field aid="270"/>
+    <field aid="15"/>
+    <field aid="271"/>
+    <field aid="272"/>
+    <field aid="273"/>
+    <field aid="274"/>
+    <field aid="275"/>
+    <field aid="336"/>
+    <field aid="276"/>
+    <field aid="277"/>
+    <field aid="282"/>
+    <field aid="283"/>
+    <field aid="284"/>
+    <field aid="286"/>
+    <field aid="59"/>
+    <field aid="432"/>
+    <field aid="126"/>
+    <field aid="110"/>
+    <field aid="18"/>
+    <field aid="287"/>
+    <field aid="37"/>
+    <field aid="299"/>
+    <field aid="288"/>
+    <field aid="289"/>
+    <field aid="346"/>
+    <field aid="290"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="X" fixml="" name="MarketDataIncrementalRefresh" cat="MarketData" sec="Pre Trade" not_req_xml="1">
+    <description>The second Market Data message format is used for incremental updates.</description>
+    <component name="StandardHeader"/>
+    <field aid="262"/>
+    <field aid="268"/>
+    <field aid="279"/>
+    <field aid="285"/>
+    <field aid="269"/>
+    <field aid="278"/>
+    <field aid="280"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="291"/>
+    <field aid="292"/>
+    <field aid="270"/>
+    <field aid="15"/>
+    <field aid="271"/>
+    <field aid="272"/>
+    <field aid="273"/>
+    <field aid="274"/>
+    <field aid="275"/>
+    <field aid="336"/>
+    <field aid="276"/>
+    <field aid="277"/>
+    <field aid="282"/>
+    <field aid="283"/>
+    <field aid="284"/>
+    <field aid="286"/>
+    <field aid="59"/>
+    <field aid="432"/>
+    <field aid="126"/>
+    <field aid="110"/>
+    <field aid="18"/>
+    <field aid="287"/>
+    <field aid="37"/>
+    <field aid="299"/>
+    <field aid="288"/>
+    <field aid="289"/>
+    <field aid="346"/>
+    <field aid="290"/>
+    <field aid="387"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="Y" fixml="" name="MarketDataRequestReject" cat="MarketData" sec="Pre Trade" not_req_xml="1">
+    <description>The Market Data Request Reject is used when the broker cannot honor the Market Data Request, due to business or technical reasons.</description>
+    <component name="StandardHeader"/>
+    <field aid="262"/>
+    <field aid="281"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="Z" fixml="" name="QuoteCancel" cat="QuotationNegotiation" sec="Pre Trade" not_req_xml="1">
+    <description>The Quote Cancel message is used by an originator of quotes to cancel quotes.</description>
+    <component name="StandardHeader"/>
+    <field aid="131"/>
+    <field aid="117"/>
+    <field aid="298"/>
+    <field aid="301"/>
+    <field aid="336"/>
+    <field aid="295"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="311"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="a" fixml="" name="QuoteStatusRequest" cat="QuotationNegotiation" sec="Pre Trade" not_req_xml="1">
+    <description>The quote status request message is used by the institution to generate an execution report that contains the quote status message back from the counterparty.</description>
+    <component name="StandardHeader"/>
+    <field aid="117"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="54"/>
+    <field aid="336"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="b" fixml="" name="QuoteAcknowledgement" cat="QuotationNegotiation" sec="Pre Trade" not_req_xml="1">
+    <description>An optional response to Quote, Mass Quote, Quote Cancel, and Quote Request message is the Quote Acknowledgement message.</description>
+    <component name="StandardHeader"/>
+    <field aid="131"/>
+    <field aid="117"/>
+    <field aid="297"/>
+    <field aid="300"/>
+    <field aid="301"/>
+    <field aid="336"/>
+    <field aid="58"/>
+    <field aid="296"/>
+    <field aid="302"/>
+    <field aid="311"/>
+    <field aid="312"/>
+    <field aid="309"/>
+    <field aid="305"/>
+    <field aid="310"/>
+    <field aid="313"/>
+    <field aid="314"/>
+    <field aid="315"/>
+    <field aid="316"/>
+    <field aid="317"/>
+    <field aid="436"/>
+    <field aid="435"/>
+    <field aid="308"/>
+    <field aid="306"/>
+    <field aid="362"/>
+    <field aid="363"/>
+    <field aid="307"/>
+    <field aid="364"/>
+    <field aid="365"/>
+    <field aid="304"/>
+    <field aid="295"/>
+    <field aid="299"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="368"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="c" fixml="" name="SecurityDefinitionRequest" cat="SecurityAndTradingSessionDefinitionOrStatus" sec="Pre Trade" not_req_xml="1">
+    <description>The Security Definition Request message is used for the following:
+1. Request a specific Security to be traded with the second party. The request security can be defined as a complex security made up of one or more underlying securities.
+2. Request a list of the Security Types that can be traded with the second party.
+3. Request a list of Securities that can be traded with the second party. This request can optionally be qualified with Symbol, TradingSessionID, SecurityExchange, and Security Type.</description>
+    <component name="StandardHeader"/>
+    <field aid="320"/>
+    <field aid="321"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="15"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="336"/>
+    <field aid="146"/>
+    <field aid="311"/>
+    <field aid="312"/>
+    <field aid="309"/>
+    <field aid="305"/>
+    <field aid="310"/>
+    <field aid="313"/>
+    <field aid="314"/>
+    <field aid="315"/>
+    <field aid="316"/>
+    <field aid="317"/>
+    <field aid="436"/>
+    <field aid="435"/>
+    <field aid="308"/>
+    <field aid="306"/>
+    <field aid="362"/>
+    <field aid="363"/>
+    <field aid="307"/>
+    <field aid="364"/>
+    <field aid="365"/>
+    <field aid="319"/>
+    <field aid="54"/>
+    <field aid="318"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="d" fixml="" name="SecurityDefinition" cat="SecurityAndTradingSessionDefinitionOrStatus" sec="Pre Trade" not_req_xml="1">
+    <description>The Security Definition message is used for the following:
+1. Accept the security defined in a Security Definition message.
+2. Accept the security defined in a Security Definition message with changes to the definition and/or identity of the security.
+3. Reject the security requested in a Security Definition message
+4. Return a list of Security Types
+5. Return a list of Securities</description>
+    <component name="StandardHeader"/>
+    <field aid="320"/>
+    <field aid="322"/>
+    <field aid="323"/>
+    <field aid="393"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="15"/>
+    <field aid="336"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <field aid="146"/>
+    <field aid="311"/>
+    <field aid="312"/>
+    <field aid="309"/>
+    <field aid="305"/>
+    <field aid="310"/>
+    <field aid="313"/>
+    <field aid="314"/>
+    <field aid="315"/>
+    <field aid="316"/>
+    <field aid="317"/>
+    <field aid="436"/>
+    <field aid="435"/>
+    <field aid="308"/>
+    <field aid="306"/>
+    <field aid="362"/>
+    <field aid="363"/>
+    <field aid="307"/>
+    <field aid="364"/>
+    <field aid="365"/>
+    <field aid="319"/>
+    <field aid="54"/>
+    <field aid="318"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="e" fixml="" name="SecurityStatusRequest" cat="SecurityAndTradingSessionDefinitionOrStatus" sec="Pre Trade" not_req_xml="1">
+    <description>The Security Status Request message provides for the ability to request the status of a security.</description>
+    <component name="StandardHeader"/>
+    <field aid="324"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="15"/>
+    <field aid="263"/>
+    <field aid="336"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="f" fixml="" name="SecurityStatus" cat="SecurityAndTradingSessionDefinitionOrStatus" sec="Pre Trade" not_req_xml="1">
+    <description/>
+    <component name="StandardHeader"/>
+    <field aid="324"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="15"/>
+    <field aid="336"/>
+    <field aid="325"/>
+    <field aid="326"/>
+    <field aid="291"/>
+    <field aid="292"/>
+    <field aid="327"/>
+    <field aid="328"/>
+    <field aid="329"/>
+    <field aid="330"/>
+    <field aid="331"/>
+    <field aid="332"/>
+    <field aid="333"/>
+    <field aid="31"/>
+    <field aid="60"/>
+    <field aid="334"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="g" fixml="" name="TradingSessionStatusRequest" cat="SecurityAndTradingSessionDefinitionOrStatus" sec="Pre Trade" not_req_xml="1">
+    <description>The Trading Session Status Request is used to request information on the status of a market.</description>
+    <component name="StandardHeader"/>
+    <field aid="335"/>
+    <field aid="336"/>
+    <field aid="338"/>
+    <field aid="339"/>
+    <field aid="263"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="h" fixml="" name="TradingSessionStatus" cat="SecurityAndTradingSessionDefinitionOrStatus" sec="Pre Trade" not_req_xml="1">
+    <description>The Trading Session Status provides information on the status of a market.</description>
+    <component name="StandardHeader"/>
+    <field aid="335"/>
+    <field aid="336"/>
+    <field aid="338"/>
+    <field aid="339"/>
+    <field aid="325"/>
+    <field aid="340"/>
+    <field aid="341"/>
+    <field aid="342"/>
+    <field aid="343"/>
+    <field aid="344"/>
+    <field aid="345"/>
+    <field aid="387"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="i" fixml="" name="MassQuote" cat="QuotationNegotiation" sec="Pre Trade" not_req_xml="1">
+    <description>The Mass Quote message can contain quotes for multiple securities to support applications that allow for the mass quoting of an option series.</description>
+    <component name="StandardHeader"/>
+    <field aid="131"/>
+    <field aid="117"/>
+    <field aid="301"/>
+    <field aid="293"/>
+    <field aid="294"/>
+    <field aid="296"/>
+    <field aid="302"/>
+    <field aid="311"/>
+    <field aid="312"/>
+    <field aid="309"/>
+    <field aid="305"/>
+    <field aid="310"/>
+    <field aid="313"/>
+    <field aid="314"/>
+    <field aid="315"/>
+    <field aid="316"/>
+    <field aid="317"/>
+    <field aid="436"/>
+    <field aid="435"/>
+    <field aid="308"/>
+    <field aid="306"/>
+    <field aid="362"/>
+    <field aid="363"/>
+    <field aid="307"/>
+    <field aid="364"/>
+    <field aid="365"/>
+    <field aid="367"/>
+    <field aid="304"/>
+    <field aid="295"/>
+    <field aid="299"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="132"/>
+    <field aid="133"/>
+    <field aid="134"/>
+    <field aid="135"/>
+    <field aid="62"/>
+    <field aid="188"/>
+    <field aid="190"/>
+    <field aid="189"/>
+    <field aid="191"/>
+    <field aid="60"/>
+    <field aid="336"/>
+    <field aid="64"/>
+    <field aid="40"/>
+    <field aid="193"/>
+    <field aid="192"/>
+    <field aid="15"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="j" fixml="" name="BusinessMessageReject" cat="Common" sec="Other" not_req_xml="1">
+    <description>The Business Message Reject message can reject an application-level message which fulfills session-level rules and cannot be rejected via any other means.</description>
+    <component name="StandardHeader"/>
+    <field aid="45"/>
+    <field aid="372"/>
+    <field aid="379"/>
+    <field aid="380"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="k" fixml="" name="BidRequest" cat="ProgramTrading" sec="Pre Trade" not_req_xml="1">
+    <description>The BidRequest Message can be used in one of two ways depending on which market conventions are being followed.</description>
+    <component name="StandardHeader"/>
+    <field aid="390"/>
+    <field aid="391"/>
+    <field aid="374"/>
+    <field aid="392"/>
+    <field aid="393"/>
+    <field aid="394"/>
+    <field aid="395"/>
+    <field aid="15"/>
+    <field aid="396"/>
+    <field aid="397"/>
+    <field aid="398"/>
+    <field aid="399"/>
+    <field aid="400"/>
+    <field aid="401"/>
+    <field aid="404"/>
+    <field aid="441"/>
+    <field aid="402"/>
+    <field aid="403"/>
+    <field aid="405"/>
+    <field aid="406"/>
+    <field aid="407"/>
+    <field aid="408"/>
+    <field aid="420"/>
+    <field aid="66"/>
+    <field aid="54"/>
+    <field aid="336"/>
+    <field aid="430"/>
+    <field aid="63"/>
+    <field aid="64"/>
+    <field aid="1"/>
+    <field aid="409"/>
+    <field aid="410"/>
+    <field aid="411"/>
+    <field aid="412"/>
+    <field aid="413"/>
+    <field aid="414"/>
+    <field aid="415"/>
+    <field aid="416"/>
+    <field aid="121"/>
+    <field aid="417"/>
+    <field aid="75"/>
+    <field aid="418"/>
+    <field aid="419"/>
+    <field aid="443"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="l" fixml="" name="BidResponse" cat="ProgramTrading" sec="Pre Trade" not_req_xml="1">
+    <description>The Bid Response message can be used in one of two ways depending on which market conventions are being followed.
+      In the "Non disclosed" convention the Bid Response message can be used to supply a bid based on the sector, country, index and liquidity information contained within the corresponding bid request message. See "Program/Basket/List Trading"  for an example.
+      In the "Disclosed" convention the Bid Response message can be used to supply bids based on the List Order Detail messages sent in advance of the corresponding Bid Request message.</description>
+    <component name="StandardHeader"/>
+    <field aid="390"/>
+    <field aid="391"/>
+    <field aid="420"/>
+    <field aid="12"/>
+    <field aid="13"/>
+    <field aid="66"/>
+    <field aid="421"/>
+    <field aid="54"/>
+    <field aid="44"/>
+    <field aid="423"/>
+    <field aid="406"/>
+    <field aid="430"/>
+    <field aid="63"/>
+    <field aid="64"/>
+    <field aid="336"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="m" fixml="" name="ListStrikePrice" cat="ProgramTrading" sec="Trade" not_req_xml="1">
+    <description>The strike price message is used to exchange strike price information for principal trades. It can also be used to exchange reference prices for agency trades.</description>
+    <component name="StandardHeader"/>
+    <field aid="66"/>
+    <field aid="422"/>
+    <field aid="428"/>
+    <field aid="55"/>
+    <field aid="65"/>
+    <field aid="48"/>
+    <field aid="22"/>
+    <field aid="167"/>
+    <field aid="200"/>
+    <field aid="205"/>
+    <field aid="201"/>
+    <field aid="202"/>
+    <field aid="206"/>
+    <field aid="231"/>
+    <field aid="223"/>
+    <field aid="207"/>
+    <field aid="106"/>
+    <field aid="348"/>
+    <field aid="349"/>
+    <field aid="107"/>
+    <field aid="350"/>
+    <field aid="351"/>
+    <field aid="140"/>
+    <field aid="11"/>
+    <field aid="54"/>
+    <field aid="44"/>
+    <field aid="15"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <component fixml="" name="StandardHeader" cat="Session" type="Block" not_req_xml="1">
+    <description>The standard FIX message header</description>
+    <field aid="8"/>
+    <field aid="9"/>
+    <field aid="35"/>
+    <field aid="49"/>
+    <field aid="56"/>
+    <field aid="115"/>
+    <field aid="128"/>
+    <field aid="90"/>
+    <field aid="91"/>
+    <field aid="34"/>
+    <field aid="50"/>
+    <field aid="142"/>
+    <field aid="57"/>
+    <field aid="143"/>
+    <field aid="116"/>
+    <field aid="144"/>
+    <field aid="129"/>
+    <field aid="145"/>
+    <field aid="43"/>
+    <field aid="97"/>
+    <field aid="52"/>
+    <field aid="122"/>
+    <field aid="212"/>
+    <field aid="213"/>
+    <field aid="347"/>
+    <field aid="369"/>
+    <field aid="370"/>
+  </component>
+  <component fixml="" name="StandardTrailer" cat="Session" type="Block" not_req_xml="1">
+    <description>The standard FIX message trailer</description>
+    <field aid="93"/>
+    <field aid="89"/>
+    <field aid="10"/>
+  </component>
+  <field aid="1" fixml="" name="Account" type="String" not_req_xml="1">
+    <description>Account mnemonic as agreed between broker and institution.</description>
+  </field>
+  <field aid="2" fixml="" name="AdvId" type="String" not_req_xml="1">
+    <description>Unique identifier of advertisement message.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="3" fixml="" name="AdvRefID" type="String" not_req_xml="1">
+    <description>Reference identifier used with CANCEL and REPLACE transaction types.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="4" fixml="" name="AdvSide" type="Char" not_req_xml="1">
+    <description>Broker's side of advertised trade</description>
+  </field>
+  <field aid="5" fixml="" name="AdvTransType" type="String" not_req_xml="1">
+    <description>Identifies advertisement message transaction type</description>
+  </field>
+  <field aid="6" fixml="" name="AvgPx" type="Price" not_req_xml="1">
+    <description>Calculated average price of all fills on this order.</description>
+  </field>
+  <field aid="7" fixml="" name="BeginSeqNo" type="int" not_req_xml="1">
+    <description>Message sequence number of first message in range to be resent</description>
+  </field>
+  <field aid="8" fixml="" name="BeginString" type="String" not_req_xml="1">
+    <description>Identifies beginning of new message and protocol version. ALWAYS FIRST FIELD IN MESSAGE. (Always unencrypted)</description>
+  </field>
+  <field aid="9" fixml="" name="BodyLength" type="int" not_req_xml="1">
+    <description>Message length, in bytes, forward to the CheckSum field. ALWAYS SECOND FIELD IN MESSAGE. (Always unencrypted)</description>
+  </field>
+  <field aid="10" fixml="" name="CheckSum" type="String" not_req_xml="1">
+    <description>Three byte, simple checksum (see Appendix B: CheckSum Calculation for description). ALWAYS LAST FIELD IN MESSAGE; i.e. serves, with the trailing &lt;SOH&gt;, as the end-of-message delimiter. Always defined as three characters. (Always unencrypted)</description>
+  </field>
+  <field aid="11" fixml="" name="ClOrdID" type="String" not_req_xml="1">
+    <description>Unique identifier for Order as assigned by institution (identified by SenderCompID or OnBehalfOfCompID as appropriate). Uniqueness must be guaranteed within a single trading day. Firms, particularly those which electronically submit multi-day orders, trade globally or throughout market close periods,should ensure uniqueness across days, for example by embedding a date within the ClOrdID field.</description>
+  </field>
+  <field aid="12" fixml="" name="Commission" type="Amt" not_req_xml="1">
+    <description>Commission. Note if CommType is percentage, Commission of 5% should be represented as .05.</description>
+  </field>
+  <field aid="13" fixml="" name="CommType" type="char" not_req_xml="1">
+    <description>Commission type</description>
+  </field>
+  <field aid="14" fixml="" name="CumQty" type="Qty" not_req_xml="1">
+    <description>Total number of shares filled.
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="15" fixml="" name="Currency" type="Currency" not_req_xml="1">
+    <description>Identifies currency used for price. Absence of this field is interpreted as the default for the security. It is recommended that systems provide the currency value whenever possible. See Appendix A: Valid Currency Codes for information on obtaining valid values.</description>
+  </field>
+  <field aid="16" fixml="" name="EndSeqNo" type="int" not_req_xml="1">
+    <description>Message sequence number of last message in range to be resent. If request is for a single message BeginSeqNo = EndSeqNo. If request is for all messages subsequent to a particular message, EndSeqNo = "0" (representing infinity).</description>
+  </field>
+  <field aid="17" fixml="" name="ExecID" type="String" not_req_xml="1">
+    <description>Unique identifier of execution message as assigned by broker (will be 0 (zero) for ExecTransType=3 (Status)).
+Uniqueness must be guaranteed within a single trading day or the life of a multi-day order. Firms which accept multi-day orders should consider embedding a date within the ExecID field to assure uniqueness across days.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="18" fixml="" name="ExecInst" type="MultipleValueString" not_req_xml="1">
+    <description>Instructions for order handling on exchange trading floor. If more than one instruction is applicable to an order, this field can contain multiple instructions separated by space.</description>
+  </field>
+  <field aid="19" fixml="" name="ExecRefID" type="String" not_req_xml="1">
+    <description>Reference identifier used with Cancel and Correct transaction types.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="20" fixml="" name="ExecTransType" type="char" not_req_xml="1">
+    <description>Identifies transaction type</description>
+  </field>
+  <field aid="21" fixml="" name="HandlInst" type="char" not_req_xml="1">
+    <description>Instructions for order handling on Broker trading floor</description>
+  </field>
+  <field aid="22" fixml="" name="IDSource" type="String" not_req_xml="1">
+    <description>Identifies class of alternative SecurityID</description>
+  </field>
+  <field aid="23" fixml="" name="IOIid" type="String" not_req_xml="1">
+    <description>Unique identifier of IOI message.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="24" fixml="" name="IOIOthSvc" type="char" not_req_xml="1">
+    <description/>
+  </field>
+  <field aid="25" fixml="" name="IOIQltyInd" type="char" not_req_xml="1">
+    <description>Relative quality of indication</description>
+  </field>
+  <field aid="26" fixml="" name="IOIRefID" type="String" not_req_xml="1">
+    <description>Reference identifier used with CANCEL and REPLACE, transaction types.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="27" fixml="" name="IOIShares" type="String" not_req_xml="1">
+    <description>Number of shares in numeric or relative size.</description>
+  </field>
+  <field aid="28" fixml="" name="IOITransType" type="char" not_req_xml="1">
+    <description>Identifies IOI message transaction type</description>
+  </field>
+  <field aid="29" fixml="" name="LastCapacity" type="char" not_req_xml="1">
+    <description>Broker capacity in order execution</description>
+  </field>
+  <field aid="30" fixml="" name="LastMkt" type="Exchange" not_req_xml="1">
+    <description>Market of execution for last fill</description>
+  </field>
+  <field aid="31" fixml="" name="LastPx" type="Price" not_req_xml="1">
+    <description>Price of this (last) fill. Field not required for ExecTransType = 3 (Status)</description>
+  </field>
+  <field aid="32" fixml="" name="LastShares" type="Qty" not_req_xml="1">
+    <description>Quantity of shares bought/sold on this (last) fill. Field not required for ExecTransType = 3 (Status)
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="33" fixml="" name="LinesOfText" type="int" not_req_xml="1">
+    <description>Identifies number of lines of text body</description>
+  </field>
+  <field aid="34" fixml="" name="MsgSeqNum" type="int" not_req_xml="1">
+    <description>Integer message sequence number.</description>
+  </field>
+  <field aid="35" fixml="" name="MsgType" type="String" not_req_xml="1">
+    <description>Defines message type. ALWAYS THIRD FIELD IN MESSAGE. (Always unencrypted)
+Note: A "U" as the first character in the MsgType field (i.e. U1, U2, etc) indicates that the message format is privately defined between the sender and receiver.</description>
+  </field>
+  <field aid="36" fixml="" name="NewSeqNo" type="int" not_req_xml="1">
+    <description>New sequence number</description>
+  </field>
+  <field aid="37" fixml="" name="OrderID" type="String" not_req_xml="1">
+    <description>Unique identifier for Order as assigned by broker. Uniqueness must be guaranteed within a single trading day. Firms which accept multi-day orders should consider embedding a date within the OrderID field to assure uniqueness across days.</description>
+  </field>
+  <field aid="38" fixml="" name="OrderQty" type="Qty" not_req_xml="1">
+    <description>Number of shares ordered. This represents the number of shares for equities or based on normal convention the number of contracts for options, futures, convertible bonds, etc.
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="39" fixml="" name="OrdStatus" type="char" not_req_xml="1">
+    <description>Identifies current status of order.</description>
+  </field>
+  <field aid="40" fixml="" name="OrdType" type="char" not_req_xml="1">
+    <description>Order type.</description>
+  </field>
+  <field aid="41" fixml="" name="OrigClOrdID" type="String" not_req_xml="1">
+    <description>ClOrdID of the previous order (NOT the initial order of the day) as assigned by the institution, used to identify the previous order in cancel and cancel/replace requests.</description>
+  </field>
+  <field aid="42" fixml="" name="OrigTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Time of message origination (always expressed in UTC (Universal Time Coordinated, also known as "GMT"))</description>
+  </field>
+  <field aid="43" fixml="" name="PossDupFlag" type="Boolean" not_req_xml="1">
+    <description>Indicates possible retransmission of message with this sequence number</description>
+  </field>
+  <field aid="44" fixml="" name="Price" type="Price" not_req_xml="1">
+    <description>Price per share</description>
+  </field>
+  <field aid="45" fixml="" name="RefSeqNum" type="int" not_req_xml="1">
+    <description>Reference message sequence number</description>
+  </field>
+  <field aid="46" fixml="" name="RelatdSym" type="String" not_req_xml="1">
+    <description>Symbol of issue related to story. Can be repeated within message to identify multiple companies.</description>
+  </field>
+  <field aid="47" fixml="" name="Rule80A" type="char" not_req_xml="1">
+    <description>Note that the name of this field is changing to "OrderCapacity" as Rule80A is a very US market-specific term. Other world markets need to convey similar information, however, often a subset of the US values. . See the "Rule80A (aka OrderCapacity) Usage by Market" appendix for market-specific usage of this field.</description>
+  </field>
+  <field aid="48" fixml="" name="SecurityID" type="String" not_req_xml="1">
+    <description>CUSIP or other alternate security identifier</description>
+  </field>
+  <field aid="49" fixml="" name="SenderCompID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify firm sending message.</description>
+  </field>
+  <field aid="50" fixml="" name="SenderSubID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific message originator (desk, trader, etc.)</description>
+  </field>
+  <field aid="51" fixml="" name="SendingDate" type="LocalMktDate" not_req_xml="1">
+    <description>No longer used. Included here for reference to prior versions.</description>
+  </field>
+  <field aid="52" fixml="" name="SendingTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Time of message transmission (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="53" fixml="" name="Shares" type="Qty" not_req_xml="1">
+    <description>Number of shares
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="54" fixml="" name="Side" type="char" not_req_xml="1">
+    <description>Side of order</description>
+  </field>
+  <field aid="55" fixml="" name="Symbol" type="String" not_req_xml="1">
+    <description>Ticker symbol</description>
+  </field>
+  <field aid="56" fixml="" name="TargetCompID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify receiving firm.</description>
+  </field>
+  <field aid="57" fixml="" name="TargetSubID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific individual or unit intended to receive message. "ADMIN" reserved for administrative messages not intended for a specific user.</description>
+  </field>
+  <field aid="58" fixml="" name="Text" type="String" not_req_xml="1">
+    <description>Free format text string
+(Note: this field does not have a specified maximum length)</description>
+  </field>
+  <field aid="59" fixml="" name="TimeInForce" type="char" not_req_xml="1">
+    <description>Specifies how long the order remains in effect. Absence of this field is interpreted as DAY.</description>
+  </field>
+  <field aid="60" fixml="" name="TransactTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Time of execution/order creation (expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="61" fixml="" name="Urgency" type="char" not_req_xml="1">
+    <description>Urgency flag</description>
+  </field>
+  <field aid="62" fixml="" name="ValidUntilTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Indicates expiration time of indication message (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="63" fixml="" name="SettlmntTyp" type="char" not_req_xml="1">
+    <description>Indicates order settlement period. Absence of this field is interpreted as Regular. Regular is defined as the default settlement period for the particular security on the exchange of execution.</description>
+  </field>
+  <field aid="64" fixml="" name="FutSettDate" type="LocalMktDate" not_req_xml="1">
+    <description>Specific date of trade settlement (SettlementDate) in YYYYMMDD format. Required when SettlmntTyp = 6 (Future) or SettlmntTyp = 8 (Sellers Option). (expressed in local time at place of settlement)</description>
+  </field>
+  <field aid="65" fixml="" name="SymbolSfx" type="String" not_req_xml="1">
+    <description>Additional information about the security (e.g. preferred, warrants, etc.). Note also see SecurityType.
+Valid values:
+As defined in the NYSE Stock and bond Symbol Directory and in the AMEX Fitch Directory</description>
+  </field>
+  <field aid="66" fixml="" name="ListID" type="String" not_req_xml="1">
+    <description>Unique identifier for list as assigned by institution, used to associate multiple individual orders. Uniqueness must be guaranteed within a single trading day. Firms which generate multi-day orders should consider embedding a date within the ListID field to assure uniqueness across days.</description>
+  </field>
+  <field aid="67" fixml="" name="ListSeqNo" type="int" not_req_xml="1">
+    <description>Sequence of individual order within list (i.e. ListSeqNo of ListNoOrds, 2 of 25, 3 of 25, . . . )</description>
+  </field>
+  <field aid="68" fixml="" name="TotNoOrders" type="int" not_req_xml="1">
+    <description>Total number of list order entries across all messages. Should be the sum of all NoOrders in each message that has repeating list order entries related to the same ListID. Used to support fragmentation.
+(Prior to FIX 4.2 this field was named "ListNoOrds")</description>
+  </field>
+  <field aid="69" fixml="" name="ListExecInst" type="String" not_req_xml="1">
+    <description>Free format text message containing list handling and execution instructions.</description>
+  </field>
+  <field aid="70" fixml="" name="AllocID" type="String" not_req_xml="1">
+    <description>Unique identifier for allocation message.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="71" fixml="" name="AllocTransType" type="char" not_req_xml="1">
+    <description>Identifies allocation transaction type</description>
+  </field>
+  <field aid="72" fixml="" name="RefAllocID" type="String" not_req_xml="1">
+    <description>Reference identifier to be used with Replace, Cancel, and Calculated AllocTransType messages.
+(Prior to FIX 4.1 this field was of type int)</description>
+  </field>
+  <field aid="73" fixml="" name="NoOrders" type="int" not_req_xml="1">
+    <description>Indicates number of orders to be combined for average pricing and allocation.</description>
+  </field>
+  <field aid="74" fixml="" name="AvgPrxPrecision" type="int" not_req_xml="1">
+    <description>Indicates number of decimal places to be used for average pricing. Absence of this field indicates that default precision arranged by the broker/institution is to be used.</description>
+  </field>
+  <field aid="75" fixml="" name="TradeDate" type="LocalMktDate" not_req_xml="1">
+    <description>Indicates date of trade referenced in this message in YYYYMMDD format. Absence of this field indicates current day (expressed in local time at place of trade).</description>
+  </field>
+  <field aid="76" fixml="" name="ExecBroker" type="String" not_req_xml="1">
+    <description>Identifies executing / give-up broker. Standard NASD market-maker mnemonic is preferred.</description>
+  </field>
+  <field aid="77" fixml="" name="OpenClose" type="char" not_req_xml="1">
+    <description>Indicates whether the resulting position after a trade should be an opening position or closing position. Used for omnibus accounting - where accounts are held on a gross basis instead of being netted together.</description>
+  </field>
+  <field aid="78" fixml="" name="NoAllocs" type="int" not_req_xml="1">
+    <description>Number of repeating AllocAccount/AllocPrice entries.</description>
+  </field>
+  <field aid="79" fixml="" name="AllocAccount" type="String" not_req_xml="1">
+    <description>Sub-account mnemonic</description>
+  </field>
+  <field aid="80" fixml="" name="AllocShares" type="Qty" not_req_xml="1">
+    <description>Number of shares to be allocated to specific sub-account
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="81" fixml="" name="ProcessCode" type="char" not_req_xml="1">
+    <description>Processing code for sub-account. Absence of this field in AllocAccount / AllocPrice/AllocShares / ProcessCode instance indicates regular trade.</description>
+  </field>
+  <field aid="82" fixml="" name="NoRpts" type="int" not_req_xml="1">
+    <description>Total number of reports within series.</description>
+  </field>
+  <field aid="83" fixml="" name="RptSeq" type="int" not_req_xml="1">
+    <description>Sequence number of message within report series.</description>
+  </field>
+  <field aid="84" fixml="" name="CxlQty" type="Qty" not_req_xml="1">
+    <description>Total number of shares canceled for this order.
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="85" fixml="" name="NoDlvyInst" type="int" not_req_xml="1">
+    <description>Number of delivery instruction fields to follow
+No longer used. Included here for reference to prior versions.</description>
+  </field>
+  <field aid="86" fixml="" name="DlvyInst" type="String" not_req_xml="1">
+    <description>Free format text field to indicate delivery instructions
+No longer used. Included here for reference to prior versions.</description>
+  </field>
+  <field aid="87" fixml="" name="AllocStatus" type="int" not_req_xml="1">
+    <description>Identifies status of allocation.</description>
+  </field>
+  <field aid="88" fixml="" name="AllocRejCode" type="int" not_req_xml="1">
+    <description>Identifies reason for rejection.</description>
+  </field>
+  <field aid="89" fixml="" name="Signature" type="data" not_req_xml="1">
+    <description>Electronic signature</description>
+  </field>
+  <field aid="90" fixml="" name="SecureDataLen" type="Length" not_req_xml="1">
+    <description>Length of encrypted message</description>
+  </field>
+  <field aid="91" fixml="" name="SecureData" type="data" not_req_xml="1">
+    <description>Actual encrypted data stream</description>
+  </field>
+  <field aid="92" fixml="" name="BrokerOfCredit" type="String" not_req_xml="1">
+    <description>Broker to receive trade credit.</description>
+  </field>
+  <field aid="93" fixml="" name="SignatureLength" type="Length" not_req_xml="1">
+    <description>Number of bytes in signature field.</description>
+  </field>
+  <field aid="94" fixml="" name="EmailType" type="char" not_req_xml="1">
+    <description>Email message type.</description>
+  </field>
+  <field aid="95" fixml="" name="RawDataLength" type="Length" not_req_xml="1">
+    <description>Number of bytes in raw data field.</description>
+  </field>
+  <field aid="96" fixml="" name="RawData" type="data" not_req_xml="1">
+    <description>Unformatted raw data, can include bitmaps, word processor documents, etc.</description>
+  </field>
+  <field aid="97" fixml="" name="PossResend" type="Boolean" not_req_xml="1">
+    <description>Indicates that message may contain information that has been sent under another sequence number.</description>
+  </field>
+  <field aid="98" fixml="" name="EncryptMethod" type="int" not_req_xml="1">
+    <description>Method of encryption.</description>
+  </field>
+  <field aid="99" fixml="" name="StopPx" type="Price" not_req_xml="1">
+    <description>Price per share</description>
+  </field>
+  <field aid="100" fixml="" name="ExDestination" type="Exchange" not_req_xml="1">
+    <description>Execution destination as defined by institution when order is entered.
+Valid values:
+See Appendix C</description>
+  </field>
+  <field aid="102" fixml="" name="CxlRejReason" type="int" not_req_xml="1">
+    <description>Code to identify reason for cancel rejection.</description>
+  </field>
+  <field aid="103" fixml="" name="OrdRejReason" type="int" not_req_xml="1">
+    <description>Code to identify reason for order rejection.</description>
+  </field>
+  <field aid="104" fixml="" name="IOIQualifier" type="char" not_req_xml="1">
+    <description>Code to qualify IOI use.</description>
+  </field>
+  <field aid="105" fixml="" name="WaveNo" type="String" not_req_xml="1">
+    <description>Identifier to aid in the management of multiple lists derived from a single, master list.</description>
+  </field>
+  <field aid="106" fixml="" name="Issuer" type="String" not_req_xml="1">
+    <description>Company name of security issuer (e.g. International Business Machines)</description>
+  </field>
+  <field aid="107" fixml="" name="SecurityDesc" type="String" not_req_xml="1">
+    <description>Security description.</description>
+  </field>
+  <field aid="108" fixml="" name="HeartBtInt" type="int" not_req_xml="1">
+    <description>Heartbeat interval (seconds)</description>
+  </field>
+  <field aid="109" fixml="" name="ClientID" type="String" not_req_xml="1">
+    <description>Firm identifier used in third party-transactions (should not be a substitute for OnBehalfOfCompID/DeliverToCompID).</description>
+  </field>
+  <field aid="110" fixml="" name="MinQty" type="Qty" not_req_xml="1">
+    <description>Minimum quantity of an order to be executed.
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="111" fixml="" name="MaxFloor" type="Qty" not_req_xml="1">
+    <description>Maximum number of shares within an order to be shown on the exchange floor at any given time.
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="112" fixml="" name="TestReqID" type="String" not_req_xml="1">
+    <description>Identifier included in Test Request message to be returned in resulting Heartbeat</description>
+  </field>
+  <field aid="113" fixml="" name="ReportToExch" type="Boolean" not_req_xml="1">
+    <description>Identifies party of trade responsible for exchange reporting.</description>
+  </field>
+  <field aid="114" fixml="" name="LocateReqd" type="Boolean" not_req_xml="1">
+    <description>Indicates whether the broker is to locate the stock in conjunction with a short sell order.</description>
+  </field>
+  <field aid="115" fixml="" name="OnBehalfOfCompID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify firm originating message if the message was delivered by a third party i.e. the third party firm identifier would be delivered in the SenderCompID field and the firm originating the message in this field.</description>
+  </field>
+  <field aid="116" fixml="" name="OnBehalfOfSubID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific message originator (i.e. trader) if the message was delivered by a third party</description>
+  </field>
+  <field aid="117" fixml="" name="QuoteID" type="String" not_req_xml="1">
+    <description>Unique identifier for quote</description>
+  </field>
+  <field aid="118" fixml="" name="NetMoney" type="Amt" not_req_xml="1">
+    <description>Total amount due as the result of the transaction (e.g. for Buy order - principal + commission + fees) reported in currency of execution.</description>
+  </field>
+  <field aid="119" fixml="" name="SettlCurrAmt" type="Amt" not_req_xml="1">
+    <description>Total amount due expressed in settlement currency (includes the effect of the forex transaction)</description>
+  </field>
+  <field aid="120" fixml="" name="SettlCurrency" type="Currency" not_req_xml="1">
+    <description>Currency code of settlement denomination.</description>
+  </field>
+  <field aid="121" fixml="" name="ForexReq" type="Boolean" not_req_xml="1">
+    <description>Indicates request for forex accommodation trade to be executed along with security transaction.</description>
+  </field>
+  <field aid="122" fixml="" name="OrigSendingTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Original time of message transmission (always expressed in UTC (Universal Time Coordinated, also known as "GMT") when transmitting orders as the result of a resend request.</description>
+  </field>
+  <field aid="123" fixml="" name="GapFillFlag" type="Boolean" not_req_xml="1">
+    <description>Indicates that the Sequence Reset message is replacing administrative or application messages which will not be resent.</description>
+  </field>
+  <field aid="124" fixml="" name="NoExecs" type="int" not_req_xml="1">
+    <description>No of execution repeating group entries to follow.</description>
+  </field>
+  <field aid="125" fixml="" name="CxlType" type="char" not_req_xml="1">
+    <description>No longer used. Included here for reference to prior versions.</description>
+  </field>
+  <field aid="126" fixml="" name="ExpireTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Time/Date of order expiration (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="127" fixml="" name="DKReason" type="char" not_req_xml="1">
+    <description>Reason for execution rejection.</description>
+  </field>
+  <field aid="128" fixml="" name="DeliverToCompID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify the firm targeted to receive the message if the message is delivered by a third party i.e. the third party firm identifier would be delivered in the TargetCompID field and the ultimate receiver firm ID in this field.</description>
+  </field>
+  <field aid="129" fixml="" name="DeliverToSubID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific message recipient (i.e. trader) if the message is delivered by a third party</description>
+  </field>
+  <field aid="130" fixml="" name="IOINaturalFlag" type="Boolean" not_req_xml="1">
+    <description>Indicates that IOI is the result of an existing agency order or a facilitation position resulting from an agency order, not from principal trading or order solicitation activity.</description>
+  </field>
+  <field aid="131" fixml="" name="QuoteReqID" type="String" not_req_xml="1">
+    <description>Unique identifier for quote request</description>
+  </field>
+  <field aid="132" fixml="" name="BidPx" type="Price" not_req_xml="1">
+    <description>Bid price/rate</description>
+  </field>
+  <field aid="133" fixml="" name="OfferPx" type="Price" not_req_xml="1">
+    <description>Offer price/rate</description>
+  </field>
+  <field aid="134" fixml="" name="BidSize" type="Qty" not_req_xml="1">
+    <description>Quantity of bid
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="135" fixml="" name="OfferSize" type="Qty" not_req_xml="1">
+    <description>Quantity of offer
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="136" fixml="" name="NoMiscFees" type="int" not_req_xml="1">
+    <description>Number of repeating groups of miscellaneous fees</description>
+  </field>
+  <field aid="137" fixml="" name="MiscFeeAmt" type="Amt" not_req_xml="1">
+    <description>Miscellaneous fee value</description>
+  </field>
+  <field aid="138" fixml="" name="MiscFeeCurr" type="Currency" not_req_xml="1">
+    <description>Currency of miscellaneous fee</description>
+  </field>
+  <field aid="139" fixml="" name="MiscFeeType" type="char" not_req_xml="1">
+    <description>Indicates type of miscellaneous fee.</description>
+  </field>
+  <field aid="140" fixml="" name="PrevClosePx" type="Price" not_req_xml="1">
+    <description>Previous closing price of security.</description>
+  </field>
+  <field aid="141" fixml="" name="ResetSeqNumFlag" type="Boolean" not_req_xml="1">
+    <description>Indicates that the both sides of the FIX session should reset sequence numbers.</description>
+  </field>
+  <field aid="142" fixml="" name="SenderLocationID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific message originator’s location (i.e. geographic location and/or desk, trader)</description>
+  </field>
+  <field aid="143" fixml="" name="TargetLocationID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific message destination’s location (i.e. geographic location and/or desk, trader)</description>
+  </field>
+  <field aid="144" fixml="" name="OnBehalfOfLocationID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific message originator’s location (i.e. geographic location and/or desk, trader) if the message was delivered by a third party</description>
+  </field>
+  <field aid="145" fixml="" name="DeliverToLocationID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify specific message recipient’s location (i.e. geographic location and/or desk, trader) if the message was delivered by a third party</description>
+  </field>
+  <field aid="146" fixml="" name="NoRelatedSym" type="int" not_req_xml="1">
+    <description>Specifies the number of repeating symbols specified.</description>
+  </field>
+  <field aid="147" fixml="" name="Subject" type="String" not_req_xml="1">
+    <description>The subject of an Email message</description>
+  </field>
+  <field aid="148" fixml="" name="Headline" type="String" not_req_xml="1">
+    <description>The headline of a News message</description>
+  </field>
+  <field aid="149" fixml="" name="URLLink" type="String" not_req_xml="1">
+    <description>A URL (Uniform Resource Locator) link to additional information (i.e. http://www.XYZ.com/research.html)</description>
+  </field>
+  <field aid="150" fixml="" name="ExecType" type="char" not_req_xml="1">
+    <description>Describes the specific ExecutionRpt (i.e. Pending Cancel) while OrdStatus will always identify the current order status (i.e. Partially Filled)</description>
+  </field>
+  <field aid="151" fixml="" name="LeavesQty" type="Qty" not_req_xml="1">
+    <description>Amount of shares open for further execution. If the OrdStatus is Canceled, DoneForTheDay, Expired, Calculated, or Rejected (in which case the order is no longer active) then LeavesQty could be 0, otherwise LeavesQty = OrderQty - CumQty.
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="152" fixml="" name="CashOrderQty" type="Qty" not_req_xml="1">
+    <description>Specifies the approximate order quantity desired in total monetary units vs. as a number of shares. The broker would be responsible for converting and calculating a share quantity (OrderQty) based upon this amount to be used for the actual order and subsequent messages.</description>
+  </field>
+  <field aid="153" fixml="" name="AllocAvgPx" type="Price" not_req_xml="1">
+    <description>AvgPx for a specific AllocAccount</description>
+  </field>
+  <field aid="154" fixml="" name="AllocNetMoney" type="Amt" not_req_xml="1">
+    <description>NetMoney for a specific AllocAccount</description>
+  </field>
+  <field aid="155" fixml="" name="SettlCurrFxRate" type="float" not_req_xml="1">
+    <description>Foreign exchange rate used to compute SettlCurrAmt from Currency to SettlCurrency</description>
+  </field>
+  <field aid="156" fixml="" name="SettlCurrFxRateCalc" type="char" not_req_xml="1">
+    <description>Specifies whether or not SettlCurrFxRate should be multiplied or divided.</description>
+  </field>
+  <field aid="157" fixml="" name="NumDaysInterest" type="int" not_req_xml="1">
+    <description>Number of Days of Interest for convertible bonds and fixed income</description>
+  </field>
+  <field aid="158" fixml="" name="AccruedInterestRate" type="float" not_req_xml="1">
+    <description>Accrued Interest Rate for convertible bonds and fixed income</description>
+  </field>
+  <field aid="159" fixml="" name="AccruedInterestAmt" type="Amt" not_req_xml="1">
+    <description>Amount of Accrued Interest for convertible bonds and fixed income</description>
+  </field>
+  <field aid="160" fixml="" name="SettlInstMode" type="char" not_req_xml="1">
+    <description>Indicates mode used for Settlement Instructions</description>
+  </field>
+  <field aid="161" fixml="" name="AllocText" type="String" not_req_xml="1">
+    <description>Free format text related to a specific AllocAccount.</description>
+  </field>
+  <field aid="162" fixml="" name="SettlInstID" type="String" not_req_xml="1">
+    <description>Unique identifier for Settlement Instructions message.</description>
+  </field>
+  <field aid="163" fixml="" name="SettlInstTransType" type="char" not_req_xml="1">
+    <description>Settlement Instructions message transaction type</description>
+  </field>
+  <field aid="164" fixml="" name="EmailThreadID" type="String" not_req_xml="1">
+    <description>Unique identifier for an email thread (new and chain of replies)</description>
+  </field>
+  <field aid="165" fixml="" name="SettlInstSource" type="char" not_req_xml="1">
+    <description>Indicates source of Settlement Instructions</description>
+  </field>
+  <field aid="166" fixml="" name="SettlLocation" type="String" not_req_xml="1">
+    <description>Identifies Settlement Depository or Country Code (ISITC spec)</description>
+  </field>
+  <field aid="167" fixml="" name="SecurityType" type="String" not_req_xml="1">
+    <description>Indicates type of security (ISITC spec)</description>
+  </field>
+  <field aid="168" fixml="" name="EffectiveTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Time the details within the message should take effect (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="169" fixml="" name="StandInstDbType" type="int" not_req_xml="1">
+    <description>Identifies the Standing Instruction database used</description>
+  </field>
+  <field aid="170" fixml="" name="StandInstDbName" type="String" not_req_xml="1">
+    <description>Name of the Standing Instruction database represented with StandInstDbType (i.e. the Global Custodian’s name).</description>
+  </field>
+  <field aid="171" fixml="" name="StandInstDbID" type="String" not_req_xml="1">
+    <description>Unique identifier used on the Standing Instructions database for the Standing Instructions to be referenced.</description>
+  </field>
+  <field aid="172" fixml="" name="SettlDeliveryType" type="int" not_req_xml="1">
+    <description>Identifies type of settlement</description>
+  </field>
+  <field aid="173" fixml="" name="SettlDepositoryCode" type="String" not_req_xml="1">
+    <description>Broker’s account code at the depository (i.e. CEDEL ID for CEDEL, FINS for DTC, or Euroclear ID for Euroclear) if SettlLocation is a depository</description>
+  </field>
+  <field aid="174" fixml="" name="SettlBrkrCode" type="String" not_req_xml="1">
+    <description>BIC (Bank Identification Code—Swift managed) code of the broker involved (i.e. for multi-company brokerage firms)</description>
+  </field>
+  <field aid="175" fixml="" name="SettlInstCode" type="String" not_req_xml="1">
+    <description>BIC (Bank Identification Code—Swift managed) code of the institution involved (i.e. for multi-company institution firms)</description>
+  </field>
+  <field aid="176" fixml="" name="SecuritySettlAgentName" type="String" not_req_xml="1">
+    <description>Name of SettlInstSource's local agent bank if SettlLocation is not a depository</description>
+  </field>
+  <field aid="177" fixml="" name="SecuritySettlAgentCode" type="String" not_req_xml="1">
+    <description>BIC (Bank Identification Code--Swift managed) code of the SettlInstSource's local agent bank if SettlLocation is not a depository</description>
+  </field>
+  <field aid="178" fixml="" name="SecuritySettlAgentAcctNum" type="String" not_req_xml="1">
+    <description>SettlInstSource's account number at local agent bank if SettlLocation is not a depository</description>
+  </field>
+  <field aid="179" fixml="" name="SecuritySettlAgentAcctName" type="String" not_req_xml="1">
+    <description>Name of SettlInstSource's account at local agent bank if SettlLocation is not a depository</description>
+  </field>
+  <field aid="180" fixml="" name="SecuritySettlAgentContactName" type="String" not_req_xml="1">
+    <description>Name of contact at local agent bank for SettlInstSource's account if SettlLocation is not a depository</description>
+  </field>
+  <field aid="181" fixml="" name="SecuritySettlAgentContactPhone" type="String" not_req_xml="1">
+    <description>Phone number for contact at local agent bank if SettlLocation is not a depository</description>
+  </field>
+  <field aid="182" fixml="" name="CashSettlAgentName" type="String" not_req_xml="1">
+    <description>Name of SettlInstSource's local agent bank if SettlDeliveryType=Free</description>
+  </field>
+  <field aid="183" fixml="" name="CashSettlAgentCode" type="String" not_req_xml="1">
+    <description>BIC (Bank Identification Code--Swift managed) code of the SettlInstSource's local agent bank if SettlDeliveryType=Free</description>
+  </field>
+  <field aid="184" fixml="" name="CashSettlAgentAcctNum" type="String" not_req_xml="1">
+    <description>SettlInstSource's account number at local agent bank if SettlDeliveryType=Free</description>
+  </field>
+  <field aid="185" fixml="" name="CashSettlAgentAcctName" type="String" not_req_xml="1">
+    <description>Name of SettlInstSource's account at local agent bank if SettlDeliveryType=Free</description>
+  </field>
+  <field aid="186" fixml="" name="CashSettlAgentContactName" type="String" not_req_xml="1">
+    <description>Name of contact at local agent bank for SettlInstSource's account if SettlDeliveryType=Free</description>
+  </field>
+  <field aid="187" fixml="" name="CashSettlAgentContactPhone" type="String" not_req_xml="1">
+    <description>Phone number for contact at local agent bank for SettlInstSource's account if SettlDeliveryType=Free</description>
+  </field>
+  <field aid="188" fixml="" name="BidSpotRate" type="Price" not_req_xml="1">
+    <description>Bid F/X spot rate.y vary and not limited to four)</description>
+  </field>
+  <field aid="189" fixml="" name="BidForwardPoints" type="PriceOffset" not_req_xml="1">
+    <description>Bid F/X forward points added to spot rate. May be a negative value.</description>
+  </field>
+  <field aid="190" fixml="" name="OfferSpotRate" type="Price" not_req_xml="1">
+    <description>Offer F/X spot rate.</description>
+  </field>
+  <field aid="191" fixml="" name="OfferForwardPoints" type="PriceOffset" not_req_xml="1">
+    <description>Offer F/X forward points added to spot rate. May be a negative value.</description>
+  </field>
+  <field aid="192" fixml="" name="OrderQty2" type="Qty" not_req_xml="1">
+    <description>OrderQty of the future part of a F/X swap order.</description>
+  </field>
+  <field aid="193" fixml="" name="FutSettDate2" type="LocalMktDate" not_req_xml="1">
+    <description>FutSettDate of the future part of a F/X swap order.</description>
+  </field>
+  <field aid="194" fixml="" name="LastSpotRate" type="Price" not_req_xml="1">
+    <description>F/X spot rate.</description>
+  </field>
+  <field aid="195" fixml="" name="LastForwardPoints" type="PriceOffset" not_req_xml="1">
+    <description>F/X forward points added to LastSpotRate. May be a negative value.</description>
+  </field>
+  <field aid="196" fixml="" name="AllocLinkID" type="String" not_req_xml="1">
+    <description>Can be used to link two different Allocation messages (each with unique AllocID) together, i.e. for F/X "Netting" or "Swaps". Should be unique.</description>
+  </field>
+  <field aid="197" fixml="" name="AllocLinkType" type="int" not_req_xml="1">
+    <description>Identifies the type of Allocation linkage when AllocLinkID is used.</description>
+  </field>
+  <field aid="198" fixml="" name="SecondaryOrderID" type="String" not_req_xml="1">
+    <description>Assigned by the party which accepts the order. Can be used to provide the OrderID used by an exchange or executing system.</description>
+  </field>
+  <field aid="199" fixml="" name="NoIOIQualifiers" type="int" not_req_xml="1">
+    <description>Number of repeating groups of IOIQualifiers.</description>
+  </field>
+  <field aid="200" fixml="" name="MaturityMonthYear" type="MonthYear" not_req_xml="1">
+    <description>Month and Year of the maturity for SecurityType=FUT or SecurityType=OPT. Required if MaturityDay is specified.
+Format: YYYYMM
+(i.e. 199903)</description>
+  </field>
+  <field aid="201" fixml="" name="PutOrCall" type="int" not_req_xml="1">
+    <description>Indicates whether an Option is for a put or call.</description>
+  </field>
+  <field aid="202" fixml="" name="StrikePrice" type="Price" not_req_xml="1">
+    <description>Strike Price for an Option.</description>
+  </field>
+  <field aid="203" fixml="" name="CoveredOrUncovered" type="int" not_req_xml="1">
+    <description>Used for options</description>
+  </field>
+  <field aid="204" fixml="" name="CustomerOrFirm" type="int" not_req_xml="1">
+    <description>Used for options when delivering the order to an execution system/exchange to specify if the order is for a customer or the firm placing the order itself.</description>
+  </field>
+  <field aid="205" fixml="" name="MaturityDay" type="DayOfMonth" not_req_xml="1">
+    <description>Day of month used in conjunction with MaturityMonthYear to specify the maturity date for SecurityType=FUT or SecurityType=OPT.</description>
+  </field>
+  <field aid="206" fixml="" name="OptAttribute" type="char" not_req_xml="1">
+    <description>Can be used for SecurityType=OPT to identify a particular security.</description>
+  </field>
+  <field aid="207" fixml="" name="SecurityExchange" type="Exchange" not_req_xml="1">
+    <description>Market used to help identify a security.</description>
+  </field>
+  <field aid="208" fixml="" name="NotifyBrokerOfCredit" type="Boolean" not_req_xml="1">
+    <description>Indicates whether or not details should be communicated to BrokerOfCredit (i.e. step-in broker).</description>
+  </field>
+  <field aid="209" fixml="" name="AllocHandlInst" type="int" not_req_xml="1">
+    <description>Indicates how the receiver (i.e. third party) of Allocation message should handle/process the account details.</description>
+  </field>
+  <field aid="210" fixml="" name="MaxShow" type="Qty" not_req_xml="1">
+    <description>Maximum number of shares within an order to be shown to other customers (i.e. sent via an IOI).
+(Prior to FIX 4.2 this field was of type int)</description>
+  </field>
+  <field aid="211" fixml="" name="PegDifference" type="PriceOffset" not_req_xml="1">
+    <description>Amount (signed) added to the price of the peg for a pegged order.</description>
+  </field>
+  <field aid="212" fixml="" name="XmlDataLen" type="Length" not_req_xml="1">
+    <description>Length of the XmlData data block.</description>
+  </field>
+  <field aid="213" fixml="" name="XmlData" type="data" not_req_xml="1">
+    <description>Actual XML data stream (e.g. FIXML). See approriate XML reference (e.g. FIXML). Note: may contain embedded SOH characters.</description>
+  </field>
+  <field aid="214" fixml="" name="SettlInstRefID" type="String" not_req_xml="1">
+    <description>Reference identifier for the SettlInstID with Cancel and Replace SettlInstTransType transaction types.</description>
+  </field>
+  <field aid="215" fixml="" name="NoRoutingIDs" type="int" not_req_xml="1">
+    <description>Number of repeating groups of RoutingID and RoutingType values.
+See Appendix L – Pre-Trade Message Targeting/Routing</description>
+  </field>
+  <field aid="216" fixml="" name="RoutingType" type="int" not_req_xml="1">
+    <description>Indicates the type of RoutingID specified.</description>
+  </field>
+  <field aid="217" fixml="" name="RoutingID" type="String" not_req_xml="1">
+    <description>Assigned value used to identify a specific routing destination.</description>
+  </field>
+  <field aid="218" fixml="" name="SpreadToBenchmark" type="PriceOffset" not_req_xml="1">
+    <description>For Fixed Income. Basis points relative to a benchmark. To be expressed as "count of basis points" (vs. an absolute value). E.g. High Grade Corporate Bonds may express price as basis points relative to benchmark (the Benchmark field). Note: Basis points can be negative.</description>
+  </field>
+  <field aid="219" fixml="" name="Benchmark" type="char" not_req_xml="1">
+    <description>For Fixed Income. Identifies the benchmark (e.g. used in conjunction with the SpreadToBenchmark field).</description>
+  </field>
+  <field aid="223" fixml="" name="CouponRate" type="float" not_req_xml="1">
+    <description>For Fixed Income. Coupon rate of the bond. Will be zero for step-up bonds.</description>
+  </field>
+  <field aid="231" fixml="" name="ContractMultiplier" type="float" not_req_xml="1">
+    <description>Specifies the ratio or multiply factor to convert from contracts to shares (e.g. 1.0, 100, 1000, etc). Applicable For Fixed Income, Convertible Bonds, Derivatives, etc. Note: If used, quantities should be expressed in the "nominal" (e.g. contracts vs. shares) amount.</description>
+  </field>
+  <field aid="262" fixml="" name="MDReqID" type="String" not_req_xml="1">
+    <description>Unique identifier for Market Data Request</description>
+  </field>
+  <field aid="263" fixml="" name="SubscriptionRequestType" type="char" not_req_xml="1">
+    <description>Subscription Request Type</description>
+  </field>
+  <field aid="264" fixml="" name="MarketDepth" type="int" not_req_xml="1">
+    <description>Depth of market for Book Snapshot</description>
+  </field>
+  <field aid="265" fixml="" name="MDUpdateType" type="int" not_req_xml="1">
+    <description>Specifies the type of Market Data update.</description>
+  </field>
+  <field aid="266" fixml="" name="AggregatedBook" type="Boolean" not_req_xml="1">
+    <description>Specifies whether or not book entries should be aggregated.</description>
+  </field>
+  <field aid="267" fixml="" name="NoMDEntryTypes" type="int" not_req_xml="1">
+    <description>Number of MDEntryType fields requested.</description>
+  </field>
+  <field aid="268" fixml="" name="NoMDEntries" type="int" not_req_xml="1">
+    <description>Number of entries in Market Data message.</description>
+  </field>
+  <field aid="269" fixml="" name="MDEntryType" type="char" not_req_xml="1">
+    <description>Type Market Data entry.</description>
+  </field>
+  <field aid="270" fixml="" name="MDEntryPx" type="Price" not_req_xml="1">
+    <description>Price of the Market Data Entry.</description>
+  </field>
+  <field aid="271" fixml="" name="MDEntrySize" type="Qty" not_req_xml="1">
+    <description>Number of shares represented by the Market Data Entry.</description>
+  </field>
+  <field aid="272" fixml="" name="MDEntryDate" type="UTCDate" not_req_xml="1">
+    <description>Date of Market Data Entry.</description>
+  </field>
+  <field aid="273" fixml="" name="MDEntryTime" type="UTCTimeOnly" not_req_xml="1">
+    <description>Time of Market Data Entry.</description>
+  </field>
+  <field aid="274" fixml="" name="TickDirection" type="char" not_req_xml="1">
+    <description>Direction of the "tick".</description>
+  </field>
+  <field aid="275" fixml="" name="MDMkt" type="Exchange" not_req_xml="1">
+    <description>Market posting quote / trade.
+Valid values:
+See Appendix C</description>
+  </field>
+  <field aid="276" fixml="" name="QuoteCondition" type="MultipleValueString" not_req_xml="1">
+    <description>Space-delimited list of conditions describing a quote.</description>
+  </field>
+  <field aid="277" fixml="" name="TradeCondition" type="MultipleValueString" not_req_xml="1">
+    <description>Space-delimited list of conditions describing a trade</description>
+  </field>
+  <field aid="278" fixml="" name="MDEntryID" type="String" not_req_xml="1">
+    <description>Unique Market Data Entry identifier.</description>
+  </field>
+  <field aid="279" fixml="" name="MDUpdateAction" type="char" not_req_xml="1">
+    <description>Type of Market Data update action.</description>
+  </field>
+  <field aid="280" fixml="" name="MDEntryRefID" type="String" not_req_xml="1">
+    <description>Refers to a previous MDEntryID.</description>
+  </field>
+  <field aid="281" fixml="" name="MDReqRejReason" type="char" not_req_xml="1">
+    <description>Reason for the rejection of a Market Data request.</description>
+  </field>
+  <field aid="282" fixml="" name="MDEntryOriginator" type="String" not_req_xml="1">
+    <description>Originator of a Market Data Entry</description>
+  </field>
+  <field aid="283" fixml="" name="LocationID" type="String" not_req_xml="1">
+    <description>Identification of a Market Maker’s location</description>
+  </field>
+  <field aid="284" fixml="" name="DeskID" type="String" not_req_xml="1">
+    <description>Identification of a Market Maker’s desk</description>
+  </field>
+  <field aid="285" fixml="" name="DeleteReason" type="char" not_req_xml="1">
+    <description>Reason for deletion.</description>
+  </field>
+  <field aid="286" fixml="" name="OpenCloseSettleFlag" type="char" not_req_xml="1">
+    <description>Flag that identifies a price.</description>
+  </field>
+  <field aid="287" fixml="" name="SellerDays" type="int" not_req_xml="1">
+    <description>Specifies the number of days that may elapse before delivery of the security</description>
+  </field>
+  <field aid="288" fixml="" name="MDEntryBuyer" type="String" not_req_xml="1">
+    <description>Buying party in a trade</description>
+  </field>
+  <field aid="289" fixml="" name="MDEntrySeller" type="String" not_req_xml="1">
+    <description>Selling party in a trade</description>
+  </field>
+  <field aid="290" fixml="" name="MDEntryPositionNo" type="int" not_req_xml="1">
+    <description>Display position of a bid or offer, numbered from most competitive to least competitive, per market side, beginning with 1.</description>
+  </field>
+  <field aid="291" fixml="" name="FinancialStatus" type="char" not_req_xml="1">
+    <description>Identifies a firm’s financial status.</description>
+  </field>
+  <field aid="292" fixml="" name="CorporateAction" type="char" not_req_xml="1">
+    <description>Identifies the type of Corporate Action.</description>
+  </field>
+  <field aid="293" fixml="" name="DefBidSize" type="Qty" not_req_xml="1">
+    <description>Default Bid Size.</description>
+  </field>
+  <field aid="294" fixml="" name="DefOfferSize" type="Qty" not_req_xml="1">
+    <description>Default Offer Size.</description>
+  </field>
+  <field aid="295" fixml="" name="NoQuoteEntries" type="int" not_req_xml="1">
+    <description>The number of quote entries for a QuoteSet.</description>
+  </field>
+  <field aid="296" fixml="" name="NoQuoteSets" type="int" not_req_xml="1">
+    <description>The number of sets of quotes in the message.</description>
+  </field>
+  <field aid="297" fixml="" name="QuoteAckStatus" type="int" not_req_xml="1">
+    <description>Identifies the status of the quote acknowledgement.</description>
+  </field>
+  <field aid="298" fixml="" name="QuoteCancelType" type="int" not_req_xml="1">
+    <description>Identifies the type of quote cancel.</description>
+  </field>
+  <field aid="299" fixml="" name="QuoteEntryID" type="String" not_req_xml="1">
+    <description>Uniquely identifies the quote as part of a QuoteSet.</description>
+  </field>
+  <field aid="300" fixml="" name="QuoteRejectReason" type="int" not_req_xml="1">
+    <description>Reason Quote was rejected:</description>
+  </field>
+  <field aid="301" fixml="" name="QuoteResponseLevel" type="int" not_req_xml="1">
+    <description>Level of Response requested from receiver of quote messages.</description>
+  </field>
+  <field aid="302" fixml="" name="QuoteSetID" type="String" not_req_xml="1">
+    <description>Unique id for the Quote Set.</description>
+  </field>
+  <field aid="303" fixml="" name="QuoteRequestType" type="int" not_req_xml="1">
+    <description>Indicates the type of Quote Request being generated</description>
+  </field>
+  <field aid="304" fixml="" name="TotQuoteEntries" type="int" not_req_xml="1">
+    <description>Total number of quotes for the quote set across all messages. Should be the sum of all NoQuoteEntries in each message that has repeating quotes that are part of the same quote set.</description>
+  </field>
+  <field aid="305" fixml="" name="UnderlyingIDSource" type="String" not_req_xml="1">
+    <description>Underlying security’s IDSource.</description>
+  </field>
+  <field aid="306" fixml="" name="UnderlyingIssuer" type="String" not_req_xml="1">
+    <description>Underlying security’s Issuer.
+See Issuer field for description</description>
+  </field>
+  <field aid="307" fixml="" name="UnderlyingSecurityDesc" type="String" not_req_xml="1">
+    <description>Underlying security’s SecurityDesc.
+See SecurityDesc field for description</description>
+  </field>
+  <field aid="308" fixml="" name="UnderlyingSecurityExchange" type="Exchange" not_req_xml="1">
+    <description>Underlying security’s SecurityExchange. Can be used to identify the underlying security.</description>
+  </field>
+  <field aid="309" fixml="" name="UnderlyingSecurityID" type="String" not_req_xml="1">
+    <description>Underlying security’s SecurityID.
+See SecurityID field for description</description>
+  </field>
+  <field aid="310" fixml="" name="UnderlyingSecurityType" type="String" not_req_xml="1">
+    <description>Underlying security’s SecurityType.</description>
+  </field>
+  <field aid="311" fixml="" name="UnderlyingSymbol" type="String" not_req_xml="1">
+    <description>Underlying security’s Symbol.
+See Symbol field for description</description>
+  </field>
+  <field aid="312" fixml="" name="UnderlyingSymbolSfx" type="String" not_req_xml="1">
+    <description>Underlying security’s SymbolSfx.
+See SymbolSfx field for description</description>
+  </field>
+  <field aid="313" fixml="" name="UnderlyingMaturityMonthYear" type="MonthYear" not_req_xml="1">
+    <description>Underlying security’s MaturityMonthYear. Required if UnderlyingMaturityDay is specified.
+See MaturityMonthYear field for description</description>
+  </field>
+  <field aid="314" fixml="" name="UnderlyingMaturityDay" type="DayOfMonth" not_req_xml="1">
+    <description>Underlying security’s MaturityDay.
+See MaturityDay field for description</description>
+  </field>
+  <field aid="315" fixml="" name="UnderlyingPutOrCall" type="int" not_req_xml="1">
+    <description>Underlying security’s PutOrCall.
+See PutOrCall field for description</description>
+  </field>
+  <field aid="316" fixml="" name="UnderlyingStrikePrice" type="Price" not_req_xml="1">
+    <description>Underlying security’s StrikePrice.
+See StrikePrice field for description</description>
+  </field>
+  <field aid="317" fixml="" name="UnderlyingOptAttribute" type="char" not_req_xml="1">
+    <description>Underlying security’s OptAttribute.
+See OptAttribute field for description</description>
+  </field>
+  <field aid="318" fixml="" name="UnderlyingCurrency" type="Currency" not_req_xml="1">
+    <description>Underlying security’s Currency.
+See Currency field for description and valid values</description>
+  </field>
+  <field aid="319" fixml="" name="RatioQty" type="Quantity" not_req_xml="1">
+    <description>Quantity of a particular leg in the security.</description>
+  </field>
+  <field aid="320" fixml="" name="SecurityReqID" type="String" not_req_xml="1">
+    <description>Unique ID of a Security Definition Request.</description>
+  </field>
+  <field aid="321" fixml="" name="SecurityRequestType" type="int" not_req_xml="1">
+    <description>Type of Security Definition Request.</description>
+  </field>
+  <field aid="322" fixml="" name="SecurityResponseID" type="String" not_req_xml="1">
+    <description>Unique ID of a Security Definition message.</description>
+  </field>
+  <field aid="323" fixml="" name="SecurityResponseType" type="int" not_req_xml="1">
+    <description>Type of Security Definition message response.</description>
+  </field>
+  <field aid="324" fixml="" name="SecurityStatusReqID" type="String" not_req_xml="1">
+    <description>Unique ID of a Security Status Request message.</description>
+  </field>
+  <field aid="325" fixml="" name="UnsolicitedIndicator" type="Boolean" not_req_xml="1">
+    <description>Indicates whether or not message is being sent as a result of a subscription request or not.</description>
+  </field>
+  <field aid="326" fixml="" name="SecurityTradingStatus" type="int" not_req_xml="1">
+    <description>Identifies the trading status applicable to the transaction.</description>
+  </field>
+  <field aid="327" fixml="" name="HaltReason" type="char" not_req_xml="1">
+    <description>Denotes the reason for the Opening Delay or Trading Halt.</description>
+  </field>
+  <field aid="328" fixml="" name="InViewOfCommon" type="Boolean" not_req_xml="1">
+    <description>Indicates whether or not the halt was due to Common Stock trading being halted.</description>
+  </field>
+  <field aid="329" fixml="" name="DueToRelated" type="Boolean" not_req_xml="1">
+    <description>Indicates whether or not the halt was due to the Related Security being halted.</description>
+  </field>
+  <field aid="330" fixml="" name="BuyVolume" type="Qty" not_req_xml="1">
+    <description>Number of shares bought.</description>
+  </field>
+  <field aid="331" fixml="" name="SellVolume" type="Qty" not_req_xml="1">
+    <description>Number of shares sold.</description>
+  </field>
+  <field aid="332" fixml="" name="HighPx" type="Price" not_req_xml="1">
+    <description>Represents an indication of the high end of the price range for a security prior to the open or reopen</description>
+  </field>
+  <field aid="333" fixml="" name="LowPx" type="Price" not_req_xml="1">
+    <description>Represents an indication of the low end of the price range for a security prior to the open or reopen</description>
+  </field>
+  <field aid="334" fixml="" name="Adjustment" type="int" not_req_xml="1">
+    <description>Identifies the type of adjustment.</description>
+  </field>
+  <field aid="335" fixml="" name="TradSesReqID" type="String" not_req_xml="1">
+    <description>Unique ID of a Trading Session Status message.</description>
+  </field>
+  <field aid="336" fixml="" name="TradingSessionID" type="String" not_req_xml="1">
+    <description>Identifier for Trading Session
+Can be used to represent a specific market trading session (e.g. "PRE-OPEN", "CROSS_2", "AFTER-HOURS", "TOSTNET1", "TOSTNET2", etc).
+Values should be bi-laterally agreed to between counterparties.</description>
+  </field>
+  <field aid="337" fixml="" name="ContraTrader" type="String" not_req_xml="1">
+    <description>Identifies the trader (e.g. "badge number") of the ContraBroker.</description>
+  </field>
+  <field aid="338" fixml="" name="TradSesMethod" type="int" not_req_xml="1">
+    <description>Method of trading</description>
+  </field>
+  <field aid="339" fixml="" name="TradSesMode" type="int" not_req_xml="1">
+    <description>Trading Session Mode</description>
+  </field>
+  <field aid="340" fixml="" name="TradSesStatus" type="int" not_req_xml="1">
+    <description>State of the trading session.</description>
+  </field>
+  <field aid="341" fixml="" name="TradSesStartTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Starting time of the trading session</description>
+  </field>
+  <field aid="342" fixml="" name="TradSesOpenTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Time of the opening of the trading session</description>
+  </field>
+  <field aid="343" fixml="" name="TradSesPreCloseTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Time of the pre-closed of the trading session</description>
+  </field>
+  <field aid="344" fixml="" name="TradSesCloseTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Closing time of the trading session</description>
+  </field>
+  <field aid="345" fixml="" name="TradSesEndTime" type="UTCTimestamp" not_req_xml="1">
+    <description>End time of the trading session</description>
+  </field>
+  <field aid="346" fixml="" name="NumberOfOrders" type="int" not_req_xml="1">
+    <description>Number of orders in the market.</description>
+  </field>
+  <field aid="347" fixml="" name="MessageEncoding" type="String" not_req_xml="1">
+    <description>Type of message encoding (non-ASCII (non-English) characters) used in a message’s "Encoded" fields.</description>
+  </field>
+  <field aid="348" fixml="" name="EncodedIssuerLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedIssuer field.</description>
+  </field>
+  <field aid="349" fixml="" name="EncodedIssuer" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the Issuer field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the Issuer field.</description>
+  </field>
+  <field aid="350" fixml="" name="EncodedSecurityDescLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedSecurityDesc field.</description>
+  </field>
+  <field aid="351" fixml="" name="EncodedSecurityDesc" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the SecurityDesc field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the SecurityDesc field.</description>
+  </field>
+  <field aid="352" fixml="" name="EncodedListExecInstLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedListExecInst field.</description>
+  </field>
+  <field aid="353" fixml="" name="EncodedListExecInst" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the ListExecInst field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the ListExecInst field.</description>
+  </field>
+  <field aid="354" fixml="" name="EncodedTextLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedText field.</description>
+  </field>
+  <field aid="355" fixml="" name="EncodedText" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the Text field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the Text field.</description>
+  </field>
+  <field aid="356" fixml="" name="EncodedSubjectLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedSubject field.</description>
+  </field>
+  <field aid="357" fixml="" name="EncodedSubject" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the Subject field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the Subject field.</description>
+  </field>
+  <field aid="358" fixml="" name="EncodedHeadlineLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedHeadline field.</description>
+  </field>
+  <field aid="359" fixml="" name="EncodedHeadline" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the Headline field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the Headline field.</description>
+  </field>
+  <field aid="360" fixml="" name="EncodedAllocTextLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedAllocText field.</description>
+  </field>
+  <field aid="361" fixml="" name="EncodedAllocText" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the AllocText field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the AllocText field.</description>
+  </field>
+  <field aid="362" fixml="" name="EncodedUnderlyingIssuerLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedUnderlyingIssuer field.</description>
+  </field>
+  <field aid="363" fixml="" name="EncodedUnderlyingIssuer" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the UnderlyingIssuer field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the UnderlyingIssuer field.</description>
+  </field>
+  <field aid="364" fixml="" name="EncodedUnderlyingSecurityDescLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedUnderlyingSecurityDesc field.</description>
+  </field>
+  <field aid="365" fixml="" name="EncodedUnderlyingSecurityDesc" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the UnderlyingSecurityDesc field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the UnderlyingSecurityeDesc field.</description>
+  </field>
+  <field aid="366" fixml="" name="AllocPrice" type="Price" not_req_xml="1">
+    <description>Executed price for an AllocAccount entry used when using "executed price" vs. "average price" allocations (e.g. Japan).</description>
+  </field>
+  <field aid="367" fixml="" name="QuoteSetValidUntilTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Indicates expiration time of this particular QuoteSet (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="368" fixml="" name="QuoteEntryRejectReason" type="int" not_req_xml="1">
+    <description>Reason Quote Entry was rejected:</description>
+  </field>
+  <field aid="369" fixml="" name="LastMsgSeqNumProcessed" type="int" not_req_xml="1">
+    <description>The last MsgSeqNum value received and processed. Can be specified on every message sent. Useful for detecting a backlog with a counterparty.</description>
+  </field>
+  <field aid="370" fixml="" name="OnBehalfOfSendingTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Used when a message is sent via a "hub" or "service bureau". If A sends to Q (the hub) who then sends to B via a separate FIX session, then when Q sends to B the value of this field should represent the SendingTime on the message A sent to Q. (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="371" fixml="" name="RefTagID" type="int" not_req_xml="1">
+    <description>The tag number of the FIX field being referenced.</description>
+  </field>
+  <field aid="372" fixml="" name="RefMsgType" type="String" not_req_xml="1">
+    <description>The MsgType of the FIX message being referenced.</description>
+  </field>
+  <field aid="373" fixml="" name="SessionRejectReason" type="int" not_req_xml="1">
+    <description>Code to identify reason for a session-level Reject message.</description>
+  </field>
+  <field aid="374" fixml="" name="BidRequestTransType" type="char" not_req_xml="1">
+    <description>Identifies the Bid Request message type.</description>
+  </field>
+  <field aid="375" fixml="" name="ContraBroker" type="String" not_req_xml="1">
+    <description>Identifies contra broker. Standard NASD market-maker mnemonic is preferred.</description>
+  </field>
+  <field aid="376" fixml="" name="ComplianceID" type="String" not_req_xml="1">
+    <description>ID used to represent this transaction for compliance purposes (e.g. OATS reporting).</description>
+  </field>
+  <field aid="377" fixml="" name="SolicitedFlag" type="Boolean" not_req_xml="1">
+    <description>Indicates whether or not the order was solicited.</description>
+  </field>
+  <field aid="378" fixml="" name="ExecRestatementReason" type="int" not_req_xml="1">
+    <description>Code to identify reason for an ExecutionRpt message sent with ExecType=Restated or used when communicating an unsolicited cancel.</description>
+  </field>
+  <field aid="379" fixml="" name="BusinessRejectRefID" type="String" not_req_xml="1">
+    <description>The value of the business-level "ID" field on the message being referenced.</description>
+  </field>
+  <field aid="380" fixml="" name="BusinessRejectReason" type="int" not_req_xml="1">
+    <description>Code to identify reason for a Business Message Reject message.</description>
+  </field>
+  <field aid="381" fixml="" name="GrossTradeAmt" type="Amt" not_req_xml="1">
+    <description>Total amount traded (e.g. CumQty * AvgPx) expressed in units of currency.</description>
+  </field>
+  <field aid="382" fixml="" name="NoContraBrokers" type="int" not_req_xml="1">
+    <description>The number of ContraBroker entries.</description>
+  </field>
+  <field aid="383" fixml="" name="MaxMessageSize" type="int" not_req_xml="1">
+    <description>Maximum number of bytes supported for a single message.</description>
+  </field>
+  <field aid="384" fixml="" name="NoMsgTypes" type="int" not_req_xml="1">
+    <description>Number of MsgTypes in repeating group.</description>
+  </field>
+  <field aid="385" fixml="" name="MsgDirection" type="char" not_req_xml="1">
+    <description>Specifies the direction of the messsage.</description>
+  </field>
+  <field aid="386" fixml="" name="NoTradingSessions" type="int" not_req_xml="1">
+    <description>Number of TradingSessionIDs in repeating group.</description>
+  </field>
+  <field aid="387" fixml="" name="TotalVolumeTraded" type="Qty" not_req_xml="1">
+    <description>Total volume (quantity) traded.</description>
+  </field>
+  <field aid="388" fixml="" name="DiscretionInst" type="char" not_req_xml="1">
+    <description>Code to identify the price a DiscretionOffset is related to and should be mathematically added to.</description>
+  </field>
+  <field aid="389" fixml="" name="DiscretionOffset" type="PriceOffset" not_req_xml="1">
+    <description>Amount (signed) added to the "related to" price specified via DiscretionInst.</description>
+  </field>
+  <field aid="390" fixml="" name="BidID" type="String" not_req_xml="1">
+    <description>Unique identifier for Bid Response as assigned by broker. Uniqueness must be guaranteed within a single trading day.</description>
+  </field>
+  <field aid="391" fixml="" name="ClientBidID" type="String" not_req_xml="1">
+    <description>Unique identifier for a Bid Request as assigned by institution. Uniqueness must be guaranteed within a single trading day.</description>
+  </field>
+  <field aid="392" fixml="" name="ListName" type="String" not_req_xml="1">
+    <description>Descriptive name for list order.</description>
+  </field>
+  <field aid="393" fixml="" name="TotalNumSecurities" type="int" not_req_xml="1">
+    <description>Total number of securities.</description>
+  </field>
+  <field aid="394" fixml="" name="BidType" type="int" not_req_xml="1">
+    <description>Code to identify the type of Bid Request.</description>
+  </field>
+  <field aid="395" fixml="" name="NumTickets" type="int" not_req_xml="1">
+    <description>Total number of tickets.</description>
+  </field>
+  <field aid="396" fixml="" name="SideValue1" type="Amt" not_req_xml="1">
+    <description>Amounts in currency</description>
+  </field>
+  <field aid="397" fixml="" name="SideValue2" type="Amt" not_req_xml="1">
+    <description>Amounts in currency</description>
+  </field>
+  <field aid="398" fixml="" name="NoBidDescriptors" type="int" not_req_xml="1">
+    <description>Number of BidDescriptor entries.</description>
+  </field>
+  <field aid="399" fixml="" name="BidDescriptorType" type="int" not_req_xml="1">
+    <description>Code to identify the type of BidDescriptor.</description>
+  </field>
+  <field aid="400" fixml="" name="BidDescriptor" type="String" not_req_xml="1">
+    <description>BidDescriptor value. Usage depends upon BidDescriptorType.</description>
+  </field>
+  <field aid="401" fixml="" name="SideValueInd" type="int" not_req_xml="1">
+    <description>Code to identify which "SideValue" the value refers to. SideValue1 and SideValue2 are used as opposed to Buy or Sell so that the basket can be quoted either way as Buy or Sell.</description>
+  </field>
+  <field aid="402" fixml="" name="LiquidityPctLow" type="float" not_req_xml="1">
+    <description>Liquidity indicator or lower limit if TotalNumSecurities &gt; 1. Represented as a percentage.</description>
+  </field>
+  <field aid="403" fixml="" name="LiquidityPctHigh" type="float" not_req_xml="1">
+    <description>Upper liquidity indicator if TotalNumSecurities &gt; 1. Represented as a percentage.</description>
+  </field>
+  <field aid="404" fixml="" name="LiquidityValue" type="Amt" not_req_xml="1">
+    <description>Value between LiquidityPctLow and LiquidityPctHigh in Currency</description>
+  </field>
+  <field aid="405" fixml="" name="EFPTrackingError" type="float" not_req_xml="1">
+    <description>Eg Used in EFP trades 12% (EFP – Exchange for Physical ). Represented as a percentage.</description>
+  </field>
+  <field aid="406" fixml="" name="FairValue" type="Amt" not_req_xml="1">
+    <description>Used in EFP trades</description>
+  </field>
+  <field aid="407" fixml="" name="OutsideIndexPct" type="float" not_req_xml="1">
+    <description>Used in EFP trades. Represented as a percentage.</description>
+  </field>
+  <field aid="408" fixml="" name="ValueOfFutures" type="Amt" not_req_xml="1">
+    <description>Used in EFP trades</description>
+  </field>
+  <field aid="409" fixml="" name="LiquidityIndType" type="int" not_req_xml="1">
+    <description>Code to identify the type of liquidity indicator.</description>
+  </field>
+  <field aid="410" fixml="" name="WtAverageLiquidity" type="float" not_req_xml="1">
+    <description>Overall weighted average liquidity expressed as a % of average daily volume. Represented as a percentage.</description>
+  </field>
+  <field aid="411" fixml="" name="ExchangeForPhysical" type="Boolean" not_req_xml="1">
+    <description>Indicates whether or not to exchange for phsyical.</description>
+  </field>
+  <field aid="412" fixml="" name="OutMainCntryUIndex" type="Amt" not_req_xml="1">
+    <description>Value of stocks in Currency</description>
+  </field>
+  <field aid="413" fixml="" name="CrossPercent" type="float" not_req_xml="1">
+    <description>Percentage of program that crosses in Currency. Represented as a percentage.</description>
+  </field>
+  <field aid="414" fixml="" name="ProgRptReqs" type="int" not_req_xml="1">
+    <description>Code to identify the desired frequency of progress reports.</description>
+  </field>
+  <field aid="415" fixml="" name="ProgPeriodInterval" type="int" not_req_xml="1">
+    <description>Time in minutes between each ListStatus report sent by SellSide. Zero means don’t send status.</description>
+  </field>
+  <field aid="416" fixml="" name="IncTaxInd" type="int" not_req_xml="1">
+    <description>Code to represent whether value is net (inclusive of tax) or gross.</description>
+  </field>
+  <field aid="417" fixml="" name="NumBidders" type="int" not_req_xml="1">
+    <description>Indicates the total number of bidders on the list</description>
+  </field>
+  <field aid="418" fixml="" name="TradeType" type="char" not_req_xml="1">
+    <description>Code to represent the type of trade.</description>
+  </field>
+  <field aid="419" fixml="" name="BasisPxType" type="char" not_req_xml="1">
+    <description>Code to represent the basis price type.</description>
+  </field>
+  <field aid="420" fixml="" name="NoBidComponents" type="int" not_req_xml="1">
+    <description>Indicates the number of list entries.</description>
+  </field>
+  <field aid="421" fixml="" name="Country" type="String" not_req_xml="1">
+    <description>ISO Country Code in field</description>
+  </field>
+  <field aid="422" fixml="" name="TotNoStrikes" type="int" not_req_xml="1">
+    <description>Total number of strike price entries across all messages. Should be the sum of all NoStrikes in each message that has repeating strike price entries related to the same ListID. Used to support fragmentation.</description>
+  </field>
+  <field aid="423" fixml="" name="PriceType" type="int" not_req_xml="1">
+    <description>Code to represent the price type.</description>
+  </field>
+  <field aid="424" fixml="" name="DayOrderQty" type="Qty" not_req_xml="1">
+    <description>For GT orders, the OrderQty less all shares (adjusted for stock splits) that traded on previous days. DayOrderQty = OrderQty – (CumQty - DayCumQty)</description>
+  </field>
+  <field aid="425" fixml="" name="DayCumQty" type="Qty" not_req_xml="1">
+    <description>The number of shares on a GT order that have traded today.</description>
+  </field>
+  <field aid="426" fixml="" name="DayAvgPx" type="Price" not_req_xml="1">
+    <description>The average price of shares on a GT order that have traded today.</description>
+  </field>
+  <field aid="427" fixml="" name="GTBookingInst" type="int" not_req_xml="1">
+    <description>Code to identify whether to book out executions on a part-filled GT order on the day of execution or to accumulate.</description>
+  </field>
+  <field aid="428" fixml="" name="NoStrikes" type="int" not_req_xml="1">
+    <description>Number of list strike price entries.</description>
+  </field>
+  <field aid="429" fixml="" name="ListStatusType" type="int" not_req_xml="1">
+    <description>Code to represent the price type.</description>
+  </field>
+  <field aid="430" fixml="" name="NetGrossInd" type="int" not_req_xml="1">
+    <description>Code to represent whether value is net (inclusive of tax) or gross.</description>
+  </field>
+  <field aid="431" fixml="" name="ListOrderStatus" type="int" not_req_xml="1">
+    <description>Code to represent the status of a list order.</description>
+  </field>
+  <field aid="432" fixml="" name="ExpireDate" type="LocalMktDate" not_req_xml="1">
+    <description>Date of order expiration (last day the order can trade), always expressed in terms of the local market date. The time at which the order expires is determined by the local market’s business practices</description>
+  </field>
+  <field aid="433" fixml="" name="ListExecInstType" type="char" not_req_xml="1">
+    <description>Identifies the type of ListExecInst.</description>
+  </field>
+  <field aid="434" fixml="" name="CxlRejResponseTo" type="char" not_req_xml="1">
+    <description>Identifies the type of request that a Cancel Reject is in response to.</description>
+  </field>
+  <field aid="435" fixml="" name="UnderlyingCouponRate" type="float" not_req_xml="1">
+    <description>Underlying security’s CouponRate.
+See CouponRate field for description</description>
+  </field>
+  <field aid="436" fixml="" name="UnderlyingContractMultiplier" type="float" not_req_xml="1">
+    <description>Underlying security’s ContractMultiplier.
+See ContractMultiplier field for description</description>
+  </field>
+  <field aid="437" fixml="" name="ContraTradeQty" type="Qty" not_req_xml="1">
+    <description>Quantity traded with the ContraBroker.</description>
+  </field>
+  <field aid="438" fixml="" name="ContraTradeTime" type="UTCTimestamp" not_req_xml="1">
+    <description>Identifes the time of the trade with the ContraBroker. (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="439" fixml="" name="ClearingFirm" type="String" not_req_xml="1">
+    <description>Firm that will clear the trade. Used if different from the executing firm.</description>
+  </field>
+  <field aid="440" fixml="" name="ClearingAccount" type="String" not_req_xml="1">
+    <description>Supplemental accounting information forwared to clearing house/firm.</description>
+  </field>
+  <field aid="441" fixml="" name="LiquidityNumSecurities" type="int" not_req_xml="1">
+    <description>Number of Securites between LiquidityPctLow and LiquidityPctHigh in Currency.</description>
+  </field>
+  <field aid="442" fixml="" name="MultiLegReportingType" type="char" not_req_xml="1">
+    <description>Used to indicate what an Execution Report represents (e.g. used with multi-leg securiteis, such as option strategies, spreads, etc.).</description>
+  </field>
+  <field aid="443" fixml="" name="StrikeTime" type="UTCTimestamp" not_req_xml="1">
+    <description>The time at which current market prices are used to determine the value of a basket.</description>
+  </field>
+  <field aid="444" fixml="" name="ListStatusText" type="String" not_req_xml="1">
+    <description>Free format text string related to List Status.</description>
+  </field>
+  <field aid="445" fixml="" name="EncodedListStatusTextLen" type="Length" not_req_xml="1">
+    <description>Byte length of encoded (non-ASCII characters) EncodedListStatusText field.</description>
+  </field>
+  <field aid="446" fixml="" name="EncodedListStatusText" type="data" not_req_xml="1">
+    <description>Encoded (non-ASCII characters) representation of the ListStatusText field in the encoded format specified via the MessageEncoding field. If used, the ASCII (English) representation should also be specified in the ListStatusText field.</description>
+  </field>
+  <enum eid="4">
+    <item value="B">Buy</item>
+    <item value="S">Sell</item>
+    <item value="T">Trade</item>
+    <item value="X">Cross</item>
+  </enum>
+  <enum eid="5">
+    <item value="C">Cancel</item>
+    <item value="N">New</item>
+    <item value="R">Replace</item>
+  </enum>
+  <enum eid="13">
+    <item value="1">per share</item>
+    <item value="2">percentage</item>
+    <item value="3">absolute</item>
+  </enum>
+  <enum eid="18">
+    <item value="0">Stay on offerside</item>
+    <item value="1">Not held</item>
+    <item value="2">Work</item>
+    <item value="3">Go along</item>
+    <item value="4">Over the day</item>
+    <item value="5">Held</item>
+    <item value="6">Participate don't initiate</item>
+    <item value="7">Strict scale</item>
+    <item value="8">Try to scale</item>
+    <item value="9">Stay on bidside</item>
+    <item value="A">No cross (cross is forbidden)</item>
+    <item value="B">OK to cross</item>
+    <item value="C">Call first</item>
+    <item value="D">Percent of volume (indicates that the sender does not want to be all of the volume on the floor vs. a specific percentage)</item>
+    <item value="E">Do not increase - DNI</item>
+    <item value="F">Do not reduce - DNR</item>
+    <item value="G">All or none - AON</item>
+    <item value="I">Institutions only</item>
+    <item value="L">Last peg (last sale)</item>
+    <item value="M">Mid-price peg (midprice of inside quote)</item>
+    <item value="N">Non-negotiable</item>
+    <item value="O">Opening peg</item>
+    <item value="P">Market peg</item>
+    <item value="R">Primary peg (primary market - buy at bid/sell at offer)</item>
+    <item value="S">Suspend</item>
+    <item value="T">Fixed Peg to Local best bid or offer at time of order</item>
+    <item value="U">Customer Display Instruction (Rule11Ac1-1/4)</item>
+    <item value="V">Netting (for Forex)</item>
+    <item value="W">Peg to VWAP</item>
+  </enum>
+  <enum eid="20">
+    <item value="0">New</item>
+    <item value="1">Cancel</item>
+    <item value="2">Correct</item>
+    <item value="3">Status</item>
+  </enum>
+  <enum eid="21">
+    <item value="1">Automated execution order, private, no Broker intervention</item>
+    <item value="2">Automated execution order, public, Broker intervention OK</item>
+    <item value="3">Manual order, best execution</item>
+  </enum>
+  <enum eid="22">
+    <item value="1">CUSIP</item>
+    <item value="2">SEDOL</item>
+    <item value="3">QUIK</item>
+    <item value="4">ISIN number</item>
+    <item value="5">RIC code</item>
+    <item value="6">ISO Currency Code</item>
+    <item value="7">ISO Country Code</item>
+    <item value="8">Exchange Symbol</item>
+    <item value="9">Consolidated Tape Association (CTA) Symbol (SIAC CTS/CQS line format)</item>
+  </enum>
+  <enum eid="25">
+    <item value="H">High</item>
+    <item value="L">Low</item>
+    <item value="M">Medium</item>
+  </enum>
+  <enum eid="27">
+    <item value="L">Large</item>
+    <item value="M">Medium</item>
+    <item value="S">Small</item>
+  </enum>
+  <enum eid="28">
+    <item value="C">Cancel</item>
+    <item value="N">New</item>
+    <item value="R">Replace</item>
+  </enum>
+  <enum eid="29">
+    <item value="1">Agent</item>
+    <item value="2">Cross as agent</item>
+    <item value="3">Cross as principal</item>
+    <item value="4">Principal</item>
+  </enum>
+  <enum eid="35">
+    <item value="0">Heartbeat</item>
+    <item value="1">Test Request</item>
+    <item value="2">Resend Request</item>
+    <item value="3">Reject</item>
+    <item value="4">Sequence Reset</item>
+    <item value="5">Logout</item>
+    <item value="6">Indication of Interest</item>
+    <item value="7">Advertisement</item>
+    <item value="8">Execution Report</item>
+    <item value="9">Order Cancel Reject</item>
+    <item value="a">Quote Status Request</item>
+    <item value="A">Logon</item>
+    <item value="B">News</item>
+    <item value="b">Quote Acknowledgement</item>
+    <item value="C">Email</item>
+    <item value="c">Security Definition Request</item>
+    <item value="D">Order Single</item>
+    <item value="d">Security Definition</item>
+    <item value="E">Order List</item>
+    <item value="e">Security Status Request</item>
+    <item value="f">Security Status</item>
+    <item value="F">Order Cancel Request</item>
+    <item value="G">Order Cancel/Replace Request</item>
+    <item value="g">Trading Session Status Request</item>
+    <item value="H">Order Status Request</item>
+    <item value="h">Trading Session Status</item>
+    <item value="i">Mass Quote</item>
+    <item value="j">Business Message Reject</item>
+    <item value="J">Allocation</item>
+    <item value="K">List Cancel Request</item>
+    <item value="k">Bid Request</item>
+    <item value="l">Bid Response (lowercase L)</item>
+    <item value="L">List Execute</item>
+    <item value="m">List Strike Price</item>
+    <item value="M">List Status Request</item>
+    <item value="N">List Status</item>
+    <item value="P">Allocation ACK</item>
+    <item value="Q">Dont Know Trade (DK)</item>
+    <item value="R">Quote Request</item>
+    <item value="S">Quote</item>
+    <item value="T">Settlement Instructions</item>
+    <item value="V">Market Data Request</item>
+    <item value="W">Market Data-Snapshot/Full Refresh</item>
+    <item value="X">Market Data-Incremental Refresh</item>
+    <item value="Y">Market Data Request Reject</item>
+    <item value="Z">Quote Cancel</item>
+  </enum>
+  <enum eid="39">
+    <item value="0">New</item>
+    <item value="1">Partially filled</item>
+    <item value="2">Filled</item>
+    <item value="3">Done for day</item>
+    <item value="4">Canceled</item>
+    <item value="5">Replaced</item>
+    <item value="6">Pending Cancel (e.g. result of Order Cancel Request)</item>
+    <item value="7">Stopped</item>
+    <item value="8">Rejected</item>
+    <item value="9">Suspended</item>
+    <item value="A">Pending New</item>
+    <item value="B">Calculated</item>
+    <item value="C">Expired</item>
+    <item value="D">Accepted for bidding</item>
+    <item value="E">Pending Replace (e.g. result of Order Cancel/Replace Request)</item>
+  </enum>
+  <enum eid="40">
+    <item value="1">Market</item>
+    <item value="2">Limit</item>
+    <item value="3">Stop</item>
+    <item value="4">Stop limit</item>
+    <item value="5">Market on close</item>
+    <item value="6">With or without</item>
+    <item value="7">Limit or better</item>
+    <item value="8">Limit with or without</item>
+    <item value="9">On basis</item>
+    <item value="A">On close</item>
+    <item value="B">Limit on close</item>
+    <item value="C">Forex - Market</item>
+    <item value="D">Previously quoted</item>
+    <item value="E">Previously indicated</item>
+    <item value="F">Forex - Limit</item>
+    <item value="G">Forex - Swap</item>
+    <item value="H">Forex - Previously Quoted</item>
+    <item value="I">Funari (Limit Day Order with unexecuted portion handled as Market On Close. e.g. Japan)</item>
+    <item value="P">Pegged</item>
+  </enum>
+  <enum eid="43">
+    <item value="N">Original transmission</item>
+    <item value="Y">Possible duplicate</item>
+  </enum>
+  <enum eid="47">
+    <item value="A">Agency single order</item>
+    <item value="B">Short exempt transaction (refer to A type)</item>
+    <item value="C">Program Order, non-index arb, for Member firm/org</item>
+    <item value="D">Program Order, index arb, for Member firm/org</item>
+    <item value="E">Registered Equity Market Maker trades</item>
+    <item value="F">Short exempt transaction (refer to W type)</item>
+    <item value="H">Short exempt transaction (refer to I type)</item>
+    <item value="I">Individual Investor, single order</item>
+    <item value="J">Program Order, index arb, for individual customer</item>
+    <item value="K">Program Order, non-index arb, for individual customer</item>
+    <item value="L">Short exempt transaction for member competing market-maker affiliated with the firm clearing the trade (refer to P and O types)</item>
+    <item value="M">Program Order, index arb, for other member</item>
+    <item value="N">Program Order, non-index arb, for other member</item>
+    <item value="O">Competing dealer trades</item>
+    <item value="P">Principal</item>
+    <item value="R">Competing dealer trades</item>
+    <item value="S">Specialist trades</item>
+    <item value="T">Competing dealer trades</item>
+    <item value="U">Program Order, index arb, for other agency</item>
+    <item value="W">All other orders as agent for other member</item>
+    <item value="X">Short exempt transaction for member competing market-maker not affiliated with the firm clearing the trade (refer to W and T types)</item>
+    <item value="Y">Program Order, non-index arb, for other agency</item>
+    <item value="Z">Short exempt transaction for non-member competing market-maker (refer to A and R types)</item>
+  </enum>
+  <enum eid="54">
+    <item value="1">Buy</item>
+    <item value="2">Sell</item>
+    <item value="3">Buy minus</item>
+    <item value="4">Sell plus</item>
+    <item value="5">Sell short</item>
+    <item value="6">Sell short exempt</item>
+    <item value="7">Undisclosed (valid for IOI and List Order messages only)</item>
+    <item value="8">Cross (orders where counterparty is an exchange, valid for all messages except IOIs)</item>
+    <item value="9">Cross short</item>
+  </enum>
+  <enum eid="59">
+    <item value="0">Day</item>
+    <item value="1">Good Till Cancel (GTC)</item>
+    <item value="2">At the Opening (OPG)</item>
+    <item value="3">Immediate or Cancel (IOC)</item>
+    <item value="4">Fill or Kill (FOK)</item>
+    <item value="5">Good Till Crossing (GTX)</item>
+    <item value="6">Good Till Date</item>
+  </enum>
+  <enum eid="61">
+    <item value="0">Normal</item>
+    <item value="1">Flash</item>
+    <item value="2">Background</item>
+  </enum>
+  <enum eid="63">
+    <item value="0">Regular</item>
+    <item value="1">Cash</item>
+    <item value="2">Next Day</item>
+    <item value="3">T+2</item>
+    <item value="4">T+3</item>
+    <item value="5">T+4</item>
+    <item value="6">Future</item>
+    <item value="7">When Issued</item>
+    <item value="8">Sellers Option</item>
+    <item value="9">T+ 5</item>
+  </enum>
+  <enum eid="71">
+    <item value="0">New</item>
+    <item value="1">Replace</item>
+    <item value="2">Cancel</item>
+    <item value="3">Preliminary (without MiscFees and NetMoney)</item>
+    <item value="4">Calculated (includes MiscFees and NetMoney)</item>
+    <item value="5">Calculated without Preliminary (sent unsolicited by broker, includes MiscFees and NetMoney)</item>
+  </enum>
+  <enum eid="77">
+    <item value="C">Close</item>
+    <item value="O">Open</item>
+  </enum>
+  <enum eid="81">
+    <item value="0">regular</item>
+    <item value="1">soft dollar</item>
+    <item value="2">step-in</item>
+    <item value="3">step-out</item>
+    <item value="4">soft-dollar step-in</item>
+    <item value="5">soft-dollar step-out</item>
+    <item value="6">plan sponsor</item>
+  </enum>
+  <enum eid="87">
+    <item value="0">accepted (successfully processed)</item>
+    <item value="1">rejected</item>
+    <item value="2">partial accept</item>
+    <item value="3">received (received, not yet processed)</item>
+  </enum>
+  <enum eid="88">
+    <item value="0">unknown account(s)</item>
+    <item value="1">incorrect quantity</item>
+    <item value="2">incorrect average price</item>
+    <item value="3">unknown executing broker mnemonic</item>
+    <item value="4">commission difference</item>
+    <item value="5">unknown OrderID</item>
+    <item value="6">unknown ListID</item>
+    <item value="7">other</item>
+  </enum>
+  <enum eid="94">
+    <item value="0">New</item>
+    <item value="1">Reply</item>
+    <item value="2">Admin Reply</item>
+  </enum>
+  <enum eid="97">
+    <item value="N">Original transmission</item>
+    <item value="Y">Possible resend</item>
+  </enum>
+  <enum eid="98">
+    <item value="0">None / other</item>
+    <item value="1">PKCS (proprietary)</item>
+    <item value="2">DES (ECB mode)</item>
+    <item value="3">PKCS/DES (proprietary)</item>
+    <item value="4">PGP/DES (defunct)</item>
+    <item value="5">PGP/DES-MD5 (see app note on FIX web site)</item>
+    <item value="6">PEM/DES-MD5 (see app note on FIX web site)</item>
+  </enum>
+  <enum eid="102">
+    <item value="0">Too late to cancel</item>
+    <item value="1">Unknown order</item>
+    <item value="2">Broker Option</item>
+    <item value="3">Order already in Pending Cancel or Pending Replace status</item>
+  </enum>
+  <enum eid="103">
+    <item value="0">Broker option</item>
+    <item value="1">Unknown symbol</item>
+    <item value="2">Exchange closed</item>
+    <item value="3">Order exceeds limit</item>
+    <item value="4">Too late to enter</item>
+    <item value="5">Unknown Order</item>
+    <item value="6">Duplicate Order (e.g. dupe ClOrdID)</item>
+    <item value="7">Duplicate of a verbally communicated order</item>
+    <item value="8">Stale Order</item>
+  </enum>
+  <enum eid="104">
+    <item value="A">All or none</item>
+    <item value="C">At the close</item>
+    <item value="I">In touch with</item>
+    <item value="L">Limit</item>
+    <item value="M">More behind</item>
+    <item value="O">At the open</item>
+    <item value="P">Taking a position</item>
+    <item value="Q">At the Market (previously called Current Quote)</item>
+    <item value="R">Ready to trade</item>
+    <item value="S">Portfolio show-n</item>
+    <item value="T">Through the day</item>
+    <item value="V">Versus</item>
+    <item value="W">Indication - Working away</item>
+    <item value="X">Crossing opportunity</item>
+    <item value="Y">At the Midpoint</item>
+    <item value="Z">Pre-open</item>
+  </enum>
+  <enum eid="113">
+    <item value="N">Indicates that party sending message will report trade</item>
+    <item value="Y">Indicates that party receiving message must report trade</item>
+  </enum>
+  <enum eid="114">
+    <item value="N">Indicates the broker is not required to locate</item>
+    <item value="Y">Indicates the broker is responsible for locating the stock</item>
+  </enum>
+  <enum eid="121">
+    <item value="N">Do not execute Forex after security trade</item>
+    <item value="Y">Execute Forex after security trade</item>
+  </enum>
+  <enum eid="123">
+    <item value="N">Sequence Reset, ignore MsgSeqNum</item>
+    <item value="Y">Gap Fill message, MsgSeqNum field valid</item>
+  </enum>
+  <enum eid="127">
+    <item value="A">Unknown symbol</item>
+    <item value="B">Wrong side</item>
+    <item value="C">Quantity exceeds order</item>
+    <item value="D">No matching order</item>
+    <item value="E">Price exceeds limit</item>
+    <item value="Z">Other</item>
+  </enum>
+  <enum eid="130">
+    <item value="N">Not natural</item>
+    <item value="Y">Natural</item>
+  </enum>
+  <enum eid="139">
+    <item value="1">Regulatory (e.g. SEC)</item>
+    <item value="2">Tax</item>
+    <item value="3">Local Commission</item>
+    <item value="4">Exchange Fees</item>
+    <item value="5">Stamp</item>
+    <item value="6">Levy</item>
+    <item value="7">Other</item>
+    <item value="8">Markup</item>
+    <item value="9">Consumption Tax</item>
+  </enum>
+  <enum eid="141">
+    <item value="N">No</item>
+    <item value="Y">Yes, reset sequence numbers</item>
+  </enum>
+  <enum eid="150">
+    <item value="0">New</item>
+    <item value="1">Partial fill</item>
+    <item value="2">Fill</item>
+    <item value="3">Done for day</item>
+    <item value="4">Canceled</item>
+    <item value="5">Replace</item>
+    <item value="6">Pending Cancel (e.g. result of Order Cancel Request)</item>
+    <item value="7">Stopped</item>
+    <item value="8">Rejected</item>
+    <item value="9">Suspended</item>
+    <item value="A">Pending New</item>
+    <item value="B">Calculated</item>
+    <item value="C">Expired</item>
+    <item value="D">Restated (ExecutionRpt sent unsolicited by sellside, with ExecRestatementReason set)</item>
+    <item value="E">Pending Replace (e.g. result of Order Cancel/Replace Request)</item>
+  </enum>
+  <enum eid="160">
+    <item value="0">Default</item>
+    <item value="1">Standing Instructions Provided</item>
+    <item value="2">Specific Allocation Account Overriding</item>
+    <item value="3">Specific Allocation Account Standing</item>
+  </enum>
+  <enum eid="163">
+    <item value="C">Cancel</item>
+    <item value="N">New</item>
+    <item value="R">Replace</item>
+  </enum>
+  <enum eid="165">
+    <item value="1">Brokers Instructions</item>
+    <item value="2">Institutions Instructions</item>
+  </enum>
+  <enum eid="166">
+    <item value="CED">CEDEL</item>
+    <item value="DTC">Depository Trust Company</item>
+    <item value="EUR">Euroclear</item>
+    <item value="FED">Federal Book Entry</item>
+    <item value="ISO Country Code">Local Market Settle Location</item>
+    <item value="PNY">Physical</item>
+    <item value="PTC">Participant Trust Company</item>
+  </enum>
+  <enum eid="167">
+    <item value="?">Wildcard entry (used on Security Definition Request message)</item>
+    <item value="BA">Bankers Acceptance</item>
+    <item value="CB">Convertible Bond (Note not part of ISITC spec)</item>
+    <item value="CD">Certificate Of Deposit</item>
+    <item value="CMO">Collateralize Mortgage Obligation</item>
+    <item value="CORP">Corporate Bond</item>
+    <item value="CP">Commercial Paper</item>
+    <item value="CPP">Corporate Private Placement</item>
+    <item value="CS">Common Stock</item>
+    <item value="FHA">Federal Housing Authority</item>
+    <item value="FHL">Federal Home Loan</item>
+    <item value="FN">Federal National Mortgage Association</item>
+    <item value="FOR">Foreign Exchange Contract</item>
+    <item value="FUT">Future</item>
+    <item value="GN">Government National Mortgage Association</item>
+    <item value="GOVT">Treasuries + Agency Debenture</item>
+    <item value="IET">Mortgage IOETTE</item>
+    <item value="MF">Mutual Fund</item>
+    <item value="MIO">Mortgage Interest Only</item>
+    <item value="MPO">Mortgage Principal Only</item>
+    <item value="MPP">Mortgage Private Placement</item>
+    <item value="MPT">Miscellaneous Pass-Thru</item>
+    <item value="MUNI">Municipal Bond</item>
+    <item value="NONE">No ISITC Security Type</item>
+    <item value="OPT">Option</item>
+    <item value="PS">Preferred Stock</item>
+    <item value="RP">Repurchase Agreement</item>
+    <item value="RVRP">Reverse Repurchase Agreement</item>
+    <item value="SL">Student Loan Marketing Association</item>
+    <item value="TD">Time Deposit</item>
+    <item value="USTB">US Treasury Bill</item>
+    <item value="WAR">Warrant</item>
+    <item value="ZOO">Cats, Tigers &amp; Lions (a real code: US Treasury Receipts)</item>
+  </enum>
+  <enum eid="169">
+    <item value="0">Other</item>
+    <item value="1">DTC SID</item>
+    <item value="2">Thomson ALERT</item>
+    <item value="3">A Global Custodian (StandInstDbName must be provided)</item>
+  </enum>
+  <enum eid="197">
+    <item value="0">F/X Netting</item>
+    <item value="1">F/X Swap</item>
+  </enum>
+  <enum eid="201">
+    <item value="0">Put</item>
+    <item value="1">Call</item>
+  </enum>
+  <enum eid="203">
+    <item value="0">Covered</item>
+    <item value="1">Uncovered</item>
+  </enum>
+  <enum eid="204">
+    <item value="0">Customer</item>
+    <item value="1">Firm</item>
+  </enum>
+  <enum eid="208">
+    <item value="N">Details should not be communicated</item>
+    <item value="Y">Details should be communicated</item>
+  </enum>
+  <enum eid="209">
+    <item value="1">Match</item>
+    <item value="2">Forward</item>
+    <item value="3">Forward and Match</item>
+  </enum>
+  <enum eid="216">
+    <item value="1">Target Firm</item>
+    <item value="2">Target List</item>
+    <item value="3">Block Firm</item>
+    <item value="4">Block List</item>
+  </enum>
+  <enum eid="219">
+    <item value="1">CURVE</item>
+    <item value="2">5-YR</item>
+    <item value="3">OLD-5</item>
+    <item value="4">10-YR</item>
+    <item value="5">OLD-10</item>
+    <item value="6">30-YR</item>
+    <item value="7">OLD-30</item>
+    <item value="8">3-MO-LIBOR</item>
+    <item value="9">6-MO-LIBOR</item>
+  </enum>
+  <enum eid="263">
+    <item value="0">Snapshot</item>
+    <item value="1">Snapshot + Updates (Subscribe)</item>
+    <item value="2">Disable previous Snapshot + Update Request (Unsubscribe)</item>
+  </enum>
+  <enum eid="265">
+    <item value="0">Full Refresh</item>
+    <item value="1">Incremental Refresh</item>
+  </enum>
+  <enum eid="266">
+    <item value="N">Multiple entries per side per price allowed</item>
+    <item value="Y">one book entry per side per price</item>
+  </enum>
+  <enum eid="269">
+    <item value="0">Bid</item>
+    <item value="1">Offer</item>
+    <item value="2">Trade</item>
+    <item value="3">Index Value</item>
+    <item value="4">Opening Price</item>
+    <item value="5">Closing Price</item>
+    <item value="6">Settlement Price</item>
+    <item value="7">Trading Session High Price</item>
+    <item value="8">Trading Session Low Price</item>
+    <item value="9">Trading Session VWAP Price</item>
+  </enum>
+  <enum eid="274">
+    <item value="0">Plus Tick</item>
+    <item value="1">Zero-Plus Tick</item>
+    <item value="2">Minus Tick</item>
+    <item value="3">Zero-Minus Tick</item>
+  </enum>
+  <enum eid="276">
+    <item value="A">Open / Active</item>
+    <item value="B">Closed / Inactive</item>
+    <item value="C">Exchange Best</item>
+    <item value="D">Consolidated Best</item>
+    <item value="E">Locked</item>
+    <item value="F">Crossed</item>
+    <item value="G">Depth</item>
+    <item value="H">Fast Trading</item>
+    <item value="I">Non-Firm</item>
+  </enum>
+  <enum eid="277">
+    <item value="A">Cash (only) Market</item>
+    <item value="B">Average Price Trade</item>
+    <item value="C">Cash Trade (same day clearing)</item>
+    <item value="D">Next Day (only) Market</item>
+    <item value="E">Opening / Reopening Trade Detail</item>
+    <item value="F">Intraday Trade Detail</item>
+    <item value="G">Rule 127 Trade (NYSE)</item>
+    <item value="H">Rule 155 Trade (Amex)</item>
+    <item value="I">Sold Last (late reporting)</item>
+    <item value="J">Next Day Trade (next day clearing)</item>
+    <item value="K">Opened (late report of opened trade)</item>
+    <item value="L">Seller</item>
+    <item value="M">Sold (out of sequence)</item>
+    <item value="N">Stopped Stock (guarantee of price but does not execute the order)</item>
+  </enum>
+  <enum eid="279">
+    <item value="0">New</item>
+    <item value="1">Change</item>
+    <item value="2">Delete</item>
+  </enum>
+  <enum eid="281">
+    <item value="0">Unknown symbol</item>
+    <item value="1">Duplicate MDReqID</item>
+    <item value="2">Insufficient Bandwidth</item>
+    <item value="3">Insufficient Permissions</item>
+    <item value="4">Unsupported SubscriptionRequestType</item>
+    <item value="5">Unsupported MarketDepth</item>
+    <item value="6">Unsupported MDUpdateType</item>
+    <item value="7">Unsupported AggregatedBook</item>
+    <item value="8">Unsupported MDEntryType</item>
+  </enum>
+  <enum eid="285">
+    <item value="0">Cancelation / Trade Bust</item>
+    <item value="1">Error</item>
+  </enum>
+  <enum eid="286">
+    <item value="0">Daily Open / Close / Settlement price</item>
+    <item value="1">Session Open / Close / Settlement price</item>
+    <item value="2">Delivery Settlement price</item>
+  </enum>
+  <enum eid="291">
+    <item value="1">Bankrupt</item>
+  </enum>
+  <enum eid="292">
+    <item value="A">Ex-Dividend</item>
+    <item value="B">Ex-Distribution</item>
+    <item value="C">Ex-Rights</item>
+    <item value="D">New</item>
+    <item value="E">Ex-Interest</item>
+  </enum>
+  <enum eid="297">
+    <item value="0">Accepted</item>
+    <item value="1">Canceled for Symbol(s)</item>
+    <item value="2">Canceled for Security Type(s)</item>
+    <item value="3">Canceled for Underlying</item>
+    <item value="4">Canceled All</item>
+    <item value="5">Rejected</item>
+  </enum>
+  <enum eid="298">
+    <item value="1">Cancel for Symbol(s)</item>
+    <item value="2">Cancel for Security Type(s)</item>
+    <item value="3">Cancel for Underlying Symbol</item>
+    <item value="4">Cancel for All Quotes</item>
+  </enum>
+  <enum eid="300">
+    <item value="1">Unknown symbol (Security)</item>
+    <item value="2">Exchange (Security) closed</item>
+    <item value="3">Quote Request exceeds limit</item>
+    <item value="4">Too late to enter</item>
+    <item value="5">Unknown Quote</item>
+    <item value="6">Duplicate Quote</item>
+    <item value="7">Invalid bid/ask spread</item>
+    <item value="8">Invalid price</item>
+    <item value="9">Not authorized to quote security</item>
+  </enum>
+  <enum eid="301">
+    <item value="0">No Acknowledgement (Default)</item>
+    <item value="1">Acknowledge only negative or erroneous quotes</item>
+    <item value="2">Acknowledge each quote messages</item>
+  </enum>
+  <enum eid="303">
+    <item value="1">Manual</item>
+    <item value="2">Automatic</item>
+  </enum>
+  <enum eid="321">
+    <item value="0">Request Security identity and specifications</item>
+    <item value="1">Request Security identity for the specifications provided (Name of the security is not supplied)</item>
+    <item value="2">Request List Security Types</item>
+    <item value="3">Request List Securities (Can be qualified with Symbol, SecurityType, TradingSessionID, SecurityExchange is provided then only list Securities for the specific type)</item>
+  </enum>
+  <enum eid="323">
+    <item value="1">Accept security proposal as is</item>
+    <item value="2">Accept security proposal with revisions as indicated in the message</item>
+    <item value="3">List of security types returned per request</item>
+    <item value="4">List of securities returned per request</item>
+    <item value="5">Reject security proposal</item>
+    <item value="6">Can not match selection criteria</item>
+  </enum>
+  <enum eid="325">
+    <item value="N">Message is being sent as a result of a prior request</item>
+    <item value="Y">Message is being sent unsolicited</item>
+  </enum>
+  <enum eid="326">
+    <item value="1">Opening Delay</item>
+    <item value="10">Market On Close Imbalance Sell</item>
+    <item value="12">No Market Imbalance</item>
+    <item value="13">No Market On Close Imbalance</item>
+    <item value="14">ITS Pre-Opening</item>
+    <item value="15">New Price Indication</item>
+    <item value="16">Trade Dissemination Time</item>
+    <item value="17">Ready to trade (start of session)</item>
+    <item value="18">Not Available for trading (end of session)</item>
+    <item value="19">Not Traded on this Market</item>
+    <item value="2">Trading Halt</item>
+    <item value="20">Unknown or Invalid</item>
+    <item value="3">Resume</item>
+    <item value="4">No Open/No Resume</item>
+    <item value="5">Price Indication</item>
+    <item value="6">Trading Range Indication</item>
+    <item value="7">Market Imbalance Buy</item>
+    <item value="8">Market Imbalance Sell</item>
+    <item value="9">Market On Close Imbalance Buy</item>
+  </enum>
+  <enum eid="327">
+    <item value="D">News Dissemination</item>
+    <item value="E">Order Influx</item>
+    <item value="I">Order Imbalance</item>
+    <item value="M">Additional Information</item>
+    <item value="P">News Pending</item>
+    <item value="X">Equipment Changeover</item>
+  </enum>
+  <enum eid="328">
+    <item value="N">Halt was not related to a halt of the common stock</item>
+    <item value="Y">Halt was due to common stock being halted</item>
+  </enum>
+  <enum eid="329">
+    <item value="N">Halt was not related to a halt of the related security</item>
+    <item value="Y">Halt was due to related security being halted</item>
+  </enum>
+  <enum eid="334">
+    <item value="1">Cancel</item>
+    <item value="2">Error</item>
+    <item value="3">Correction</item>
+  </enum>
+  <enum eid="338">
+    <item value="1">Electronic</item>
+    <item value="2">Open Outcry</item>
+    <item value="3">Two Party</item>
+  </enum>
+  <enum eid="339">
+    <item value="1">Testing</item>
+    <item value="2">Simulated</item>
+    <item value="3">Production</item>
+  </enum>
+  <enum eid="340">
+    <item value="1">Halted</item>
+    <item value="2">Open</item>
+    <item value="3">Closed</item>
+    <item value="4">Pre-Open</item>
+    <item value="5">Pre-Close</item>
+  </enum>
+  <enum eid="347">
+    <item value="EUC-JP">(for using EUC)</item>
+    <item value="ISO-2022-JP">(for using JIS)</item>
+    <item value="Shift_JIS">(for using SJIS)</item>
+    <item value="UTF-8">(for using Unicode)</item>
+  </enum>
+  <enum eid="368">
+    <item value="1">Unknown symbol (Security)</item>
+    <item value="2">Exchange (Security) closed</item>
+    <item value="3">Quote exceeds limit</item>
+    <item value="4">Too late to enter</item>
+    <item value="5">Unknown Quote</item>
+    <item value="6">Duplicate Quote</item>
+    <item value="7">Invalid bid/ask spread</item>
+    <item value="8">Invalid price</item>
+    <item value="9">Not authorized to quote security</item>
+  </enum>
+  <enum eid="373">
+    <item value="0">Invalid tag number</item>
+    <item value="1">Required tag missing</item>
+    <item value="10">SendingTime accuracy problem</item>
+    <item value="11">Invalid MsgType</item>
+    <item value="2">Tag not defined for this message type</item>
+    <item value="3">Undefined Tag</item>
+    <item value="4">Tag specified without a value</item>
+    <item value="5">Value is incorrect (out of range) for this tag</item>
+    <item value="6">Incorrect data format for value</item>
+    <item value="7">Decryption problem</item>
+    <item value="8">Signature problem</item>
+    <item value="9">CompID problem</item>
+  </enum>
+  <enum eid="374">
+    <item value="C">Cancel</item>
+    <item value="N">New</item>
+  </enum>
+  <enum eid="377">
+    <item value="N">Was not solicited</item>
+    <item value="Y">Was solcitied</item>
+  </enum>
+  <enum eid="378">
+    <item value="0">GT Corporate action</item>
+    <item value="1">GT renewal / restatement (no corporate action)</item>
+    <item value="2">Verbal change</item>
+    <item value="3">Repricing of order</item>
+    <item value="4">Broker option</item>
+    <item value="5">Partial decline of OrderQty (e.g. exchange-initiated partial cancel)</item>
+  </enum>
+  <enum eid="380">
+    <item value="0">Other</item>
+    <item value="1">Unkown ID</item>
+    <item value="2">Unknown Security</item>
+    <item value="3">Unsupported Message Type</item>
+    <item value="4">Application not available</item>
+    <item value="5">Conditionally Required Field Missing</item>
+  </enum>
+  <enum eid="385">
+    <item value="R">Receive</item>
+    <item value="S">Send</item>
+  </enum>
+  <enum eid="388">
+    <item value="0">Related to displayed price</item>
+    <item value="1">Related to market price</item>
+    <item value="2">Related to primary price</item>
+    <item value="3">Related to local primary price</item>
+    <item value="4">Related to midpoint price</item>
+    <item value="5">Related to last trade price</item>
+  </enum>
+  <enum eid="409">
+    <item value="1">5 day moving average</item>
+    <item value="2">20 day moving average</item>
+    <item value="3">Normal Market Size</item>
+    <item value="4">Other</item>
+  </enum>
+  <enum eid="411">
+    <item value="N">False</item>
+    <item value="Y">True</item>
+  </enum>
+  <enum eid="414">
+    <item value="1">BuySide explicitly requests status using StatusRequest (Default) The sell-side firm can however, send a DONE status List Status Response in an unsolicited fashion</item>
+    <item value="2">SellSide periodically sends status using ListStatus. Period optionally specified in ProgressPeriod</item>
+    <item value="3">Real-time execution reports (to be discouraged)</item>
+  </enum>
+  <enum eid="416">
+    <item value="1">Net</item>
+    <item value="2">Gross</item>
+  </enum>
+  <enum eid="418">
+    <item value="A">Agency</item>
+    <item value="G">VWAP Guarantee</item>
+    <item value="J">Guaranteed Close</item>
+    <item value="R">Risk Trade</item>
+  </enum>
+  <enum eid="419">
+    <item value="2">Closing Price at morning session</item>
+    <item value="3">Closing Price</item>
+    <item value="4">Current price</item>
+    <item value="5">SQ</item>
+    <item value="6">VWAP through a day</item>
+    <item value="7">VWAP through a morning session</item>
+    <item value="8">VWAP through an afternoon session</item>
+    <item value="9">VWAP through a day except YORI</item>
+    <item value="A">VWAP through a morning session except YORI</item>
+    <item value="B">VWAP through an afternoon session except YORI</item>
+    <item value="C">Strike</item>
+    <item value="D">Open</item>
+    <item value="Z">Others</item>
+  </enum>
+  <enum eid="423">
+    <item value="1">Percentage</item>
+    <item value="2">per share (e.g. cents per share)</item>
+    <item value="3">Fixed Amount (absolute value)</item>
+  </enum>
+  <enum eid="427">
+    <item value="0">book out all trades on day of execution</item>
+    <item value="1">accumulate executions until order is filled or expires</item>
+    <item value="2">accumulate until verbally notified otherwise</item>
+  </enum>
+  <enum eid="430">
+    <item value="1">Net</item>
+    <item value="2">Gross</item>
+  </enum>
+  <enum eid="433">
+    <item value="1">Immediate</item>
+    <item value="2">Wait for Execute Instruction (e.g. a List Execute message or phone call before proceeding with execution of the list)</item>
+  </enum>
+  <enum eid="434">
+    <item value="1">Order Cancel Request</item>
+    <item value="2">Order Cancel/Replace Request</item>
+  </enum>
+  <enum eid="442">
+    <item value="1">Single Security (default if not specified)</item>
+    <item value="2">Individual leg of a multi-leg security</item>
+    <item value="3">Multi-leg security</item>
+  </enum>
+</spec>

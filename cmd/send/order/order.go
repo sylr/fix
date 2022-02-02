@@ -1,15 +1,18 @@
 package sendorder
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
 	nos50sp2 "github.com/quickfixgo/fix50sp2/newordersingle"
 	"github.com/quickfixgo/quickfix"
+	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
@@ -111,13 +114,17 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	session, err := context.GetSession()
+	if err != nil {
+		return err
+	}
+
 	acceptor, err := context.GetAcceptor()
 	if err != nil {
 		return err
 	}
 
 	settings, err := context.ToQuickFixSettings()
-
 	if err != nil {
 		return err
 	}
@@ -125,12 +132,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app := application.NewSendOrder()
 	app.Logger = &logger
 	app.Settings = settings
+	app.FixVersion = session.DefaultApplVerID
 
 	init, err := initiator.Initiate(app, settings)
 	if err != nil {
 		return err
 	}
 
+	// Start session
 	err = init.Start()
 	if err != nil {
 		return err
@@ -138,6 +147,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 	defer init.Stop()
 
+	// Choose right timeout cli option > config > default value (5s)
 	var timeout time.Duration
 	if options.Timeout != time.Duration(0) {
 		timeout = options.Timeout
@@ -147,6 +157,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		timeout = 5 * time.Second
 	}
 
+	// Wait for session connection
 	select {
 	case <-time.After(timeout):
 		return fmt.Errorf("connection timeout")
@@ -168,6 +179,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Prepare order
 	clordid := field.NewClOrdID(optionID)
 	ordside := field.NewSide(eside)
 	transactime := field.NewTransactTime(time.Now())
@@ -179,22 +191,16 @@ func Execute(cmd *cobra.Command, args []string) error {
 	order.Set(field.NewOrderQty(decimal.NewFromInt(optionQuantity), 2))
 	order.Set(field.NewPrice(decimal.NewFromFloat(optionPrice), 2))
 	order.Set(field.NewTimeInForce(eExpiry))
+	order.Header.Set(field.NewTargetCompID(session.TargetCompID))
+	order.Header.Set(field.NewSenderCompID(session.SenderCompID))
 
-	message := order.ToMessage()
-
-	session, err := context.GetSession()
+	// Send the order
+	err = quickfix.Send(order)
 	if err != nil {
 		return err
 	}
 
-	message.Header.Set(field.NewTargetCompID(session.TargetCompID))
-	message.Header.Set(field.NewSenderCompID(session.SenderCompID))
-
-	err = quickfix.Send(message)
-	if err != nil {
-		return err
-	}
-
+	// Wait for the order response
 	var responseMessage *quickfix.Message
 	select {
 	case <-time.After(timeout):
@@ -202,13 +208,27 @@ func Execute(cmd *cobra.Command, args []string) error {
 	case responseMessage = <-app.FromAppChan:
 	}
 
-	typ, err := responseMessage.MsgType()
+	// Extract fields from the response
+	ordStatus := field.OrdStatusField{}
+	text := field.TextField{}
+	responseMessage.Body.GetField(tag.OrdStatus, &ordStatus)
+	responseMessage.Body.GetField(tag.Text, &text)
 
-	if err != nil {
+	switch ordStatus.Value() {
+	case enum.OrdStatus_NEW:
+		fmt.Println("Order accepted")
+	case enum.OrdStatus_REJECTED:
+		err = errors.New("Order rejected")
+		if len(text.String()) > 0 {
+			err = fmt.Errorf("%w: %s", err, text.String())
+		}
+	default:
+		err = errors.New("Order status unknown")
+		if len(text.String()) > 0 {
+			err = fmt.Errorf("%w: %s", err, text.String())
+		}
 		return err
 	}
 
-	logger.Info().Msgf("Response(type=%s): %s\n", dict.MessageTypes[typ], message.String())
-
-	return nil
+	return err
 }

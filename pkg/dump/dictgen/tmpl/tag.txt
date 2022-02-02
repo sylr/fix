@@ -1,0 +1,29 @@
+package dict
+
+type {{.FixName}} struct {
+}
+
+func (f {{.FixName}}) Version() string {
+	return "{{.FixVer}}"
+}
+
+func (f {{.FixName}}) TagName(tag int) (string, bool) {
+	switch tag {
+{{- range .Fields}}
+	case {{.AID}}:
+		return "{{.Name}}", true
+{{- end}}
+	default:
+		return "", false
+	}
+}
+
+func (f {{.FixName}}) ValueName(tag int, value string) (string, bool) {
+	switch tag {
+{{- range .Enums}}
+	case {{.EID}}:
+{{template "item.txt" .}}
+{{- end}}
+	}
+	return "", false
+}

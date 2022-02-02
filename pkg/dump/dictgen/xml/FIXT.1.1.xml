@@ -1,0 +1,455 @@
+<?xml version="1.0"?>
+<spec xmlns="http://www.ga-group.nl/libfixc_0_1" version="FIXT.1.1" extver="FIXT.1.1">
+  <message fix="0" fixml="Heartbeat" name="Heartbeat" cat="Session" sec="Session" not_req_xml="1">
+    <description>The Heartbeat monitors the status of the communication link and identifies when the last of a string of messages was not received.</description>
+    <component name="StandardHeader"/>
+    <field aid="112"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="1" fixml="TestRequest" name="TestRequest" cat="Session" sec="Session" not_req_xml="1">
+    <description>The test request message forces a heartbeat from the opposing application. The test request message checks sequence numbers or verifies communication line status. The opposite application responds to the Test Request with a Heartbeat containing the TestReqID.</description>
+    <component name="StandardHeader"/>
+    <field aid="112"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="2" fixml="ResendRequest" name="ResendRequest" cat="Session" sec="Session" not_req_xml="1">
+    <description>The resend request is sent by the receiving application to initiate the retransmission of messages. This function is utilized if a sequence number gap is detected, if the receiving application lost a message, or as a function of the initialization process.</description>
+    <component name="StandardHeader"/>
+    <field aid="7"/>
+    <field aid="16"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="3" fixml="Reject" name="Reject" cat="Session" sec="Session" not_req_xml="1">
+    <description>The reject message should be issued when a message is received but cannot be properly processed due to a session-level rule violation. An example of when a reject may be appropriate would be the receipt of a message with invalid basic data which successfully passes de-encryption, CheckSum and BodyLength checks.</description>
+    <component name="StandardHeader"/>
+    <field aid="45"/>
+    <field aid="371"/>
+    <field aid="372"/>
+    <field aid="1130"/>
+    <field aid="1406"/>
+    <field aid="1131"/>
+    <field aid="373"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="4" fixml="SequenceReset" name="SequenceReset" cat="Session" sec="Session" not_req_xml="1">
+    <description>The sequence reset message is used by the sending application to reset the incoming sequence number on the opposing side.</description>
+    <component name="StandardHeader"/>
+    <field aid="123"/>
+    <field aid="36"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="5" fixml="Logout" name="Logout" cat="Session" sec="Session" not_req_xml="1">
+    <description>The logout message initiates or confirms the termination of a FIX session. Disconnection without the exchange of logout messages should be interpreted as an abnormal condition.</description>
+    <component name="StandardHeader"/>
+    <field aid="1409"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="A" fixml="Logon" name="Logon" cat="Session" sec="Session" not_req_xml="1">
+    <description>The logon message authenticates a user establishing a connection to a remote system. The logon message must be the first message sent by the application requesting to initiate a FIX session.</description>
+    <component name="StandardHeader"/>
+    <field aid="98"/>
+    <field aid="108"/>
+    <field aid="95"/>
+    <field aid="96"/>
+    <field aid="141"/>
+    <field aid="789"/>
+    <field aid="383"/>
+    <component name="MsgTypeGrp"/>
+    <field aid="464"/>
+    <field aid="553"/>
+    <field aid="554"/>
+    <field aid="925"/>
+    <field aid="1400"/>
+    <field aid="1401"/>
+    <field aid="1402"/>
+    <field aid="1403"/>
+    <field aid="1404"/>
+    <field aid="1409"/>
+    <field aid="1137"/>
+    <field aid="1407"/>
+    <field aid="1408"/>
+    <field aid="58"/>
+    <field aid="354"/>
+    <field aid="355"/>
+    <component name="StandardTrailer"/>
+  </message>
+  <message fix="n" fixml="XMLnonFIX" name="XMLnonFIX" cat="Session" sec="Session" not_req_xml="1">
+    <description/>
+  </message>
+  <component fixml="Hdr" name="StandardHeader" cat="Session" type="Block" not_req_xml="1">
+    <description>The standard FIX message header</description>
+    <field aid="8"/>
+    <field aid="9"/>
+    <field aid="35"/>
+    <field aid="1128"/>
+    <field aid="1156"/>
+    <field aid="1129"/>
+    <field aid="49"/>
+    <field aid="56"/>
+    <field aid="115"/>
+    <field aid="128"/>
+    <field aid="90"/>
+    <field aid="91"/>
+    <field aid="34"/>
+    <field aid="50"/>
+    <field aid="142"/>
+    <field aid="57"/>
+    <field aid="143"/>
+    <field aid="116"/>
+    <field aid="144"/>
+    <field aid="129"/>
+    <field aid="145"/>
+    <field aid="43"/>
+    <field aid="97"/>
+    <field aid="52"/>
+    <field aid="122"/>
+    <field aid="212"/>
+    <field aid="213"/>
+    <field aid="347"/>
+    <field aid="369"/>
+    <component name="HopGrp"/>
+  </component>
+  <component fixml="Trlr" name="StandardTrailer" cat="Session" type="Block" not_req_xml="1">
+    <description>The standard FIX message trailer</description>
+    <field aid="93"/>
+    <field aid="89"/>
+    <field aid="10"/>
+  </component>
+  <component fixml="HopGrp" name="HopGrp" cat="Session" type="ImplicitBlock" not_req_xml="0">
+    <description/>
+    <field aid="627"/>
+    <field aid="628"/>
+    <field aid="629"/>
+    <field aid="630"/>
+  </component>
+  <component fixml="MsgTypeGrp" name="MsgTypeGrp" cat="Common" type="ImplicitBlockRepeating" not_req_xml="0">
+    <description/>
+  </component>
+  <field aid="7" fixml="BeginSeqNo" name="BeginSeqNo" type="SeqNum" not_req_xml="1">
+    <description>Message sequence number of first message in range to be resent</description>
+  </field>
+  <field aid="8" fixml="BeginString" name="BeginString" type="String" not_req_xml="1">
+    <description>Identifies beginning of new message and protocol version. ALWAYS FIRST FIELD IN MESSAGE. (Always unencrypted)
+Valid values:
+FIXT.1.1</description>
+  </field>
+  <field aid="9" fixml="BodyLength" name="BodyLength" type="Length" not_req_xml="1">
+    <description>Message length, in bytes, forward to the CheckSum field. ALWAYS SECOND FIELD IN MESSAGE. (Always unencrypted)</description>
+  </field>
+  <field aid="10" fixml="CheckSum" name="CheckSum" type="String" not_req_xml="1">
+    <description>Three byte, simple checksum (see Volume 2: "Checksum Calculation" for description). ALWAYS LAST FIELD IN MESSAGE; i.e. serves, with the trailing &lt;SOH&gt;, as the end-of-message delimiter. Always defined as three characters. (Always unencrypted)</description>
+  </field>
+  <field aid="16" fixml="EndSeqNo" name="EndSeqNo" type="SeqNum" not_req_xml="1">
+    <description>Message sequence number of last message in range to be resent. If request is for a single message BeginSeqNo (7) = EndSeqNo. If request is for all messages subsequent to a particular message, EndSeqNo = "0" (representing infinity).</description>
+  </field>
+  <field aid="34" fixml="SeqNum" name="MsgSeqNum" type="SeqNum" not_req_xml="0">
+    <description>Integer message sequence number.</description>
+  </field>
+  <field aid="35" fixml="MsgTyp" name="MsgType" type="String" not_req_xml="0">
+    <description>Defines message type ALWAYS THIRD FIELD IN MESSAGE. (Always unencrypted)
+Note: A "U" as the first character in the MsgType field (i.e. U, U2, etc) indicates that the message format is privately defined between the sender and receiver.
+*** Note the use of lower case letters ***</description>
+  </field>
+  <field aid="36" fixml="NewSeqNo" name="NewSeqNo" type="SeqNum" not_req_xml="1">
+    <description>New sequence number</description>
+  </field>
+  <field aid="43" fixml="PosDup" name="PossDupFlag" type="Boolean" not_req_xml="0">
+    <description>Indicates possible retransmission of message with this sequence number</description>
+  </field>
+  <field aid="45" fixml="RefSeqNum" name="RefSeqNum" type="SeqNum" not_req_xml="0">
+    <description>Reference message sequence number</description>
+  </field>
+  <field aid="49" fixml="SID" name="SenderCompID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify firm sending message.</description>
+  </field>
+  <field aid="50" fixml="SSub" name="SenderSubID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific message originator (desk, trader, etc.)</description>
+  </field>
+  <field aid="52" fixml="Snt" name="SendingTime" type="UTCTimestamp" not_req_xml="0">
+    <description>Time of message transmission (always expressed in UTC (Universal Time Coordinated, also known as "GMT")</description>
+  </field>
+  <field aid="56" fixml="TID" name="TargetCompID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify receiving firm.</description>
+  </field>
+  <field aid="57" fixml="TSub" name="TargetSubID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific individual or unit intended to receive message. "ADMIN" reserved for administrative messages not intended for a specific user.</description>
+  </field>
+  <field aid="58" fixml="Txt" name="Text" type="String" not_req_xml="0">
+    <description>Free format text string
+(Note: this field does not have a specified maximum length)</description>
+  </field>
+  <field aid="89" fixml="Signature" name="Signature" type="data" not_req_xml="1">
+    <description>Electronic signature</description>
+  </field>
+  <field aid="90" fixml="SecureDataLen" name="SecureDataLen" type="Length" not_req_xml="1">
+    <description>Length of encrypted message</description>
+  </field>
+  <field aid="91" fixml="SecureData" name="SecureData" type="data" not_req_xml="1">
+    <description>Actual encrypted data stream</description>
+  </field>
+  <field aid="93" fixml="SignatureLength" name="SignatureLength" type="Length" not_req_xml="1">
+    <description>Number of bytes in signature field</description>
+  </field>
+  <field aid="95" fixml="RawDataLength" name="RawDataLength" type="Length" not_req_xml="0">
+    <description>Number of bytes in raw data field.</description>
+  </field>
+  <field aid="96" fixml="RawData" name="RawData" type="data" not_req_xml="0">
+    <description>Unformatted raw data, can include bitmaps, word processor documents, etc.</description>
+  </field>
+  <field aid="97" fixml="PosRsnd" name="PossResend" type="Boolean" not_req_xml="0">
+    <description>Indicates that message may contain information that has been sent under another sequence number.</description>
+  </field>
+  <field aid="98" fixml="EncryptMethod" name="EncryptMethod" type="int" not_req_xml="1">
+    <description>Method of encryption.</description>
+  </field>
+  <field aid="108" fixml="HeartBtInt" name="HeartBtInt" type="int" not_req_xml="1">
+    <description>Heartbeat interval (seconds)</description>
+  </field>
+  <field aid="112" fixml="TestReqID" name="TestReqID" type="String" not_req_xml="1">
+    <description>Identifier included in Test Request message to be returned in resulting Heartbeat</description>
+  </field>
+  <field aid="115" fixml="OBID" name="OnBehalfOfCompID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify firm originating message if the message was delivered by a third party i.e. the third party firm identifier would be delivered in the SenderCompID field and the firm originating the message in this field.</description>
+  </field>
+  <field aid="116" fixml="OBSub" name="OnBehalfOfSubID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific message originator (i.e. trader) if the message was delivered by a third party</description>
+  </field>
+  <field aid="122" fixml="OrigSnt" name="OrigSendingTime" type="UTCTimestamp" not_req_xml="0">
+    <description>Original time of message transmission (always expressed in UTC (Universal Time Coordinated, also known as "GMT") when transmitting orders as the result of a resend request.</description>
+  </field>
+  <field aid="123" fixml="GapFillFlag" name="GapFillFlag" type="Boolean" not_req_xml="1">
+    <description>Indicates that the Sequence Reset message is replacing administrative or application messages which will not be resent.</description>
+  </field>
+  <field aid="128" fixml="D2ID" name="DeliverToCompID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify the firm targeted to receive the message if the message is delivered by a third party i.e. the third party firm identifier would be delivered in the TargetCompID (56) field and the ultimate receiver firm ID in this field.</description>
+  </field>
+  <field aid="129" fixml="D2Sub" name="DeliverToSubID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific message recipient (i.e. trader) if the message is delivered by a third party</description>
+  </field>
+  <field aid="141" fixml="ResetSeqNumFlag" name="ResetSeqNumFlag" type="Boolean" not_req_xml="1">
+    <description>Indicates that the both sides of the FIX session should reset sequence numbers.</description>
+  </field>
+  <field aid="142" fixml="SLoc" name="SenderLocationID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific message originator’s location (i.e. geographic location and/or desk, trader)</description>
+  </field>
+  <field aid="143" fixml="TLoc" name="TargetLocationID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific message destination’s location (i.e. geographic location and/or desk, trader)</description>
+  </field>
+  <field aid="144" fixml="OBLoc" name="OnBehalfOfLocationID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific message originator’s location (i.e. geographic location and/or desk, trader) if the message was delivered by a third party</description>
+  </field>
+  <field aid="145" fixml="D2Loc" name="DeliverToLocationID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify specific message recipient’s location (i.e. geographic location and/or desk, trader) if the message was delivered by a third party</description>
+  </field>
+  <field aid="212" fixml="XmlDataLen" name="XmlDataLen" type="Length" not_req_xml="1">
+    <description>Length of the XmlData data block.</description>
+  </field>
+  <field aid="213" fixml="XmlData" name="XmlData" type="data" not_req_xml="1">
+    <description>Actual XML data stream (e.g. FIXML). See approriate XML reference (e.g. FIXML). Note: may contain embedded SOH characters.</description>
+  </field>
+  <field aid="347" fixml="MsgEncd" name="MessageEncoding" type="String" not_req_xml="0">
+    <description>Type of message encoding (non-ASCII (non-English) characters) used in a message’s "Encoded" fields.</description>
+  </field>
+  <field aid="354" fixml="EncTxtLen" name="EncodedTextLen" type="Length" not_req_xml="0">
+    <description>Byte length of encoded (non-ASCII characters) EncodedText (355) field.</description>
+  </field>
+  <field aid="355" fixml="EncTxt" name="EncodedText" type="data" not_req_xml="0">
+    <description>Encoded (non-ASCII characters) representation of the Text (58) field in the encoded format specified via the MessageEncoding (347) field. If used, the ASCII (English) representation should also be specified in the Text field.</description>
+  </field>
+  <field aid="369" fixml="LastMsgSeqNumProced" name="LastMsgSeqNumProcessed" type="SeqNum" not_req_xml="1">
+    <description>The last MsgSeqNum (34) value received by the FIX engine and processed by downstream application, such as trading engine or order routing system. Can be specified on every message sent. Useful for detecting a backlog with a counterparty.</description>
+  </field>
+  <field aid="371" fixml="RefTagID" name="RefTagID" type="int" not_req_xml="0">
+    <description>The tag number of the FIX field being referenced.</description>
+  </field>
+  <field aid="372" fixml="RefMsgTyp" name="RefMsgType" type="String" not_req_xml="0" eid="35">
+    <description>The MsgType (35) of the FIX message being referenced.</description>
+  </field>
+  <field aid="373" fixml="SessRejRsn" name="SessionRejectReason" type="int" not_req_xml="1">
+    <description>Code to identify reason for a session-level Reject message.</description>
+  </field>
+  <field aid="383" fixml="MaxMsgSz" name="MaxMessageSize" type="Length" not_req_xml="1">
+    <description>Maximum number of bytes supported for a single message.</description>
+  </field>
+  <field aid="464" fixml="TestMsgInd" name="TestMessageIndicator" type="Boolean" not_req_xml="1">
+    <description>Indicates whether or not this FIX Session is a "test" vs. "production" connection. Useful for preventing "accidents".</description>
+  </field>
+  <field aid="553" fixml="Username" name="Username" type="String" not_req_xml="0">
+    <description>Userid or username.</description>
+  </field>
+  <field aid="554" fixml="Password" name="Password" type="String" not_req_xml="0">
+    <description>Password or passphrase.</description>
+  </field>
+  <field aid="627" fixml="NoHops" name="NoHops" type="NumInGroup" not_req_xml="1">
+    <description>Number of HopCompID entries in repeating group.</description>
+  </field>
+  <field aid="628" fixml="ID" name="HopCompID" type="String" not_req_xml="0">
+    <description>Assigned value used to identify the third party firm which delivered a specific message either from the firm which originated the message or from another third party (if multiple "hops" are performed). It is recommended that this value be the SenderCompID (49) of the third party.
+Applicable when messages are communicated/re-distributed via third parties which function as service bureaus or "hubs". Only applicable if OnBehalfOfCompID (115) is being used.</description>
+  </field>
+  <field aid="629" fixml="Snt" name="HopSendingTime" type="UTCTimestamp" not_req_xml="0">
+    <description>Time that HopCompID (628) sent the message. It is recommended that this value be the SendingTime (52) of the message sent by the third party.
+Applicable when messages are communicated/re-distributed via third parties which function as service bureaus or "hubs". Only applicable if OnBehalfOfCompID (115) is being used.</description>
+  </field>
+  <field aid="630" fixml="Ref" name="HopRefID" type="SeqNum" not_req_xml="0">
+    <description>Reference identifier assigned by HopCompID (628) associated with the message sent. It is recommended that this value be the MsgSeqNum (34) of the message sent by the third party.
+Applicable when messages are communicated/re-distributed via third parties which function as service bureaus or "hubs". Only applicable if OnBehalfOfCompID (115) is being used.</description>
+  </field>
+  <field aid="789" fixml="NextExpectedMsgSeqNum" name="NextExpectedMsgSeqNum" type="SeqNum" not_req_xml="1">
+    <description>Next expected MsgSeqNum value to be received.</description>
+  </field>
+  <field aid="925" fixml="NewPassword" name="NewPassword" type="String" not_req_xml="0">
+    <description>New Password or passphrase</description>
+  </field>
+  <field aid="1128" fixml="ApplVerID" name="ApplVerID" type="String" not_req_xml="0">
+    <description>Specifies the service pack release being applied at message level. Enumerated field with values assigned at time of service pack release</description>
+  </field>
+  <field aid="1129" fixml="CstmApplVerID" name="CstmApplVerID" type="String" not_req_xml="0">
+    <description>Specifies a custom extension to a message being applied at the message level. Enumerated field</description>
+  </field>
+  <field aid="1130" fixml="RefApplVerID" name="RefApplVerID" type="String" not_req_xml="0" eid="1128">
+    <description>Specifies the service pack release being applied to a message at the session level. Enumerated field with values assigned at time of service pack release. Uses same values as ApplVerID</description>
+  </field>
+  <field aid="1131" fixml="RefCstmApplVerID" name="RefCstmApplVerID" type="String" not_req_xml="0">
+    <description>Specifies a custom extension to a message being applied at the session level.</description>
+  </field>
+  <field aid="1137" fixml="DefApplVerID" name="DefaultApplVerID" type="String" not_req_xml="0" eid="1128">
+    <description>Specifies the service pack release being applied, by default, to message at the session level. Enumerated field with values assigned at time of service pack release. Uses same values as ApplVerID</description>
+  </field>
+  <field aid="1156" fixml="ApplExtID" name="ApplExtID" type="int" not_req_xml="0">
+    <description>The extension pack number associated with an application message.</description>
+  </field>
+  <field aid="1400" fixml="EncPwdMethod" name="EncryptedPasswordMethod" type="int" not_req_xml="0">
+    <description>Enumeration defining the encryption method used to encrypt password fields.
+At this time there are no encryption methods defined by FPL.</description>
+  </field>
+  <field aid="1401" fixml="EncPwdLen" name="EncryptedPasswordLen" type="Length" not_req_xml="1">
+    <description>Length of the EncryptedPassword(1402) field</description>
+  </field>
+  <field aid="1402" fixml="EncPwd" name="EncryptedPassword" type="data" not_req_xml="0">
+    <description>Encrypted password - encrypted via the method specified in the field EncryptedPasswordMethod(1400)</description>
+  </field>
+  <field aid="1403" fixml="EncNewPwdLen" name="EncryptedNewPasswordLen" type="Length" not_req_xml="1">
+    <description>Length of the EncryptedNewPassword(1404) field</description>
+  </field>
+  <field aid="1404" fixml="EncNewPwd" name="EncryptedNewPassword" type="data" not_req_xml="0">
+    <description>Encrypted new password - encrypted via the method specified in the field EncryptedPasswordMethod(1400)</description>
+  </field>
+  <field aid="1406" fixml="RefApplExtID" name="RefApplExtID" type="int" not_req_xml="0">
+    <description>The extension pack number associated with an application message.</description>
+  </field>
+  <field aid="1407" fixml="DfltApplExtID" name="DefaultApplExtID" type="int" not_req_xml="0">
+    <description>The extension pack number that is the default for a FIX session.</description>
+  </field>
+  <field aid="1408" fixml="DefaultCstmApplVerID" name="DefaultCstmApplVerID" type="String" not_req_xml="0">
+    <description>The default custom application version ID that is the default for a session.</description>
+  </field>
+  <field aid="1409" fixml="SessStat" name="SessionStatus" type="int" not_req_xml="0">
+    <description>Status of a FIX session</description>
+  </field>
+  <cat name="Session" fixml="session" not_req_xml="1"/>
+  <cat name="Indication" fixml="indications" not_req_xml="0"/>
+  <cat name="SingleGeneralOrderHandling" fixml="order" not_req_xml="0"/>
+  <cat name="EventCommunication" fixml="newsevents" not_req_xml="0"/>
+  <cat name="ProgramTrading" fixml="listorders" not_req_xml="0"/>
+  <cat name="OrderMassHandling" fixml="ordermasshandling" not_req_xml="0"/>
+  <cat name="Allocation" fixml="allocation" not_req_xml="0"/>
+  <cat name="QuotationNegotiation" fixml="quotation" not_req_xml="0"/>
+  <cat name="SettlementInstruction" fixml="settlement" not_req_xml="0"/>
+  <cat name="MarketData" fixml="marketdata" not_req_xml="0"/>
+  <cat name="MarketStructure" fixml="marketstructure" not_req_xml="0"/>
+  <cat name="ReferenceData" fixml="referencedata" not_req_xml="0"/>
+  <cat name="Common" fixml="components" not_req_xml="0"/>
+  <cat name="RegistrationInstruction" fixml="registration" not_req_xml="0"/>
+  <cat name="CrossOrders" fixml="crossorders" not_req_xml="0"/>
+  <cat name="MultilegOrders" fixml="multilegorders" not_req_xml="0"/>
+  <cat name="TradeCapture" fixml="tradecapture" not_req_xml="0"/>
+  <cat name="Confirmation" fixml="confirmation" not_req_xml="0"/>
+  <cat name="PositionMaintenance" fixml="positions" not_req_xml="0"/>
+  <cat name="CollateralManagement" fixml="collateral" not_req_xml="0"/>
+  <cat name="Application" fixml="application" not_req_xml="0"/>
+  <cat name="BusinessReject" fixml="businessreject" not_req_xml="0"/>
+  <cat name="Network" fixml="network" not_req_xml="0"/>
+  <cat name="UserManagement" fixml="usermanagement" not_req_xml="0"/>
+  <cat name="Fields" fixml="fields" not_req_xml="0"/>
+  <cat name="ImplFields" fixml="fields" not_req_xml="0"/>
+  <enum eid="43">
+    <item value="N">Original transmission</item>
+    <item value="Y">Possible duplicate</item>
+  </enum>
+  <enum eid="97">
+    <item value="N">Original Transmission</item>
+    <item value="Y">Possible Resend</item>
+  </enum>
+  <enum eid="98">
+    <item value="0">None / Other</item>
+    <item value="1">PKCS (Proprietary)</item>
+    <item value="2">DES (ECB Mode)</item>
+    <item value="3">PKCS / DES (Proprietary)</item>
+    <item value="4">PGP / DES (Defunct)</item>
+    <item value="5">PGP / DES-MD5 (See app note on FIX web site)</item>
+    <item value="6">PEM / DES-MD5 (see app note on FIX web site)</item>
+  </enum>
+  <enum eid="123">
+    <item value="N">Sequence Reset, Ignore Msg Seq Num (N/A For FIXML - Not Used)</item>
+    <item value="Y">Gap Fill Message, Msg Seq Num Field Valid</item>
+  </enum>
+  <enum eid="141">
+    <item value="N">No</item>
+    <item value="Y">Yes, reset sequence numbers</item>
+  </enum>
+  <enum eid="373">
+    <item value="0">Invalid Tag Number</item>
+    <item value="1">Required Tag Missing</item>
+    <item value="2">Tag not defined for this message type</item>
+    <item value="3">Undefined tag</item>
+    <item value="4">Tag specified without a value</item>
+    <item value="5">Value is incorrect (out of range) for this tag</item>
+    <item value="6">Incorrect data format for value</item>
+    <item value="7">Decryption problem</item>
+    <item value="8">Signature problem</item>
+    <item value="9">CompID problem</item>
+    <item value="10">SendingTime Accuracy Problem</item>
+    <item value="11">Invalid MsgType</item>
+    <item value="12">XML Validation Error</item>
+    <item value="13">Tag appears more than once</item>
+    <item value="14">Tag specified out of required order</item>
+    <item value="15">Repeating group fields out of order</item>
+    <item value="16">Incorrect NumInGroup count for repeating group</item>
+    <item value="17">Non "Data" value includes field delimiter (&lt;SOH&gt; character)</item>
+    <item value="18">Invalid/Unsupported Application Version</item>
+    <item value="99">Other</item>
+  </enum>
+  <enum eid="464">
+    <item value="N">Fales (Production)</item>
+    <item value="Y">True (Test)</item>
+  </enum>
+  <enum eid="1128">
+    <item value="0">FIX27</item>
+    <item value="1">FIX30</item>
+    <item value="2">FIX40</item>
+    <item value="3">FIX41</item>
+    <item value="4">FIX42</item>
+    <item value="5">FIX43</item>
+    <item value="6">FIX44</item>
+    <item value="7">FIX50</item>
+    <item value="8">FIX50SP1</item>
+  </enum>
+  <enum eid="1409">
+    <item value="0">Session active</item>
+    <item value="1">Session password changed</item>
+    <item value="2">Session password due to expire</item>
+    <item value="3">New session password does not comply with policy</item>
+    <item value="4">Session logout complete</item>
+    <item value="5">Invalid username or password</item>
+    <item value="6">Account locked</item>
+    <item value="7">Logons are not allowed at this time</item>
+    <item value="8">Password expired</item>
+  </enum>
+</spec>
