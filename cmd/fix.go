@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"sylr.dev/fix/cmd/list"
 	"sylr.dev/fix/cmd/new"
 	"sylr.dev/fix/config"
 )
@@ -22,6 +23,7 @@ func init() {
 	options := config.GetOptions()
 
 	FixCmd.AddCommand(new.NewCmd)
+	FixCmd.AddCommand(list.ListCmd)
 
 	FixCmd.PersistentFlags().StringVar(&options.Config, "config", os.ExpandEnv("$HOME/.fix"), "Config file")
 	FixCmd.PersistentFlags().CountVarP(&options.Verbose, "verbose", "v", "Increase verbosity")
