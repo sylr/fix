@@ -100,13 +100,15 @@ type Acceptor struct {
 }
 
 type Session struct {
-	Name             string `yaml:"name"`
-	BeginString      string `yaml:"BeginString"`
-	DefaultApplVerID string `yaml:"DefaultApplVerID"`
-	HeartBtInt       int    `yaml:"HeartBtInt"`
-	SenderCompID     string `yaml:"SenderCompID"`
-	TargetCompID     string `yaml:"TargetCompID"`
-	Username         string `yaml:"Username"`
+	Name                    string `yaml:"name"`
+	BeginString             string `yaml:"BeginString"`
+	DefaultApplVerID        string `yaml:"DefaultApplVerID"`
+	HeartBtInt              int    `yaml:"HeartBtInt"`
+	SenderCompID            string `yaml:"SenderCompID"`
+	TargetCompID            string `yaml:"TargetCompID"`
+	Username                string `yaml:"Username"`
+	TransportDataDictionary string `yaml:"TransportDataDictionary"`
+	AppDataDictionary       string `yaml:"AppDataDictionary"`
 }
 
 func (c Context) GetAcceptor() (*Acceptor, error) {
@@ -153,6 +155,13 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 	qfSession.Set("TargetCompID", session.TargetCompID)
 	qfSession.Set("SenderCompID", session.SenderCompID)
 	qfSession.Set("BeginString", session.BeginString)
+
+	if len(session.TransportDataDictionary) > 0 {
+		qfSession.Set("TransportDataDictionary", session.TransportDataDictionary)
+	}
+	if len(session.TransportDataDictionary) > 0 {
+		qfSession.Set("AppDataDictionary", session.AppDataDictionary)
+	}
 
 	//if options.Timeout != time.Duration(0) {
 	//	qfSession.Set("LogonTimeout", FixIntString(int(options.Timeout.Seconds())))
