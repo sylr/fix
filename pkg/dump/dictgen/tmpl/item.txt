@@ -1,6 +1,0 @@
-		switch value {
-{{- range .Items}}
-		case "{{.Value}}":
-			return `{{.Text}}`, true
-{{- end}}
-		}

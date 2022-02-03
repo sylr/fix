@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	sendorder "sylr.dev/fix/cmd/send/order"
+	neworder "sylr.dev/fix/cmd/new/order"
 	"sylr.dev/fix/config"
 )
 
@@ -27,9 +27,9 @@ func init() {
 	SendCmd.PersistentFlags().DurationVar(&options.Timeout, "timeout", 0, "Duration for timeouts")
 
 	AddPersistentFlagCompletion(SendCmd)
-	AddPersistentFlagCompletion(sendorder.SendOrderCmd)
+	AddPersistentFlagCompletion(neworder.NewOrderCmd)
 
-	SendCmd.AddCommand(sendorder.SendOrderCmd)
+	SendCmd.AddCommand(neworder.NewOrderCmd)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {

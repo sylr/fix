@@ -1,4 +1,4 @@
-package sendorder
+package neworder
 
 import (
 	"sort"

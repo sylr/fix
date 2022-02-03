@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/cmd/send"
+	send "sylr.dev/fix/cmd/new"
 	"sylr.dev/fix/config"
 )
 

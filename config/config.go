@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/quickfixgo/quickfix"
+	"github.com/quickfixgo/quickfix/datadictionary"
 )
 
 var (
+	fixDict             = make(map[string]*datadictionary.DataDictionary)
 	options             = cliOptions{}
 	config              = fixConfig{}
 	ErrBadConfig        = errors.New("configuration error")
@@ -182,6 +184,31 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 	}
 
 	return settings, nil
+}
+
+func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadictionary.DataDictionary, error) {
+	var err error
+	var ok bool
+
+	if len(s.TransportDataDictionary) > 0 {
+		if _, ok = fixDict[s.TransportDataDictionary]; !ok {
+			fixDict[s.TransportDataDictionary], err = datadictionary.Parse(s.TransportDataDictionary)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+
+	if len(s.AppDataDictionary) > 0 {
+		if _, ok = fixDict[s.AppDataDictionary]; !ok {
+			fixDict[s.AppDataDictionary], err = datadictionary.Parse(s.AppDataDictionary)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+
+	return fixDict[s.TransportDataDictionary], fixDict[s.AppDataDictionary], nil
 }
 
 func FixBoolString(b bool) string {
