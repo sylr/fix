@@ -163,16 +163,16 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 		qfSession.Set("AppDataDictionary", session.AppDataDictionary)
 	}
 
-	//if options.Timeout != time.Duration(0) {
-	//	qfSession.Set("LogonTimeout", FixIntString(int(options.Timeout.Seconds())))
-	//	qfSession.Set("LogonTimeout", FixIntString(int(options.Timeout.Seconds())))
-	//} else if acceptor.SocketTimeout != time.Duration(0) {
-	//	qfSession.Set("LogonTimeout", FixIntString(int(acceptor.SocketTimeout.Seconds())))
-	//	qfSession.Set("LogoutTimeout", FixIntString(int(acceptor.SocketTimeout.Seconds())))
-	//} else {
-	//	qfSession.Set("LogonTimeout", "5")
-	//	qfSession.Set("LogoutTimeout", "5")
-	//}
+	if options.Timeout != time.Duration(0) {
+		qfSession.Set("LogonTimeout", FixIntString(int(options.Timeout.Seconds())))
+		qfSession.Set("LogonTimeout", FixIntString(int(options.Timeout.Seconds())))
+	} else if acceptor.SocketTimeout != time.Duration(0) {
+		qfSession.Set("LogonTimeout", FixIntString(int(acceptor.SocketTimeout.Seconds())))
+		qfSession.Set("LogoutTimeout", FixIntString(int(acceptor.SocketTimeout.Seconds())))
+	} else {
+		qfSession.Set("LogonTimeout", "5")
+		qfSession.Set("LogoutTimeout", "5")
+	}
 
 	settings := quickfix.NewSettings()
 	_, err = settings.AddSession(qfSession)
