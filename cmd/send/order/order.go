@@ -184,11 +184,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 	ordside := field.NewSide(eside)
 	transactime := field.NewTransactTime(time.Now())
 	ordtype := field.NewOrdType(etype)
+	quantity := field.NewOrderQty(decimal.NewFromInt(optionQuantity), 2)
 
 	order := nos50sp2.New(clordid, ordside, transactime, ordtype)
 	order.SetHandlInst("1")
 	order.Set(field.NewSymbol(optionSymbol))
-	order.Set(field.NewOrderQty(decimal.NewFromInt(optionQuantity), 2))
+	order.Set(quantity)
 	order.Set(field.NewPrice(decimal.NewFromFloat(optionPrice), 2))
 	order.Set(field.NewTimeInForce(eExpiry))
 	order.Header.Set(field.NewTargetCompID(session.TargetCompID))
@@ -213,10 +214,13 @@ func Execute(cmd *cobra.Command, args []string) error {
 	text := field.TextField{}
 	responseMessage.Body.GetField(tag.OrdStatus, &ordStatus)
 	responseMessage.Body.GetField(tag.Text, &text)
+	responseMessage.Body.GetField(tag.ClOrdID, &clordid)
+	responseMessage.Body.GetField(tag.OrderQty, &quantity)
 
 	switch ordStatus.Value() {
 	case enum.OrdStatus_NEW:
-		fmt.Println("Order accepted")
+		fmt.Printf("Order accepted: ClOrdID=%s OrderQty=%s\n", clordid.String(), quantity.Decimal.String())
+		utils.MessageTable(os.Stdout, responseMessage, session.DefaultApplVerID)
 	case enum.OrdStatus_REJECTED:
 		err = errors.New("Order rejected")
 		if len(text.String()) > 0 {
