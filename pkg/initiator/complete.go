@@ -1,4 +1,4 @@
-package send
+package initiator
 
 import (
 	"github.com/spf13/cobra"

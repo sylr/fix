@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
+	nos50sp1 "github.com/quickfixgo/fix50sp1/newordersingle"
 	nos50sp2 "github.com/quickfixgo/fix50sp2/newordersingle"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
@@ -170,36 +171,11 @@ func Execute(cmd *cobra.Command, args []string) error {
 	case <-app.Connected:
 	}
 
-	eside, err := dict.OrderSideStringToEnum(optionSide)
-	if err != nil {
-		return err
-	}
-
-	etype, err := dict.OrderTypeStringToEnum(optionType)
-	if err != nil {
-		return err
-	}
-
-	eExpiry, err := dict.OrderTimeInForceStringToEnum(optionExpiry)
-	if err != nil {
-		return err
-	}
-
 	// Prepare order
-	clordid := field.NewClOrdID(optionID)
-	ordside := field.NewSide(eside)
-	transactime := field.NewTransactTime(time.Now())
-	ordtype := field.NewOrdType(etype)
-	quantity := field.NewOrderQty(decimal.NewFromInt(optionQuantity), 2)
-
-	order := nos50sp2.New(clordid, ordside, transactime, ordtype)
-	order.SetHandlInst("1")
-	order.Set(field.NewSymbol(optionSymbol))
-	order.Set(quantity)
-	order.Set(field.NewPrice(decimal.NewFromFloat(optionPrice), 2))
-	order.Set(field.NewTimeInForce(eExpiry))
-	order.Header.Set(field.NewTargetCompID(session.TargetCompID))
-	order.Header.Set(field.NewSenderCompID(session.SenderCompID))
+	order, err := new(*session)
+	if err != nil {
+		return err
+	}
 
 	// Send the order
 	err = quickfix.Send(order)
@@ -239,4 +215,69 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	return err
+}
+
+func new(session config.Session) (quickfix.Messagable, error) {
+	eside, err := dict.OrderSideStringToEnum(optionSide)
+	if err != nil {
+		return nil, err
+	}
+
+	etype, err := dict.OrderTypeStringToEnum(optionType)
+	if err != nil {
+		return nil, err
+	}
+
+	eExpiry, err := dict.OrderTimeInForceStringToEnum(optionExpiry)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare order
+	clordid := field.NewClOrdID(optionID)
+	handlinst := field.NewHandlInst(enum.HandlInst_AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION)
+	ordside := field.NewSide(eside)
+	transactime := field.NewTransactTime(time.Now())
+	ordtype := field.NewOrdType(etype)
+	quantity := field.NewOrderQty(decimal.NewFromInt(optionQuantity), 2)
+	symbol := field.NewSymbol(optionSymbol)
+	price := field.NewPrice(decimal.NewFromFloat(optionPrice), 2)
+	timeinforce := field.NewTimeInForce(eExpiry)
+	target := field.NewTargetCompID(session.TargetCompID)
+	sender := field.NewSenderCompID(session.SenderCompID)
+
+	var order quickfix.Messagable
+	switch session.BeginString {
+	case quickfix.BeginStringFIXT11:
+		switch session.DefaultApplVerID {
+		case "FIX.5.0SP1":
+			order50sp1 := nos50sp1.New(clordid, ordside, transactime, ordtype)
+			order50sp1.Header.Set(target)
+			order50sp1.Header.Set(sender)
+			order50sp1.Set(handlinst)
+			order50sp1.Set(symbol)
+			order50sp1.Set(quantity)
+			order50sp1.Set(price)
+			order50sp1.Set(timeinforce)
+
+			order = order50sp1
+		case "FIX.5.0SP2":
+			order50sp2 := nos50sp2.New(clordid, ordside, transactime, ordtype)
+			order50sp2.Header.Set(target)
+			order50sp2.Header.Set(sender)
+			order50sp2.Set(handlinst)
+			order50sp2.Set(symbol)
+			order50sp2.Set(quantity)
+			order50sp2.Set(price)
+			order50sp2.Set(timeinforce)
+
+			order = order50sp2
+		default:
+			return nil, errors.New("FIX version not implemented")
+		}
+	default:
+		return nil, errors.New("FIX version not implemented")
+	}
+
+	return order, nil
 }

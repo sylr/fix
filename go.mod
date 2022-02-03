@@ -34,6 +34,7 @@ require (
 	github.com/quickfixgo/fix42 v0.0.0-20171007212724-86a4567f1c77 // indirect
 	github.com/quickfixgo/fix43 v0.0.0-20171007213001-a7ff4f2a2470 // indirect
 	github.com/quickfixgo/fix44 v0.0.0-20171007213039-f090a1006218 // indirect
+	github.com/quickfixgo/fix50sp1 v0.0.0-20171007213322-66c7df13880d // indirect
 	github.com/quickfixgo/fixt11 v0.0.0-20171007213433-d9788ca97f5d // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
