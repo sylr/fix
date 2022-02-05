@@ -3,6 +3,7 @@ package list
 import (
 	"github.com/spf13/cobra"
 
+	listsecurity "sylr.dev/fix/cmd/list/security"
 	"sylr.dev/fix/pkg/initiator"
 )
 
@@ -18,6 +19,8 @@ var ListCmd = &cobra.Command{
 func init() {
 	initiator.AddPersistentFlags(ListCmd)
 	initiator.AddPersistentFlagCompletions(ListCmd)
+
+	ListCmd.AddCommand(listsecurity.ListSecurityCmd)
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
