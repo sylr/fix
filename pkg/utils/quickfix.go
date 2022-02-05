@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -15,12 +14,6 @@ import (
 	"github.com/quickfixgo/quickfix/datadictionary"
 	"github.com/rs/zerolog"
 )
-
-type SortableTag []quickfix.Tag
-
-func (t SortableTag) Len() int           { return len(t) }
-func (t SortableTag) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
-func (t SortableTag) Less(i, j int) bool { return t[i] < t[j] }
 
 type AppMessageLogger struct {
 	Logger                  *zerolog.Logger
@@ -50,7 +43,7 @@ func (app *AppMessageLogger) LogMessage(message *quickfix.Message, sessionID qui
 		bw := bufio.NewWriter(w)
 		br := bufio.NewReader(w)
 
-		app.WriteTags(bw, i.fm, i.dict)
+		app.WriteTags(bw, i.fm)
 		bw.Flush()
 
 		str, _ := io.ReadAll(br)
@@ -64,66 +57,67 @@ func (app *AppMessageLogger) LogMessage(message *quickfix.Message, sessionID qui
 	}
 }
 
-func (app *AppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap, dict *datadictionary.DataDictionary) {
+func (app *AppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) {
 	tags := fieldMap.Tags()
-	stags := SortableTag(tags)
-	sort.Sort(stags)
-	for i, tag := range stags {
+
+	for i, tag := range tags {
 		tagString := strconv.Itoa(int(tag))
 		tagDescription := "<unknown>"
-		valueString, _ := fieldMap.GetString(tag)
+		values, _ := fieldMap.GetStrings(tag)
 		valueDescription := ""
 
-		if dict != nil {
-			tagField, tok := dict.FieldTypeByTag[int(tag)]
-			if tok {
-				tagDescription = tagField.Name()
-			}
-			if len(tagField.Enums) > 0 {
-				if en, ok := tagField.Enums[valueString]; ok {
-					valueString = en.Value
-					valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
-					valueString += fmt.Sprintf("(%s)", valueDescription)
-				}
-			}
-		}
-
-		formatStr := "%s(%s)=%s"
-		if i < len(tags)-1 {
-			formatStr += ","
-		}
-
-		w.Write([]byte(fmt.Sprintf(formatStr, tagString, tagDescription, valueString)))
-	}
-}
-
-func (app *AppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quickfix.Message) {
-	bodyTags := message.Body.Tags()
-	sBodyTags := SortableTag(bodyTags)
-	sort.Sort(sBodyTags)
-
-	tw := tabwriter.NewWriter(w, 10, 0, 2, ' ', 0)
-
-	tw.Write([]byte(fmt.Sprintf("TAG\tTYPE\tVALUE\n")))
-
-	var line []string
-	for _, tag := range sBodyTags {
-		var tagDescription = "<unknown>"
-		var valueString = ""
-		var valueDescription = ""
 		if app.AppDataDictionary != nil {
 			tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
 			if tok {
 				tagDescription = tagField.Name()
 			}
-			valueString, _ = message.Body.GetString(tag)
-			if len(tagField.Enums) > 0 {
-				if en, ok := tagField.Enums[valueString]; ok {
-					valueString = en.Value
-					valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
-					valueString += fmt.Sprintf(" (%s)", valueDescription)
+			for j := range values {
+				if len(tagField.Enums) > 0 {
+					if en, ok := tagField.Enums[values[j]]; ok {
+						valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
+						values[j] += fmt.Sprintf("(%s)", valueDescription)
+					}
+				}
+
+				formatStr := "%s(%s)=%s"
+				if i < len(tags)-1 || j < len(values)-1 {
+					formatStr += ","
+				}
+
+				w.Write([]byte(fmt.Sprintf(formatStr, tagString, tagDescription, values[j])))
+			}
+		}
+	}
+}
+
+func (app *AppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quickfix.Message) {
+	bodyTags := message.Body.Tags()
+
+	tw := tabwriter.NewWriter(w, 10, 0, 2, ' ', 0)
+	tw.Write([]byte(fmt.Sprintf("TAG\tTYPE\tVALUE\n")))
+
+	var line []string
+	for _, tag := range bodyTags {
+		var tagDescription = "<unknown>"
+		var valueString = ""
+		var valueDescription = ""
+
+		values, _ := message.Body.GetStrings(tag)
+		if app.AppDataDictionary != nil {
+			tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
+			if tok {
+				tagDescription = tagField.Name()
+			}
+			for i := range values {
+				if len(tagField.Enums) > 0 {
+					if en, ok := tagField.Enums[values[i]]; ok {
+						valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
+						values[i] += fmt.Sprintf(" (%s)", valueDescription)
+					}
 				}
 			}
+
+			valueString = strings.Join(values, ", ")
 		}
 
 		line = []string{
