@@ -1,5 +1,6 @@
 .vscode
 .go-build-flags
+go.work*
 *.conf
 fix
 vendor/
