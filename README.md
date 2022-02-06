@@ -12,6 +12,7 @@ Configuration must be located at `$HOME/.fix/config`.
 
 ```yaml
 ---
+current-context: dev
 contexts:
 - name: dev
   acceptor: eks-euc1-dev-02
