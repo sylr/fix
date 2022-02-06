@@ -8,7 +8,7 @@ gotip install -trimpath sylr.dev/fix@latest
 
 ## Configuration
 
-Configuration must be located at `$HOME/.fix`.
+Configuration must be located at `$HOME/.fix/config`.
 
 ```yaml
 ---

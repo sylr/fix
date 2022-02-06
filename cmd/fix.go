@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -25,7 +26,9 @@ func init() {
 	FixCmd.AddCommand(new.NewCmd)
 	FixCmd.AddCommand(list.ListCmd)
 
-	FixCmd.PersistentFlags().StringVar(&options.Config, "config", os.ExpandEnv("$HOME/.fix"), "Config file")
+	configPath := strings.Join([]string{"$HOME", ".fix", "config"}, string(os.PathSeparator))
+
+	FixCmd.PersistentFlags().StringVar(&options.Config, "config", os.ExpandEnv(configPath), "Config file")
 	FixCmd.PersistentFlags().CountVarP(&options.Verbose, "verbose", "v", "Increase verbosity")
 	FixCmd.PersistentFlags().BoolVar(&options.LogCaller, "log-caller", false, "Increase verbosity")
 	FixCmd.PersistentFlags().BoolVar(&options.Interactive, "interactive", true, "Enable interactive mode")
