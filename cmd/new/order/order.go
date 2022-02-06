@@ -77,13 +77,13 @@ func init() {
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
-	sides := prettyTags(dict.OrderSidesReversed)
+	sides := utils.PrettyOptionValues(dict.OrderSidesReversed)
 	search := utils.Search(sides, strings.ToLower(optionSide))
 	if search < 0 {
 		return fmt.Errorf("unknown order side")
 	}
 
-	types := prettyTags(dict.OrderTypesReversed)
+	types := utils.PrettyOptionValues(dict.OrderTypesReversed)
 	search = utils.Search(types, strings.ToLower(optionType))
 	if search < 0 {
 		return fmt.Errorf("unknown order type")
