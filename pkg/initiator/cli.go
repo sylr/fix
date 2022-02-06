@@ -4,40 +4,52 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
 	"sylr.dev/fix/config"
 )
 
 func ValidateOptions(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
-	fixConfig := config.GetConfig()
-
-	if len(options.Context) > 0 {
-		if len(options.Acceptor) > 0 || len(options.Session) > 0 {
-			return fmt.Errorf("can't use --acceptor/--session with --context")
-		}
-	} else {
-		if len(options.Acceptor) == 0 || len(options.Session) == 0 {
-			return fmt.Errorf("you need to specify either --context or --acceptor/--session")
-		}
-	}
-
 	conf, err := config.ReadYAML(options.Config, options.Interactive)
 
 	if err != nil {
 		return fmt.Errorf("unable to read configuration: %w", err)
 	}
 
-	if len(options.Context) == 0 {
-		const contextName = "from-cli-options"
-		conf.Contexts = append(conf.Contexts, config.Context{
+	err = conf.Validate()
+	if err != nil {
+		return err
+	}
+
+	// Retrieve the global config pointer
+	fixConfig := config.GetConfig()
+
+	// Set the config retrieved in the config file into the global config pointer
+	*fixConfig = *conf
+
+	// Initialize the context name with the config current-context value
+	contextName := fixConfig.CurrentContext
+
+	if len(options.Context) > 0 {
+		if len(options.Acceptor) > 0 || len(options.Session) > 0 {
+			return fmt.Errorf("can't use --acceptor/--session with --context")
+		}
+		contextName = options.Context
+	} else if len(contextName) == 0 {
+		if len(options.Acceptor) == 0 || len(options.Session) == 0 {
+			return fmt.Errorf("you need to specify either --context or --acceptor/--session")
+		}
+	}
+
+	if len(contextName) == 0 {
+		contextName = "no-context"
+		fixConfig.Contexts = append(fixConfig.Contexts, &config.Context{
 			Name:     contextName,
 			Acceptor: options.Acceptor,
 			Session:  options.Session,
 		})
 		(*options).Context = contextName
 	}
-
-	*fixConfig = *conf
 
 	context, err := config.GetCurrentContext()
 	if err != nil {

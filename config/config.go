@@ -8,16 +8,21 @@ import (
 
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/quickfix/datadictionary"
+
+	"sylr.dev/fix/pkg/utils"
 )
 
 var (
-	fixDict             = make(map[string]*datadictionary.DataDictionary)
-	options             = cliOptions{}
-	config              = fixConfig{}
-	ErrBadConfig        = errors.New("configuration error")
-	ErrContextNotFound  = errors.New("context not found")
-	ErrAcceptorNotFound = errors.New("acceptor not found")
-	ErrSessionNotFound  = errors.New("session not found")
+	fixDict                  = make(map[string]*datadictionary.DataDictionary)
+	options                  = cliOptions{}
+	config                   = fixConfig{}
+	ErrBadConfig             = errors.New("configuration error")
+	ErrContextNotFound       = errors.New("context not found")
+	ErrAcceptorNotFound      = errors.New("acceptor not found")
+	ErrSessionNotFound       = errors.New("session not found")
+	ErrDuplicateContextName  = errors.New("duplicate context name")
+	ErrDuplicateSessionName  = errors.New("duplicate session name")
+	ErrDuplicateAcceptorName = errors.New("duplicate acceptor name")
 )
 
 func GetOptions() *cliOptions {
@@ -29,7 +34,15 @@ func GetConfig() *fixConfig {
 }
 
 func GetCurrentContext() (*Context, error) {
-	currentContext := options.Context
+	currentContext := config.CurrentContext
+
+	if len(options.Context) > 0 {
+		currentContext = options.Context
+	}
+
+	if len(currentContext) == 0 {
+		return nil, errors.New("no current-context set and no --context given")
+	}
 
 	return GetContext(currentContext)
 }
@@ -37,21 +50,21 @@ func GetCurrentContext() (*Context, error) {
 func GetContext(name string) (*Context, error) {
 	for k, context := range config.Contexts {
 		if context.Name == name {
-			return &config.Contexts[k], nil
+			return config.Contexts[k], nil
 		}
 	}
 
 	return nil, fmt.Errorf("%w: %s", ErrContextNotFound, name)
 }
 
-func GetContexts() []Context {
+func GetContexts() []*Context {
 	return config.Contexts
 }
 
 func GetAcceptor(name string) (*Acceptor, error) {
 	for k, acceptor := range config.Acceptors {
 		if acceptor.Name == name {
-			return &config.Acceptors[k], nil
+			return config.Acceptors[k], nil
 		}
 	}
 
@@ -61,7 +74,7 @@ func GetAcceptor(name string) (*Acceptor, error) {
 func GetSession(name string) (*Session, error) {
 	for k, acceptor := range config.Sessions {
 		if acceptor.Name == name {
-			return &config.Sessions[k], nil
+			return config.Sessions[k], nil
 		}
 	}
 
@@ -80,15 +93,58 @@ type cliOptions struct {
 }
 
 type fixConfig struct {
-	Contexts  []Context  `yaml:"contexts"`
-	Acceptors []Acceptor `yaml:"acceptors"`
-	Sessions  []Session  `yaml:"sessions"`
+	Contexts       []*Context  `yaml:"contexts"`
+	Acceptors      []*Acceptor `yaml:"acceptors"`
+	Sessions       []*Session  `yaml:"sessions"`
+	CurrentContext string      `yaml:"current-context"`
+}
+
+func (f *fixConfig) Validate() error {
+	err := validateNames(f.Contexts, ErrDuplicateContextName)
+	if err != nil {
+		return err
+	}
+
+	err = validateNames(f.Sessions, ErrDuplicateSessionName)
+	if err != nil {
+		return err
+	}
+
+	err = validateNames(f.Acceptors, ErrDuplicateAcceptorName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type HasName interface {
+	GetName() string
+}
+
+func validateNames[T HasName](slice []T, err error) error {
+	contextNames := make([]string, 0, len(slice))
+
+	for _, item := range slice {
+		name := item.GetName()
+		if utils.Search(contextNames, name) != -1 {
+			return fmt.Errorf("%w: %s", err, name)
+		} else {
+			contextNames = append(contextNames, name)
+		}
+	}
+
+	return nil
 }
 
 type Context struct {
 	Name     string `yaml:"name"`
 	Acceptor string `yaml:"acceptor"`
 	Session  string `yaml:"session"`
+}
+
+func (c *Context) GetName() string {
+	return c.Name
 }
 
 type Acceptor struct {
@@ -101,6 +157,10 @@ type Acceptor struct {
 	SocketUseSSL             bool          `yaml:"SocketUseSSL"`
 }
 
+func (a *Acceptor) GetName() string {
+	return a.Name
+}
+
 type Session struct {
 	Name                    string `yaml:"name"`
 	BeginString             string `yaml:"BeginString"`
@@ -111,6 +171,10 @@ type Session struct {
 	Username                string `yaml:"Username"`
 	TransportDataDictionary string `yaml:"TransportDataDictionary"`
 	AppDataDictionary       string `yaml:"AppDataDictionary"`
+}
+
+func (s *Session) GetName() string {
+	return s.Name
 }
 
 func (c Context) GetAcceptor() (*Acceptor, error) {
