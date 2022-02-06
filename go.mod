@@ -21,6 +21,8 @@ require (
 	sylr.dev/yaml/v3 v3.0.0-20210127132132-941109e4f08c
 )
 
+replace github.com/quickfixgo/quickfix => github.com/sylr/quickfix v0.6.1-0.20220206193553-ccdc2dfbcb2e
+
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a // indirect
@@ -31,5 +33,5 @@ require (
 	github.com/quickfixgo/fixt11 v0.0.0-20171007213433-d9788ca97f5d // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a // indirect
 )
