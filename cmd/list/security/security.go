@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/quickfixgo/enum"
@@ -16,15 +17,13 @@ import (
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/application"
+	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/initiator"
+	"sylr.dev/fix/pkg/utils"
 )
 
 var (
-	optionSide, optionType string
-	optionSymbol, optionID string
-	optionExpiry           string
-	optionQuantity         int64
-	optionPrice            float64
+	optionType string
 )
 
 var ListSecurityCmd = &cobra.Command{
@@ -52,10 +51,18 @@ var ListSecurityCmd = &cobra.Command{
 }
 
 func init() {
+	ListSecurityCmd.Flags().StringVar(&optionType, "type", "symbol", "Securities type (symbol, product ... etc)")
 
+	ListSecurityCmd.RegisterFlagCompletionFunc("type", completeSecurityListRequestType)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
+	types := utils.PrettyOptionValues(dict.SecurityListRequestTypesReversed)
+	search := utils.Search(types, strings.ToLower(optionType))
+	if search < 0 {
+		return fmt.Errorf("unknown security type")
+	}
+
 	return nil
 }
 
@@ -161,10 +168,15 @@ func Execute(cmd *cobra.Command, args []string) error {
 func new(session config.Session) (quickfix.Messagable, error) {
 	var order quickfix.Messagable
 
+	etype, err := dict.SecurityListRequestTypeStringToEnum(optionType)
+	if err != nil {
+		return nil, err
+	}
+
 	target := field.NewTargetCompID(session.TargetCompID)
 	sender := field.NewSenderCompID(session.SenderCompID)
-	stype := field.NewSecurityListRequestType(enum.SecurityListRequestType_SYMBOL)
-	reqid := field.NewSecurityReqID("1")
+	stype := field.NewSecurityListRequestType(etype)
+	reqid := field.NewSecurityReqID(string(enum.SecurityRequestType_SYMBOL))
 
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
