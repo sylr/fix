@@ -20,6 +20,7 @@ import (
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/application"
+	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/utils"
@@ -70,9 +71,9 @@ func init() {
 	NewOrderCmd.MarkFlagRequired("symbol")
 	NewOrderCmd.MarkFlagRequired("quantity")
 
-	NewOrderCmd.RegisterFlagCompletionFunc("side", completeOrderSide)
-	NewOrderCmd.RegisterFlagCompletionFunc("type", completeOrderType)
-	NewOrderCmd.RegisterFlagCompletionFunc("expiry", completeOrderTimeInForce)
+	NewOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
+	NewOrderCmd.RegisterFlagCompletionFunc("type", complete.OrderType)
+	NewOrderCmd.RegisterFlagCompletionFunc("expiry", complete.OrderTimeInForce)
 	NewOrderCmd.RegisterFlagCompletionFunc("symbol", cobra.NoFileCompletions)
 }
 

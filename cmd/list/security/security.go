@@ -17,6 +17,7 @@ import (
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/application"
+	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/utils"
@@ -53,7 +54,7 @@ var ListSecurityCmd = &cobra.Command{
 func init() {
 	ListSecurityCmd.Flags().StringVar(&optionType, "type", "symbol", "Securities type (symbol, product ... etc)")
 
-	ListSecurityCmd.RegisterFlagCompletionFunc("type", completeSecurityListRequestType)
+	ListSecurityCmd.RegisterFlagCompletionFunc("type", complete.SecurityListRequestType)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {

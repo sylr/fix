@@ -1,4 +1,4 @@
-package listsecurity
+package complete
 
 import (
 	"github.com/spf13/cobra"
@@ -7,6 +7,6 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
-func completeSecurityListRequestType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func SecurityListRequestType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return utils.PrettyOptionValues(dict.SecurityListRequestTypesReversed), cobra.ShellCompDirectiveNoFileComp
 }
