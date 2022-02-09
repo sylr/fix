@@ -6,6 +6,7 @@ require (
 	filippo.io/age v1.0.0
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
+	github.com/nats-io/nats.go v1.13.0
 	github.com/quickfixgo/enum v0.0.0-20210629025633-9afc8539baba
 	github.com/quickfixgo/field v0.0.0-20171007195410-74cea5ec78c7
 	github.com/quickfixgo/fix50sp1 v0.0.0-20171007213322-66c7df13880d
@@ -29,6 +30,8 @@ require (
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.8 // indirect
+	github.com/nats-io/nkeys v0.3.0 // indirect
+	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/quickfixgo/fixt11 v0.0.0-20171007213433-d9788ca97f5d // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
