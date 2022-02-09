@@ -1,7 +1,6 @@
 package listsecurity
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	"sylr.dev/fix/pkg/application"
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
+	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/utils"
 )
@@ -131,10 +131,10 @@ func Execute(cmd *cobra.Command, args []string) error {
 	// Wait for session connection
 	select {
 	case <-time.After(timeout):
-		return fmt.Errorf("connection timeout")
+		return errors.ConnectionTimeout
 	case _, ok := <-app.Connected:
 		if !ok {
-			return fmt.Errorf("connection closed by remote")
+			return errors.FixLogout
 		}
 	}
 
@@ -192,10 +192,10 @@ func new(session config.Session) (quickfix.Messagable, error) {
 
 			order = securitylist50sp2
 		default:
-			return nil, errors.New("FIX version not implemented")
+			return nil, errors.FixVersionNotImplemented
 		}
 	default:
-		return nil, errors.New("FIX version not implemented")
+		return nil, errors.FixVersionNotImplemented
 	}
 
 	return order, nil

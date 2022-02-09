@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
+	"sylr.dev/fix/pkg/errors"
 )
 
 func ValidateOptions(cmd *cobra.Command, args []string) error {
@@ -32,12 +33,12 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 
 	if len(options.Context) > 0 {
 		if len(options.Acceptor) > 0 || len(options.Session) > 0 {
-			return fmt.Errorf("can't use --acceptor/--session with --context")
+			return fmt.Errorf("%w: can't use --acceptor/--session with --context", errors.Options)
 		}
 		contextName = options.Context
 	} else if len(contextName) == 0 {
 		if len(options.Acceptor) == 0 || len(options.Session) == 0 {
-			return fmt.Errorf("you need to specify either --context or --acceptor/--session")
+			return fmt.Errorf("%w: you need to specify either --context or --acceptor/--session", errors.Options)
 		}
 	}
 
@@ -53,17 +54,17 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 
 	context, err := config.GetCurrentContext()
 	if err != nil {
-		return fmt.Errorf("%s: %w", config.ErrBadConfig, err)
+		return err
 	}
 
 	_, err = context.GetAcceptor()
 	if err != nil {
-		return fmt.Errorf("%s: %w", config.ErrBadConfig, err)
+		return err
 	}
 
 	_, err = context.GetSession()
 	if err != nil {
-		return fmt.Errorf("%s: %w", config.ErrBadConfig, err)
+		return err
 	}
 
 	return nil

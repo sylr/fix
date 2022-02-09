@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -9,20 +8,14 @@ import (
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/quickfix/datadictionary"
 
+	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/utils"
 )
 
 var (
-	fixDict                  = make(map[string]*datadictionary.DataDictionary)
-	options                  = cliOptions{}
-	config                   = fixConfig{}
-	ErrBadConfig             = errors.New("configuration error")
-	ErrContextNotFound       = errors.New("context not found")
-	ErrAcceptorNotFound      = errors.New("acceptor not found")
-	ErrSessionNotFound       = errors.New("session not found")
-	ErrDuplicateContextName  = errors.New("duplicate context name")
-	ErrDuplicateSessionName  = errors.New("duplicate session name")
-	ErrDuplicateAcceptorName = errors.New("duplicate acceptor name")
+	fixDict = make(map[string]*datadictionary.DataDictionary)
+	options = cliOptions{}
+	config  = fixConfig{}
 )
 
 func GetOptions() *cliOptions {
@@ -41,7 +34,7 @@ func GetCurrentContext() (*Context, error) {
 	}
 
 	if len(currentContext) == 0 {
-		return nil, errors.New("no current-context set and no --context given")
+		return nil, fmt.Errorf("%w:no current-context set and no --context given", errors.Config)
 	}
 
 	return GetContext(currentContext)
@@ -54,7 +47,7 @@ func GetContext(name string) (*Context, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", ErrContextNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ConfigContextNotFound, name)
 }
 
 func GetContexts() []*Context {
@@ -68,7 +61,7 @@ func GetAcceptor(name string) (*Acceptor, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", ErrAcceptorNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ConfigAcceptorNotFound, name)
 }
 
 func GetSession(name string) (*Session, error) {
@@ -78,7 +71,7 @@ func GetSession(name string) (*Session, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", ErrAcceptorNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ConfigSessionNotFound, name)
 }
 
 type cliOptions struct {
@@ -100,17 +93,17 @@ type fixConfig struct {
 }
 
 func (f *fixConfig) Validate() error {
-	err := validateNames(f.Contexts, ErrDuplicateContextName)
+	err := validateNames(f.Contexts, errors.ConfigDuplicateContextName)
 	if err != nil {
 		return err
 	}
 
-	err = validateNames(f.Sessions, ErrDuplicateSessionName)
+	err = validateNames(f.Sessions, errors.ConfigDuplicateSessionName)
 	if err != nil {
 		return err
 	}
 
-	err = validateNames(f.Acceptors, ErrDuplicateAcceptorName)
+	err = validateNames(f.Acceptors, errors.ConfigAcceptorNotFound)
 	if err != nil {
 		return err
 	}

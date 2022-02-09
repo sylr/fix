@@ -1,7 +1,6 @@
 package neworder
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -21,6 +20,7 @@ import (
 	"sylr.dev/fix/pkg/application"
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
+	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/utils"
 )
@@ -80,13 +80,13 @@ func Validate(cmd *cobra.Command, args []string) error {
 	sides := utils.PrettyOptionValues(dict.OrderSidesReversed)
 	search := utils.Search(sides, strings.ToLower(optionSide))
 	if search < 0 {
-		return fmt.Errorf("unknown order side")
+		return errors.FixOrderSideUnknown
 	}
 
 	types := utils.PrettyOptionValues(dict.OrderTypesReversed)
 	search = utils.Search(types, strings.ToLower(optionType))
 	if search < 0 {
-		return fmt.Errorf("unknown order type")
+		return errors.FixOrderTypeUnknown
 	}
 
 	if len(optionID) == 0 {
@@ -158,10 +158,10 @@ func Execute(cmd *cobra.Command, args []string) error {
 	// Wait for session connection
 	select {
 	case <-time.After(timeout):
-		return fmt.Errorf("connection timeout")
+		return errors.ConnectionTimeout
 	case _, ok := <-app.Connected:
 		if !ok {
-			return fmt.Errorf("connection closed by remote")
+			return errors.FixLogout
 		}
 	}
 
@@ -178,11 +178,15 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Wait for the order response
+	var ok bool
 	var responseMessage *quickfix.Message
 	select {
 	case <-time.After(timeout):
 		return fmt.Errorf("timeout while waiting for order response")
-	case responseMessage = <-app.FromAppChan:
+	case responseMessage, ok = <-app.FromAppChan:
+		if !ok {
+			return errors.FixLogout
+		}
 	}
 
 	// Extract fields from the response
@@ -196,12 +200,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Order accepted\n")
 		app.WriteMessageBodyAsTable(os.Stdout, responseMessage)
 	case enum.OrdStatus_REJECTED:
-		err = errors.New("Order rejected")
+		err = errors.FixOrderRejected
 		if len(text.String()) > 0 {
 			err = fmt.Errorf("%w: %s", err, text.String())
 		}
 	default:
-		err = errors.New("Order status unknown")
+		err = errors.FixOrderStatusUnknown
 		if len(text.String()) > 0 {
 			err = fmt.Errorf("%w: %s", err, text.String())
 		}
@@ -267,10 +271,10 @@ func new(session config.Session) (quickfix.Messagable, error) {
 
 			order = order50sp2
 		default:
-			return nil, errors.New("FIX version not implemented")
+			return nil, errors.FixVersionNotImplemented
 		}
 	default:
-		return nil, errors.New("FIX version not implemented")
+		return nil, errors.FixVersionNotImplemented
 	}
 
 	return order, nil
