@@ -66,12 +66,12 @@ func (app *AppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) 
 		values, _ := fieldMap.GetStrings(tag)
 		valueDescription := ""
 
-		if app.AppDataDictionary != nil {
-			tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
-			if tok {
-				tagDescription = tagField.Name()
-			}
-			for j := range values {
+		for j := range values {
+			if app.AppDataDictionary != nil {
+				tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
+				if tok {
+					tagDescription = tagField.Name()
+				}
 				if len(tagField.Enums) > 0 {
 					if en, ok := tagField.Enums[values[j]]; ok {
 						valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
@@ -85,6 +85,13 @@ func (app *AppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) 
 				}
 
 				w.Write([]byte(fmt.Sprintf(formatStr, tagString, tagDescription, values[j])))
+			} else {
+				formatStr := "%s=%s"
+				if i < len(tags)-1 || j < len(values)-1 {
+					formatStr += ","
+				}
+
+				w.Write([]byte(fmt.Sprintf(formatStr, tagString, values[j])))
 			}
 		}
 	}
@@ -103,12 +110,13 @@ func (app *AppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quick
 		var valueDescription = ""
 
 		values, _ := message.Body.GetStrings(tag)
-		if app.AppDataDictionary != nil {
-			tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
-			if tok {
-				tagDescription = tagField.Name()
-			}
-			for i := range values {
+
+		for i := range values {
+			if app.AppDataDictionary != nil {
+				tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
+				if tok {
+					tagDescription = tagField.Name()
+				}
 				if len(tagField.Enums) > 0 {
 					if en, ok := tagField.Enums[values[i]]; ok {
 						valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
@@ -116,10 +124,9 @@ func (app *AppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quick
 					}
 				}
 			}
-
-			valueString = strings.Join(values, ", ")
 		}
 
+		valueString = strings.Join(values, ", ")
 		line = []string{
 			strconv.Itoa(int(tag)),
 			tagDescription,
