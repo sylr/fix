@@ -9,11 +9,28 @@ import (
 
 // ListCmd represents the buy command
 var ListCmd = &cobra.Command{
-	Use:               "list",
-	Short:             "Send a list FIX Message",
-	Long:              "Send a list FIX message after initiating a sesion with a FIX acceptor.",
-	RunE:              Execute,
-	PersistentPreRunE: initiator.ValidateOptions,
+	Use:   "list",
+	Short: "Send a list FIX Message",
+	Long:  "Send a list FIX message after initiating a sesion with a FIX acceptor.",
+	RunE:  Execute,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		err := initiator.ValidateOptions(cmd, args)
+		if err != nil {
+			return err
+		}
+
+		if cmd.HasParent() {
+			parent := cmd.Parent()
+			if parent.PersistentPreRunE != nil {
+				err = parent.PersistentPreRunE(parent, args)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	},
 }
 
 func init() {

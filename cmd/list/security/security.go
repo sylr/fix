@@ -12,7 +12,6 @@ import (
 	slr50sp1 "github.com/quickfixgo/fix50sp1/securitylistrequest"
 	slr50sp2 "github.com/quickfixgo/fix50sp2/securitylistrequest"
 	"github.com/quickfixgo/quickfix"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
@@ -43,9 +42,13 @@ var ListSecurityCmd = &cobra.Command{
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			if parent.PersistentPreRunE != nil {
-				return parent.PersistentPreRunE(cmd, args)
+				err = parent.PersistentPreRunE(parent, args)
+				if err != nil {
+					return err
+				}
 			}
 		}
+
 		return nil
 	},
 	RunE: Execute,
@@ -69,16 +72,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 
 func Execute(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
-	consoleWriter := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: time.RFC822,
-	}
-	multi := zerolog.MultiLevelWriter(consoleWriter)
-	logger := zerolog.New(multi).With().Timestamp().Logger().Level(config.IntToZerologLevel(options.Verbose))
-
-	if options.LogCaller {
-		logger = logger.With().Caller().Logger()
-	}
+	logger := config.GetLogger()
 
 	context, err := config.GetCurrentContext()
 	if err != nil {
@@ -106,7 +100,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	app := application.NewSecurityList()
-	app.Logger = &logger
+	app.Logger = logger
 	app.Settings = settings
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict

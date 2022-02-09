@@ -9,11 +9,28 @@ import (
 
 // NewCmd represents the buy command
 var NewCmd = &cobra.Command{
-	Use:               "new",
-	Short:             "Send a new FIX message",
-	Long:              "Send a new FIX message after initiating a sesion with a FIX acceptor.",
-	RunE:              Execute,
-	PersistentPreRunE: initiator.ValidateOptions,
+	Use:   "new",
+	Short: "Send a new FIX message",
+	Long:  "Send a new FIX message after initiating a sesion with a FIX acceptor.",
+	RunE:  Execute,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		err := initiator.ValidateOptions(cmd, args)
+		if err != nil {
+			return err
+		}
+
+		if cmd.HasParent() {
+			parent := cmd.Parent()
+			if parent.PersistentPreRunE != nil {
+				err = parent.PersistentPreRunE(parent, args)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	},
 }
 
 func init() {

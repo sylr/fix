@@ -14,7 +14,6 @@ import (
 	nos50sp2 "github.com/quickfixgo/fix50sp2/newordersingle"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
-	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
@@ -100,16 +99,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 
 func Execute(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
-	consoleWriter := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: time.RFC822,
-	}
-	multi := zerolog.MultiLevelWriter(consoleWriter)
-	logger := zerolog.New(multi).With().Timestamp().Logger().Level(config.IntToZerologLevel(options.Verbose))
-
-	if options.LogCaller {
-		logger = logger.With().Caller().Logger()
-	}
+	logger := config.GetLogger()
 
 	context, err := config.GetCurrentContext()
 	if err != nil {
@@ -137,7 +127,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	app := application.NewNewOrder()
-	app.Logger = &logger
+	app.Logger = logger
 	app.Settings = settings
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict
@@ -169,7 +159,10 @@ func Execute(cmd *cobra.Command, args []string) error {
 	select {
 	case <-time.After(timeout):
 		return fmt.Errorf("connection timeout")
-	case <-app.Connected:
+	case _, ok := <-app.Connected:
+		if !ok {
+			return fmt.Errorf("connection closed by remote")
+		}
 	}
 
 	// Prepare order
