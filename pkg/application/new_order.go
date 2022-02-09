@@ -40,6 +40,8 @@ func (app *NewOrder) OnLogon(sessionID quickfix.SessionID) {
 // Notification of a session logging off or disconnecting.
 func (app *NewOrder) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
+
+	close(app.Connected)
 }
 
 // Notification of admin message being sent to target.

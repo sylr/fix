@@ -132,7 +132,10 @@ func Execute(cmd *cobra.Command, args []string) error {
 	select {
 	case <-time.After(timeout):
 		return fmt.Errorf("connection timeout")
-	case <-app.Connected:
+	case _, ok := <-app.Connected:
+		if !ok {
+			return fmt.Errorf("connection closed by remote")
+		}
 	}
 
 	// Prepare securitylist
