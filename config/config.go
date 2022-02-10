@@ -141,13 +141,25 @@ func (c *Context) GetName() string {
 }
 
 type Acceptor struct {
-	Name                     string        `yaml:"name"`
-	SocketConnectHost        string        `yaml:"SocketConnectHost"`
-	SocketConnectPort        int           `yaml:"SocketConnectPort"`
-	SocketInsecureSkipVerify bool          `yaml:"SocketInsecureSkipVerify"`
-	SocketServerName         string        `yaml:"SocketServerName"`
-	SocketTimeout            time.Duration `yaml:"SocketTimeout"`
-	SocketUseSSL             bool          `yaml:"SocketUseSSL"`
+	Name string `yaml:"name"`
+
+	// Initiator
+	SocketConnectHost string        `yaml:"SocketConnectHost"`
+	SocketConnectPort int           `yaml:"SocketConnectPort"`
+	SocketTimeout     time.Duration `yaml:"SocketTimeout"`
+
+	// Acceptor
+	SocketAcceptHost string `yaml:"SocketAcceptHost"`
+	SocketAcceptPort int    `yaml:"SocketAcceptPort"`
+	UseTCPProxy      string `yaml:"UseTCPProxy"`
+
+	// Common
+	SocketUseSSL             bool   `yaml:"SocketUseSSL"`
+	SocketServerName         string `yaml:"SocketServerName"`
+	SocketInsecureSkipVerify bool   `yaml:"SocketInsecureSkipVerify"`
+	SocketPrivateKeyFile     string `yaml:"SocketPrivateKeyFile"`
+	SocketCertificateFile    string `yaml:"SocketCertificateFile"`
+	SocketCAFile             string `yaml:"SocketCAFile"`
 }
 
 func (a *Acceptor) GetName() string {
@@ -179,6 +191,7 @@ func (c Context) GetSession() (*Session, error) {
 }
 
 func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
+	settings := quickfix.NewSettings()
 	qfSession := quickfix.NewSessionSettings()
 
 	acceptor, err := GetAcceptor(c.Acceptor)
@@ -190,6 +203,12 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	global := settings.GlobalSettings()
+
+	// Global settings
+	global.Set("SocketAcceptHost", acceptor.SocketAcceptHost)
+	global.Set("SocketAcceptPort", FixIntString(acceptor.SocketAcceptPort))
 
 	// Acceptor settings
 	qfSession.Set("SocketConnectHost", acceptor.SocketConnectHost)
@@ -233,7 +252,6 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 		qfSession.Set("LogoutTimeout", "5")
 	}
 
-	settings := quickfix.NewSettings()
 	_, err = settings.AddSession(qfSession)
 
 	if err != nil {
