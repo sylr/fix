@@ -210,51 +210,52 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 	global := settings.GlobalSettings()
 
 	// Global settings
-	global.Set("SocketAcceptHost", acceptor.SocketAcceptHost)
-	global.Set("SocketAcceptPort", FixIntString(acceptor.SocketAcceptPort))
+	global.Set(qconfig.SocketAcceptHost, acceptor.SocketAcceptHost)
+	global.Set(qconfig.SocketAcceptPort, FixIntString(acceptor.SocketAcceptPort))
+	global.Set(qconfig.ResetOnDisconnect, "Y")
 
 	// Acceptor settings
-	qfSession.Set("SocketConnectHost", acceptor.SocketConnectHost)
-	qfSession.Set("SocketConnectPort", FixIntString(acceptor.SocketConnectPort))
-	qfSession.Set("SocketServerName", acceptor.SocketServerName)
-	qfSession.Set("SocketUseSSL", FixBoolString(acceptor.SocketUseSSL))
-	qfSession.Set("SocketInsecureSkipVerify", FixBoolString(acceptor.SocketInsecureSkipVerify))
+	qfSession.Set(qconfig.SocketConnectHost, acceptor.SocketConnectHost)
+	qfSession.Set(qconfig.SocketConnectPort, FixIntString(acceptor.SocketConnectPort))
+	qfSession.Set(qconfig.SocketServerName, acceptor.SocketServerName)
+	qfSession.Set(qconfig.SocketUseSSL, FixBoolString(acceptor.SocketUseSSL))
+	qfSession.Set(qconfig.SocketInsecureSkipVerify, FixBoolString(acceptor.SocketInsecureSkipVerify))
 
 	if options.Timeout != time.Duration(0) {
-		qfSession.Set("SocketTimeout", options.Timeout.String())
+		qfSession.Set(qconfig.SocketTimeout, options.Timeout.String())
 	} else if acceptor.SocketTimeout != time.Duration(0) {
-		qfSession.Set("SocketTimeout", acceptor.SocketTimeout.String())
+		qfSession.Set(qconfig.SocketTimeout, acceptor.SocketTimeout.String())
 	} else {
-		qfSession.Set("SocketTimeout", "5s")
+		qfSession.Set(qconfig.SocketTimeout, "5s")
 	}
 
 	// Session settings
-	qfSession.Set("HeartBtInt", FixIntString(session.HeartBtInt))
-	qfSession.Set("BeginString", session.BeginString)
-	qfSession.Set("DefaultApplVerID", session.DefaultApplVerID)
+	qfSession.Set(qconfig.HeartBtInt, FixIntString(session.HeartBtInt))
+	qfSession.Set(qconfig.BeginString, session.BeginString)
+	qfSession.Set(qconfig.DefaultApplVerID, session.DefaultApplVerID)
+	qfSession.Set(qconfig.SenderCompID, session.SenderCompID)
 	qfSession.Set(qconfig.SenderSubID, session.SenderSubID)
+	qfSession.Set(qconfig.TargetCompID, session.TargetCompID)
 	qfSession.Set(qconfig.TargetSubID, session.TargetSubID)
+	qfSession.Set(qconfig.BeginString, session.BeginString)
 	qfSession.Set("Username", session.Username)
-	qfSession.Set("TargetCompID", session.TargetCompID)
-	qfSession.Set("SenderCompID", session.SenderCompID)
-	qfSession.Set("BeginString", session.BeginString)
 
 	if len(session.TransportDataDictionary) > 0 {
-		qfSession.Set("TransportDataDictionary", session.TransportDataDictionary)
+		qfSession.Set(qconfig.TransportDataDictionary, session.TransportDataDictionary)
 	}
 	if len(session.TransportDataDictionary) > 0 {
-		qfSession.Set("AppDataDictionary", session.AppDataDictionary)
+		qfSession.Set(qconfig.AppDataDictionary, session.AppDataDictionary)
 	}
 
 	if options.Timeout != time.Duration(0) {
-		qfSession.Set("LogonTimeout", FixIntString(int(options.Timeout.Seconds())))
-		qfSession.Set("LogonTimeout", FixIntString(int(options.Timeout.Seconds())))
+		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
+		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
 	} else if acceptor.SocketTimeout != time.Duration(0) {
-		qfSession.Set("LogonTimeout", FixIntString(int(acceptor.SocketTimeout.Seconds())))
-		qfSession.Set("LogoutTimeout", FixIntString(int(acceptor.SocketTimeout.Seconds())))
+		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(acceptor.SocketTimeout.Seconds())))
+		qfSession.Set(qconfig.LogoutTimeout, FixIntString(int(acceptor.SocketTimeout.Seconds())))
 	} else {
-		qfSession.Set("LogonTimeout", "5")
-		qfSession.Set("LogoutTimeout", "5")
+		qfSession.Set(qconfig.LogonTimeout, "5")
+		qfSession.Set(qconfig.LogoutTimeout, "5")
 	}
 
 	_, err = settings.AddSession(qfSession)
