@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -12,6 +13,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/quickfix/datadictionary"
+	qtag "github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 )
 
@@ -25,6 +27,9 @@ func (app *AppMessageLogger) LogMessage(message *quickfix.Message, sessionID qui
 	if app.Logger.GetLevel() > zerolog.TraceLevel {
 		return
 	}
+
+	message.Cook()
+	sort.Sort(message.Header)
 
 	loop := []struct {
 		prefix string
