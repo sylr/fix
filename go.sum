@@ -385,6 +385,7 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/sylr/quickfix v0.6.1-0.20220206193553-ccdc2dfbcb2e h1:ZibGKOyc/JXQwr2XM9YZ9zoSs0hCVbMFiPy50FUKmA0=
 github.com/sylr/quickfix v0.6.1-0.20220206193553-ccdc2dfbcb2e/go.mod h1:YhFbb4p6W6Ntj+lR1vqOFq5xkcqrFIqBhl6m+aJd6Fk=
+github.com/sylr/quickfix v0.6.1-0.20220211212705-91d220b76f41/go.mod h1:KT5CIqYKN/GoM2RW3SdjfHo7NiqBoJddXu7UkwM1kRY=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
