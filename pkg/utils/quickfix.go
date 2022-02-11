@@ -67,6 +67,9 @@ func (app *AppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) 
 		valueDescription := ""
 
 		for j := range values {
+			if tag == qtag.Password {
+				values[j] = "<redacted>"
+			}
 			if app.AppDataDictionary != nil {
 				tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
 				if tok {

@@ -65,6 +65,13 @@ func (app *NewOrder) ToAdmin(message *quickfix.Message, sessionID quickfix.Sessi
 					message.Header.SetField(tag.Username, quickfix.FIXString(username))
 				}
 			}
+			if session.HasSetting("Password") {
+				password, err := session.Setting("Password")
+				if err == nil && len(password) > 0 {
+					app.Logger.Debug().Msg("Password injected in logon message")
+					message.Header.SetField(tag.Password, quickfix.FIXString(password))
+				}
+			}
 		}
 	}
 

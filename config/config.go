@@ -177,6 +177,7 @@ type Session struct {
 	TargetCompID            string `yaml:"TargetCompID"`
 	TargetSubID             string `yaml:"TargetSubID"`
 	Username                string `yaml:"Username"`
+	Password                string `yaml:"Password"`
 	TransportDataDictionary string `yaml:"TransportDataDictionary"`
 	AppDataDictionary       string `yaml:"AppDataDictionary"`
 }
@@ -239,6 +240,7 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 	qfSession.Set(qconfig.TargetSubID, session.TargetSubID)
 	qfSession.Set(qconfig.BeginString, session.BeginString)
 	qfSession.Set("Username", session.Username)
+	qfSession.Set("Password", session.Password)
 
 	if len(session.TransportDataDictionary) > 0 {
 		qfSession.Set(qconfig.TransportDataDictionary, session.TransportDataDictionary)
