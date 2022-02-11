@@ -51,7 +51,17 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	session, err := context.GetSession()
+	if err != nil {
+		return err
+	}
+
 	settings, err := context.ToQuickFixSettings()
+	if err != nil {
+		return err
+	}
+
+	transportDict, appDict, err := session.GetFIXDictionaries()
 	if err != nil {
 		return err
 	}
@@ -61,7 +71,13 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	app.TransportDataDictionary = transportDict
+	app.AppDataDictionary = appDict
 	app.Logger = logger
+	app.NatsConnect("nats://a:a@127.0.0.1:4222,nats://a:a@127.0.0.1:4223")
+	if err != nil {
+		return err
+	}
 
 	acceptor, err := quickfix.NewAcceptor(app, quickfix.NewMemoryStoreFactory(), settings, quickfix.NewScreenLogFactory())
 	if err != nil {

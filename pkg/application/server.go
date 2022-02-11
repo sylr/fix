@@ -2,25 +2,31 @@ package application
 
 import (
 	"bytes"
+	"fmt"
 	"text/template"
 
 	"github.com/nats-io/nats.go"
-	"github.com/quickfixgo/fix50sp1/newordersingle"
+	"github.com/quickfixgo/enum"
+	"github.com/quickfixgo/field"
+	er50sp2 "github.com/quickfixgo/fix50sp2/executionreport"
+	nos50sp2 "github.com/quickfixgo/fix50sp2/newordersingle"
 	"github.com/quickfixgo/quickfix"
+	"github.com/quickfixgo/tag"
 
+	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/utils"
 )
 
 func NewServer() (*Server, error) {
 	tpl := template.New("orders")
-	tpl.Parse("orders.{{.Symbol}}.{{.Side}}.{{.type}}")
+	tpl.Parse("orders.{{.Symbol}}.{{.Side}}.{{.Type}}")
 
 	s := Server{
 		NatsSubject: tpl,
 		router:      quickfix.NewMessageRouter(),
 	}
 
-	s.router.AddRoute(newordersingle.Route(s.onNewOrderSingle))
+	s.router.AddRoute(nos50sp2.Route(s.onNewOrderSingle))
 
 	return &s, nil
 }
@@ -75,7 +81,7 @@ func (app *Server) ToAdmin(message *quickfix.Message, sessionID quickfix.Session
 
 // Notification of admin message being received from target.
 func (app *Server) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	app.Logger.Debug().Msgf("<- Message received from admin")
+	app.Logger.Debug().Msgf("<- Message received from admin %s", sessionID)
 
 	_, err := message.MsgType()
 	if err != nil {
@@ -103,32 +109,105 @@ func (app *Server) ToApp(message *quickfix.Message, sessionID quickfix.SessionID
 
 // Notification of app message being received from target.
 func (app *Server) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	app.Logger.Debug().Msgf("<- Message received from app")
+	app.Logger.Debug().Msgf("<- Message received from app %s", sessionID)
 
 	return app.router.Route(message, sessionID)
 }
 
-func (app *Server) onNewOrderSingle(order newordersingle.NewOrderSingle, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	symbol, err := order.GetSymbol()
-	if err != nil {
-		return err
+func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+	symbol, ferr := order.GetSymbol()
+	if ferr != nil {
+		return ferr
 	}
 
+	//clOrdID, ferr := order.GetClOrdID()
+	//if ferr != nil {
+	//	return ferr
+	//}
+
+	//senderCompID, ferr := order.Header.GetSenderCompID()
+	//if ferr != nil {
+	//	return ferr
+	//}
+
+	//targetCompID, ferr := order.Header.GetTargetCompID()
+	//if ferr != nil {
+	//	return ferr
+	//}
+
+	side, ferr := order.GetSide()
+	if ferr != nil {
+		return ferr
+	}
+
+	ordType, ferr := order.GetOrdType()
+	if ferr != nil {
+		return ferr
+	}
+
+	//price, ferr := order.GetPrice()
+	//if ferr != nil {
+	//	return ferr
+	//}
+
+	//orderQty, ferr := order.GetOrderQty()
+	//if ferr != nil {
+	//	return ferr
+	//}
+
+	sideString, _ := dict.OrderSides[side]
+	typeString, _ := dict.OrderTypes[ordType]
+
 	buf := bytes.NewBuffer([]byte{})
-	app.NatsSubject.Execute(
+	err := app.NatsSubject.Execute(
 		buf,
 		NewOrderSingleNatsSubject{
 			Symbol: symbol,
-			Side:   symbol,
-			Type:   symbol,
+			Side:   sideString,
+			Type:   typeString,
 		},
 	)
 	if err != nil {
-		return err
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.SessionRejectReason), nil)
 	}
-	app.natsConnetion.Publish(
+
+	err = app.natsConnetion.Publish(
 		buf.String(),
 		[]byte(order.ToMessage().String()),
 	)
+	if err != nil {
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.SessionRejectReason), nil)
+	}
+
+	app.updateOrder(order, enum.OrdStatus(enum.OrdStatus_NEW))
+
 	return nil
+}
+
+func (a *Server) updateOrder(order nos50sp2.NewOrderSingle, status enum.OrdStatus) {
+	execReport := er50sp2.New(
+		field.NewOrderID(MustNot(order.GetClOrdID())),
+		field.NewExecID("aze"),
+		field.NewExecType(enum.ExecType(status)),
+		field.NewOrdStatus(status),
+		field.NewSide(MustNot(order.GetSide())),
+		field.NewLeavesQty(MustNot(order.GetOrderQty()), 2),
+		field.NewCumQty(MustNot(order.GetOrderQty()), 2),
+	)
+	execReport.SetOrderQty(MustNot(order.GetOrderQty()), 2)
+	execReport.SetClOrdID(MustNot(order.GetClOrdID()))
+
+	execReport.Header.SetSenderCompID(MustNot(order.GetTargetCompID()))
+	execReport.Header.SetSenderSubID(MustNot(order.GetTargetSubID()))
+	execReport.Header.SetTargetCompID(MustNot(order.GetSenderCompID()))
+	execReport.Header.SetTargetSubID(MustNot(order.GetSenderSubID()))
+
+	sendErr := quickfix.Send(execReport)
+	if sendErr != nil {
+		fmt.Println(sendErr)
+	}
+}
+
+func MustNot[T any](v T, err quickfix.MessageRejectError) T {
+	return v
 }
