@@ -242,7 +242,9 @@ func new(session config.Session) (quickfix.Messagable, error) {
 	price := field.NewPrice(decimal.NewFromFloat(optionPrice), 2)
 	timeinforce := field.NewTimeInForce(eExpiry)
 	target := field.NewTargetCompID(session.TargetCompID)
+	targetsub := field.NewTargetSubID(session.TargetSubID)
 	sender := field.NewSenderCompID(session.SenderCompID)
+	sendersub := field.NewSenderSubID(session.SenderSubID)
 
 	var order quickfix.Messagable
 	switch session.BeginString {
@@ -251,7 +253,9 @@ func new(session config.Session) (quickfix.Messagable, error) {
 		case "FIX.5.0SP1":
 			order50sp1 := nos50sp1.New(clordid, ordside, transactime, ordtype)
 			order50sp1.Header.Set(target)
+			order50sp1.Header.Set(targetsub)
 			order50sp1.Header.Set(sender)
+			order50sp1.Header.Set(sendersub)
 			order50sp1.Set(handlinst)
 			order50sp1.Set(symbol)
 			order50sp1.Set(quantity)
@@ -262,7 +266,9 @@ func new(session config.Session) (quickfix.Messagable, error) {
 		case "FIX.5.0SP2":
 			order50sp2 := nos50sp2.New(clordid, ordside, transactime, ordtype)
 			order50sp2.Header.Set(target)
+			order50sp2.Header.Set(targetsub)
 			order50sp2.Header.Set(sender)
+			order50sp2.Header.Set(sendersub)
 			order50sp2.Set(handlinst)
 			order50sp2.Set(symbol)
 			order50sp2.Set(quantity)

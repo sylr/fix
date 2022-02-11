@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/quickfixgo/quickfix"
+	qconfig "github.com/quickfixgo/quickfix/config"
 	"github.com/quickfixgo/quickfix/datadictionary"
 
 	"sylr.dev/fix/pkg/errors"
@@ -172,7 +173,9 @@ type Session struct {
 	DefaultApplVerID        string `yaml:"DefaultApplVerID"`
 	HeartBtInt              int    `yaml:"HeartBtInt"`
 	SenderCompID            string `yaml:"SenderCompID"`
+	SenderSubID             string `yaml:"SenderSubID"`
 	TargetCompID            string `yaml:"TargetCompID"`
+	TargetSubID             string `yaml:"TargetSubID"`
 	Username                string `yaml:"Username"`
 	TransportDataDictionary string `yaml:"TransportDataDictionary"`
 	AppDataDictionary       string `yaml:"AppDataDictionary"`
@@ -229,6 +232,8 @@ func (c Context) ToQuickFixSettings() (*quickfix.Settings, error) {
 	qfSession.Set("HeartBtInt", FixIntString(session.HeartBtInt))
 	qfSession.Set("BeginString", session.BeginString)
 	qfSession.Set("DefaultApplVerID", session.DefaultApplVerID)
+	qfSession.Set(qconfig.SenderSubID, session.SenderSubID)
+	qfSession.Set(qconfig.TargetSubID, session.TargetSubID)
 	qfSession.Set("Username", session.Username)
 	qfSession.Set("TargetCompID", session.TargetCompID)
 	qfSession.Set("SenderCompID", session.SenderCompID)
