@@ -5,10 +5,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/quickfixgo/quickfix"
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
+	"sylr.dev/fix/pkg/acceptor"
 	"sylr.dev/fix/pkg/acceptor/application"
 	"sylr.dev/fix/pkg/initiator"
 )
@@ -79,7 +79,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	acceptor, err := quickfix.NewAcceptor(app, quickfix.NewMemoryStoreFactory(), settings, quickfix.NewScreenLogFactory())
+	acceptor, err := acceptor.NewAcceptor(app, settings)
 	if err != nil {
 		return err
 	}

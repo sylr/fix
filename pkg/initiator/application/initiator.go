@@ -9,46 +9,48 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
-func NewSecurityList() *SecurityList {
-	sl := SecurityList{
-		Connected:   make(chan interface{}),
-		FromAppChan: make(chan *quickfix.Message),
+func NewInitiator() *Initiator {
+	sl := Initiator{
+		Connected: make(chan interface{}),
+		Messages:  make(chan *quickfix.Message),
 	}
 
 	return &sl
 }
 
-type SecurityList struct {
+type Initiator struct {
 	utils.AppMessageLogger
 
-	Settings *quickfix.Settings
+	Settings  *quickfix.Settings
+	SessionID quickfix.SessionID
 
-	Connected   chan interface{}
-	FromAppChan chan *quickfix.Message
+	Connected chan interface{}
+	Messages  chan *quickfix.Message
 }
 
 // Notification of a session begin created.
-func (app *SecurityList) OnCreate(sessionID quickfix.SessionID) {
+func (app *Initiator) OnCreate(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("New session: %s", sessionID)
+	app.SessionID = sessionID
 }
 
 // Notification of a session successfully logging on.
-func (app *SecurityList) OnLogon(sessionID quickfix.SessionID) {
+func (app *Initiator) OnLogon(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logon: %s", sessionID)
 
 	app.Connected <- struct{}{}
 }
 
 // Notification of a session logging off or disconnecting.
-func (app *SecurityList) OnLogout(sessionID quickfix.SessionID) {
+func (app *Initiator) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
-	close(app.FromAppChan)
+	close(app.Messages)
 }
 
 // Notification of admin message being sent to target.
-func (app *SecurityList) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
+func (app *Initiator) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("-> Sending message to admin")
 
 	typ, err := message.MsgType()
@@ -81,7 +83,7 @@ func (app *SecurityList) ToAdmin(message *quickfix.Message, sessionID quickfix.S
 }
 
 // Notification of admin message being received from target.
-func (app *SecurityList) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *Initiator) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from admin")
 
 	_, err := message.MsgType()
@@ -95,7 +97,7 @@ func (app *SecurityList) FromAdmin(message *quickfix.Message, sessionID quickfix
 }
 
 // Notification of app message being sent to target.
-func (app *SecurityList) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
+func (app *Initiator) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
 	app.Logger.Debug().Msgf("-> Sending message to app")
 
 	_, err := message.MsgType()
@@ -103,13 +105,15 @@ func (app *SecurityList) ToApp(message *quickfix.Message, sessionID quickfix.Ses
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
 
-	app.LogMessage(zerolog.TraceLevel, message, sessionID, true)
+	app.LogMessage(zerolog.InfoLevel, message, sessionID, true)
+
+	app.Messages <- message
 
 	return nil
 }
 
 // Notification of app message being received from target.
-func (app *SecurityList) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *Initiator) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from app")
 
 	_, err := message.MsgType()
@@ -117,9 +121,9 @@ func (app *SecurityList) FromApp(message *quickfix.Message, sessionID quickfix.S
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
 
-	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
+	app.LogMessage(zerolog.InfoLevel, message, sessionID, false)
 
-	app.FromAppChan <- message
+	app.Messages <- message
 
 	return nil
 }

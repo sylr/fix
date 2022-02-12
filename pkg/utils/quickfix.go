@@ -23,8 +23,48 @@ type AppMessageLogger struct {
 	AppDataDictionary       *datadictionary.DataDictionary
 }
 
-func (app *AppMessageLogger) LogMessage(message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
+func (app *AppMessageLogger) WriteMessage(w io.Writer, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
 	if app.Logger.GetLevel() > zerolog.TraceLevel {
+		return
+	}
+
+	message.Cook()
+	sort.Sort(message.Header)
+
+	loop := []struct {
+		prefix string
+		fm     quickfix.FieldMap
+		dict   *datadictionary.DataDictionary
+	}{
+		{"Headers ", message.Header.FieldMap, app.TransportDataDictionary},
+		{"Body    ", message.Body.FieldMap, app.AppDataDictionary},
+		{"Trailers", message.Trailer.FieldMap, app.TransportDataDictionary},
+	}
+	for _, i := range loop {
+		if len(i.fm.Tags()) == 0 {
+			continue
+		}
+
+		b := bytes.NewBuffer([]byte{})
+		bw := bufio.NewWriter(b)
+		br := bufio.NewReader(b)
+
+		app.WriteTags(bw, i.fm)
+		bw.Flush()
+
+		str, _ := io.ReadAll(br)
+
+		formatStr := "%s <- %s\n"
+		if sending {
+			formatStr = "%s -> %s\n"
+		}
+
+		fmt.Fprintf(w, formatStr, i.prefix, str)
+	}
+}
+
+func (app *AppMessageLogger) LogMessage(level zerolog.Level, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
+	if app.Logger.GetLevel() > level {
 		return
 	}
 
@@ -58,7 +98,7 @@ func (app *AppMessageLogger) LogMessage(message *quickfix.Message, sessionID qui
 			formatStr = "%s -> %s"
 		}
 
-		app.Logger.Trace().Msgf(formatStr, i.prefix, str)
+		app.Logger.WithLevel(level).Msgf(formatStr, i.prefix, str)
 	}
 }
 

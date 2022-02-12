@@ -4,6 +4,7 @@ import (
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
+	"github.com/rs/zerolog"
 	"sylr.dev/fix/pkg/utils"
 )
 
@@ -75,7 +76,7 @@ func (app *NewOrder) ToAdmin(message *quickfix.Message, sessionID quickfix.Sessi
 		}
 	}
 
-	app.LogMessage(message, sessionID, true)
+	app.LogMessage(zerolog.TraceLevel, message, sessionID, true)
 }
 
 // Notification of admin message being received from target.
@@ -87,7 +88,7 @@ func (app *NewOrder) FromAdmin(message *quickfix.Message, sessionID quickfix.Ses
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
 
-	app.LogMessage(message, sessionID, false)
+	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
 	return nil
 }
@@ -101,7 +102,7 @@ func (app *NewOrder) ToApp(message *quickfix.Message, sessionID quickfix.Session
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
 
-	app.LogMessage(message, sessionID, true)
+	app.LogMessage(zerolog.TraceLevel, message, sessionID, true)
 
 	return nil
 }
@@ -115,7 +116,7 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
 
-	app.LogMessage(message, sessionID, false)
+	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
 	app.FromAppChan <- message
 
