@@ -17,11 +17,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/application"
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
+	"sylr.dev/fix/pkg/initiator/application"
 	"sylr.dev/fix/pkg/utils"
 )
 

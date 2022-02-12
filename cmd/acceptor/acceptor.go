@@ -1,4 +1,4 @@
-package server
+package acceptor
 
 import (
 	"os"
@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/application"
+	"sylr.dev/fix/pkg/acceptor/application"
 	"sylr.dev/fix/pkg/initiator"
 )
 
-var ServerCmd = &cobra.Command{
-	Use:   "server",
-	Short: "Launch a FIX server",
-	Long:  "Launch a FIX server accepting orders.",
+var AcceptorCmd = &cobra.Command{
+	Use:   "acceptor",
+	Short: "Launch a FIX acceptor",
+	Long:  "Launch a FIX acceptor.",
 	RunE:  Execute,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		err := initiator.ValidateOptions(cmd, args)
@@ -39,8 +39,8 @@ var ServerCmd = &cobra.Command{
 }
 
 func init() {
-	initiator.AddPersistentFlags(ServerCmd)
-	initiator.AddPersistentFlagCompletions(ServerCmd)
+	initiator.AddPersistentFlags(AcceptorCmd)
+	initiator.AddPersistentFlagCompletions(AcceptorCmd)
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
