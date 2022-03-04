@@ -159,6 +159,11 @@ func (c *Context) GetName() string {
 	return c.Name
 }
 
+type SQLStoreConfig interface {
+	GetSQLStoreDriver() string
+	GetSQLStoreDataSourceName() string
+}
+
 type common struct {
 	Name                     string        `yaml:"name"`
 	SocketUseSSL             bool          `yaml:"SocketUseSSL"`
@@ -174,6 +179,14 @@ type common struct {
 
 func (c *common) GetName() string {
 	return c.Name
+}
+
+func (c *common) GetSQLStoreDriver() string {
+	return c.SQLStoreDriver
+}
+
+func (c *common) GetSQLStoreDataSourceName() string {
+	return c.SQLStoreDataSourceName
 }
 
 func (c *common) setQuickFixGlobalSettings(settings *quickfix.SessionSettings, session *quickfix.SessionSettings) {
@@ -206,6 +219,14 @@ type Acceptor struct {
 	SocketAcceptHost string `yaml:"SocketAcceptHost"`
 	SocketAcceptPort int    `yaml:"SocketAcceptPort"`
 	UseTCPProxy      string `yaml:"UseTCPProxy"`
+}
+
+func (a *Acceptor) GetSQLStoreDriver() string {
+	return a.common.GetSQLStoreDriver()
+}
+
+func (a *Acceptor) GetSQLStoreDataSourceName() string {
+	return a.common.GetSQLStoreDataSourceName()
 }
 
 type Initiator struct {

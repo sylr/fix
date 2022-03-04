@@ -12,7 +12,6 @@ var NewCmd = &cobra.Command{
 	Use:   "new",
 	Short: "Send a new FIX message",
 	Long:  "Send a new FIX message after initiating a sesion with a FIX acceptor.",
-	RunE:  Execute,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		err := initiator.ValidateOptions(cmd, args)
 		if err != nil {
@@ -39,8 +38,4 @@ func init() {
 	initiator.AddPersistentFlagCompletions(neworder.NewOrderCmd)
 
 	NewCmd.AddCommand(neworder.NewOrderCmd)
-}
-
-func Execute(cmd *cobra.Command, args []string) error {
-	return nil
 }

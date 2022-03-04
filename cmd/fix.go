@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/cmd/cancel"
+	configcmd "sylr.dev/fix/cmd/config"
+	"sylr.dev/fix/cmd/database"
 	"sylr.dev/fix/cmd/initiator"
 	"sylr.dev/fix/cmd/list"
 	"sylr.dev/fix/cmd/new"
@@ -30,6 +32,8 @@ var FixCmd = &cobra.Command{
 func init() {
 	options := config.GetOptions()
 
+	FixCmd.AddCommand(configcmd.ConfigCmd)
+	FixCmd.AddCommand(database.DatabaseCmd)
 	FixCmd.AddCommand(new.NewCmd)
 	FixCmd.AddCommand(cancel.CancelCmd)
 	FixCmd.AddCommand(list.ListCmd)
