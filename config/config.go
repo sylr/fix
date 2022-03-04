@@ -92,15 +92,16 @@ func GetSession(name string) (*Session, error) {
 }
 
 type cliOptions struct {
-	Config      string
-	Context     string
-	Session     string
-	Acceptor    string
-	Initiator   string
-	Timeout     time.Duration
-	Verbose     int
-	Interactive bool
-	LogCaller   bool
+	Config          string
+	Context         string
+	Session         string
+	Acceptor        string
+	Initiator       string
+	Timeout         time.Duration
+	Verbose         int
+	Interactive     bool
+	LogCaller       bool
+	QuickFixLogging bool
 }
 
 type fixConfig struct {

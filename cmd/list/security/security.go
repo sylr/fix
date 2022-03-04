@@ -11,6 +11,7 @@ import (
 	slr50sp1 "github.com/quickfixgo/fix50sp1/securitylistrequest"
 	slr50sp2 "github.com/quickfixgo/fix50sp2/securitylistrequest"
 	"github.com/quickfixgo/quickfix"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
@@ -102,7 +103,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict
 
-	init, err := initiator.Initiate(app, settings, logger)
+	var quickfixLogger *zerolog.Logger
+	if options.QuickFixLogging {
+		quickfixLogger = logger
+	}
+
+	init, err := initiator.Initiate(app, settings, quickfixLogger)
 	if err != nil {
 		return err
 	}

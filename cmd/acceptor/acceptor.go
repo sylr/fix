@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	natsd "github.com/nats-io/nats-server/v2/server"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
@@ -45,6 +46,7 @@ func init() {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
+	options := config.GetOptions()
 	logger := config.GetLogger()
 
 	context, err := config.GetCurrentContext()
@@ -76,11 +78,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.AppDataDictionary = appDict
 	app.Logger = logger
 
-	if err != nil {
-		return err
+	var quickfixLogger *zerolog.Logger
+	if options.QuickFixLogging {
+		quickfixLogger = logger
 	}
 
-	acceptor, err := acceptor.NewAcceptor(app, settings, logger)
+	acceptor, err := acceptor.NewAcceptor(app, settings, quickfixLogger)
 	if err != nil {
 		return err
 	}

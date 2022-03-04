@@ -13,15 +13,21 @@ type quickFixLog struct {
 }
 
 func (l quickFixLog) OnIncoming(s []byte) {
-	l.logger.Debug().Msgf("quickfix(%s, incoming): %s", l.prefix, s)
+	if l.logger != nil {
+		l.logger.Debug().Msgf("quickfix(%s, incoming): %s", l.prefix, s)
+	}
 }
 
 func (l quickFixLog) OnOutgoing(s []byte) {
-	l.logger.Debug().Msgf("quickfix(%s, outgoing): %s", l.prefix, s)
+	if l.logger != nil {
+		l.logger.Debug().Msgf("quickfix(%s, outgoing): %s", l.prefix, s)
+	}
 }
 
 func (l quickFixLog) OnEvent(s string) {
-	l.logger.Debug().Msgf("quickfix(%s, event): %s", l.prefix, s)
+	if l.logger != nil {
+		l.logger.Debug().Msgf("quickfix(%s, event): %s", l.prefix, s)
+	}
 }
 
 func (l quickFixLog) OnEventf(format string, a ...interface{}) {

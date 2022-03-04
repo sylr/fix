@@ -10,6 +10,7 @@ import (
 	"github.com/quickfixgo/field"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
@@ -84,7 +85,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.AppDataDictionary = appDict
 	app.Logger = logger
 
-	init, err := initiator.Initiate(app, settings, logger)
+	var quickfixLogger *zerolog.Logger
+	if options.QuickFixLogging {
+		quickfixLogger = logger
+	}
+
+	init, err := initiator.Initiate(app, settings, quickfixLogger)
 	if err != nil {
 		return err
 	}

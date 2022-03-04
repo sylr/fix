@@ -13,6 +13,7 @@ import (
 	nos50sp2 "github.com/quickfixgo/fix50sp2/newordersingle"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
+	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
@@ -134,7 +135,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict
 
-	init, err := initiator.Initiate(app, settings, logger)
+	var quickfixLogger *zerolog.Logger
+	if options.QuickFixLogging {
+		quickfixLogger = logger
+	}
+
+	init, err := initiator.Initiate(app, settings, quickfixLogger)
 	if err != nil {
 		return err
 	}

@@ -87,6 +87,7 @@ func AddPersistentFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&options.Initiator, "initiator", "", "Initiator to use (can't be used with --context)")
 	cmd.PersistentFlags().StringVar(&options.Session, "session", "", "Session to use (can't be used with --context)")
 	cmd.PersistentFlags().DurationVar(&options.Timeout, "timeout", 0, "Duration for timeouts")
+	cmd.PersistentFlags().BoolVar(&options.QuickFixLogging, "quickfix-logging", false, "Enable quickfix logging")
 }
 
 func AddPersistentFlagCompletions(cmd *cobra.Command) {
