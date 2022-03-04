@@ -102,7 +102,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict
 
-	init, err := initiator.Initiate(app, settings)
+	init, err := initiator.Initiate(app, settings, logger)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prepare securitylist
-	securitylist, err := new(*session)
+	securitylist, err := buildMessage(*session)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func new(session config.Session) (quickfix.Messagable, error) {
+func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	var messagable quickfix.Messagable
 
 	etype, err := dict.SecurityListRequestTypeStringToEnum(optionType)

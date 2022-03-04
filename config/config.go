@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/quickfixgo/quickfix"
@@ -66,6 +68,10 @@ func GetAcceptor(name string) (*Acceptor, error) {
 }
 
 func GetInitiator(name string) (*Initiator, error) {
+	if len(name) == 0 {
+		panic("empty initiator name")
+	}
+
 	for k, initiator := range config.Initiators {
 		if initiator.Name == name {
 			return config.Initiators[k], nil
@@ -162,6 +168,8 @@ type common struct {
 	SocketCAFile             string        `yaml:"SocketCAFile"`
 	SocketTimeout            time.Duration `yaml:"SocketTimeout"`
 	ResetOnDisconnect        bool          `yaml:"ResetOnDisconnect"`
+	SQLStoreDriver           string        `yaml:"SQLStoreDriver"`
+	SQLStoreDataSourceName   string        `yaml:"SQLStoreDataSourceName"`
 }
 
 func (c *common) GetName() string {
@@ -270,6 +278,16 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	global := settings.GlobalSettings()
 	initiator.setQuickFixGlobalSettings(global, qfSession)
 
+	if len(initiator.SQLStoreDriver) > 0 {
+		if initiator.SQLStoreDriver == "sqlite3" {
+			if len(initiator.SQLStoreDataSourceName) == 0 {
+				initiator.SQLStoreDataSourceName = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "initiator.db"}, string(os.PathSeparator)))
+			}
+			global.Set(qconfig.SQLStoreDriver, initiator.SQLStoreDriver)
+			global.Set(qconfig.SQLStoreDataSourceName, initiator.SQLStoreDataSourceName)
+		}
+	}
+
 	sessions, err := c.GetSessions()
 	if err != nil {
 		return nil, err
@@ -338,13 +356,26 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 	settings := quickfix.NewSettings()
 	qfSession := quickfix.NewSessionSettings()
 
-	initiator, err := GetAcceptor(c.Acceptor)
+	acceptor, err := GetAcceptor(c.Acceptor)
 	if err != nil {
 		return nil, err
 	}
 
 	global := settings.GlobalSettings()
-	initiator.setQuickFixGlobalSettings(global, qfSession)
+	acceptor.setQuickFixGlobalSettings(global, qfSession)
+
+	if len(acceptor.SQLStoreDriver) > 0 {
+		if acceptor.SQLStoreDriver == "sqlite3" {
+			if len(acceptor.SQLStoreDataSourceName) == 0 {
+				acceptor.SQLStoreDataSourceName = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "acceptor.db"}, string(os.PathSeparator)))
+			}
+			global.Set(qconfig.SQLStoreDriver, acceptor.SQLStoreDriver)
+			global.Set(qconfig.SQLStoreDataSourceName, acceptor.SQLStoreDataSourceName)
+		}
+	}
+
+	global.Set(qconfig.SocketAcceptHost, acceptor.SocketAcceptHost)
+	global.Set(qconfig.SocketAcceptPort, strconv.Itoa(acceptor.SocketAcceptPort))
 
 	sessions, err := c.GetSessions()
 	if err != nil {
@@ -366,9 +397,9 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		if options.Timeout != time.Duration(0) {
 			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
 			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
-		} else if initiator.SocketTimeout != time.Duration(0) {
-			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(initiator.SocketTimeout.Seconds())))
-			qfSession.Set(qconfig.LogoutTimeout, FixIntString(int(initiator.SocketTimeout.Seconds())))
+		} else if acceptor.SocketTimeout != time.Duration(0) {
+			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(acceptor.SocketTimeout.Seconds())))
+			qfSession.Set(qconfig.LogoutTimeout, FixIntString(int(acceptor.SocketTimeout.Seconds())))
 		} else {
 			qfSession.Set(qconfig.LogonTimeout, "5")
 			qfSession.Set(qconfig.LogoutTimeout, "5")

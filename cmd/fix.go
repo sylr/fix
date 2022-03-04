@@ -8,7 +8,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/cmd/acceptor"
 	"sylr.dev/fix/cmd/cancel"
 	"sylr.dev/fix/cmd/initiator"
 	"sylr.dev/fix/cmd/list"
@@ -34,7 +33,6 @@ func init() {
 	FixCmd.AddCommand(new.NewCmd)
 	FixCmd.AddCommand(cancel.CancelCmd)
 	FixCmd.AddCommand(list.ListCmd)
-	FixCmd.AddCommand(acceptor.InitiatorCmd)
 	FixCmd.AddCommand(initiator.InitiatorCmd)
 
 	configPath := strings.Join([]string{"$HOME", ".fix", "config"}, string(os.PathSeparator))

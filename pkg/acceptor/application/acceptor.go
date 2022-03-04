@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"text/template"
 
+	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
@@ -18,13 +19,30 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
-func NewServer() (*Server, error) {
+func NewServer(natsdOptions *natsd.Options) (*Server, error) {
+	var err error
+
 	tpl := template.New("orders")
 	tpl.Parse("orders.{{.Symbol}}.{{.Side}}.{{.Type}}")
 
 	s := Server{
 		NatsSubject: tpl,
 		router:      quickfix.NewMessageRouter(),
+	}
+
+	if natsdOptions != nil {
+		s.natsServer, err = natsd.NewServer(natsdOptions)
+		s.natsServer.Start()
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	s.natsConn, err = nats.Connect("nats://127.0.0.1:4222")
+
+	if err != nil {
+		return nil, err
 	}
 
 	s.router.AddRoute(nos50sp2.Route(s.onNewOrderSingle))
@@ -41,15 +59,22 @@ type NewOrderSingleNatsSubject struct {
 type Server struct {
 	utils.QuickFixAppMessageLogger
 
-	natsConnetion *nats.Conn
-	NatsSubject   *template.Template
-	router        *quickfix.MessageRouter
-	Settings      *quickfix.Settings
+	natsConn   *nats.Conn
+	natsServer *natsd.Server
+
+	NatsSubject *template.Template
+	router      *quickfix.MessageRouter
+	Settings    *quickfix.Settings
+}
+
+func (app *Server) Close() {
+	app.natsConn.Close()
+	app.natsServer.Shutdown()
 }
 
 func (app *Server) NatsConnect(connString string) error {
 	var err error
-	app.natsConnetion, err = nats.Connect(connString)
+	app.natsConn, err = nats.Connect(connString)
 	return err
 }
 
@@ -172,7 +197,7 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 		return quickfix.NewMessageRejectError(err.Error(), int(tag.SessionRejectReason), nil)
 	}
 
-	err = app.natsConnetion.Publish(
+	err = app.natsConn.Publish(
 		buf.String(),
 		[]byte(order.ToMessage().String()),
 	)

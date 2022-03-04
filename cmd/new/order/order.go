@@ -134,7 +134,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict
 
-	init, err := initiator.Initiate(app, settings)
+	init, err := initiator.Initiate(app, settings, logger)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prepare order
-	order, err := new(*session)
+	order, err := buildMessage(*session)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-func new(session config.Session) (quickfix.Messagable, error) {
+func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	var messagable quickfix.Messagable
 
 	eside, err := dict.OrderSideStringToEnum(optionSide)

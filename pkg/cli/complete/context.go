@@ -1,11 +1,11 @@
-package initiator
+package complete
 
 import (
 	"github.com/spf13/cobra"
 	"sylr.dev/fix/config"
 )
 
-func completeContext(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func Context(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	options := config.GetOptions()
 	fixConfig := config.GetConfig()
 
@@ -21,7 +21,7 @@ func completeContext(cmd *cobra.Command, args []string, toComplete string) ([]st
 	return contexts, cobra.ShellCompDirectiveNoFileComp
 }
 
-func completeInitiator(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func Acceptor(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	options := config.GetOptions()
 	fixConfig := config.GetConfig()
 
@@ -29,7 +29,7 @@ func completeInitiator(cmd *cobra.Command, args []string, toComplete string) ([]
 		*fixConfig = *conf
 	}
 
-	acceptors := make([]string, 0, len(fixConfig.Initiators))
+	acceptors := make([]string, 0, len(fixConfig.Acceptors))
 	for _, acceptor := range fixConfig.Initiators {
 		acceptors = append(acceptors, acceptor.Name)
 	}
@@ -37,7 +37,23 @@ func completeInitiator(cmd *cobra.Command, args []string, toComplete string) ([]
 	return acceptors, cobra.ShellCompDirectiveNoFileComp
 }
 
-func completeSession(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func Initiator(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	options := config.GetOptions()
+	fixConfig := config.GetConfig()
+
+	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
+		*fixConfig = *conf
+	}
+
+	initiators := make([]string, 0, len(fixConfig.Initiators))
+	for _, initiator := range fixConfig.Initiators {
+		initiators = append(initiators, initiator.Name)
+	}
+
+	return initiators, cobra.ShellCompDirectiveNoFileComp
+}
+
+func Session(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	options := config.GetOptions()
 	fixConfig := config.GetConfig()
 

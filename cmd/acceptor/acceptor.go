@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
@@ -13,13 +14,13 @@ import (
 	"sylr.dev/fix/pkg/initiator"
 )
 
-var InitiatorCmd = &cobra.Command{
+var AcceptorCmd = &cobra.Command{
 	Use:   "acceptor",
 	Short: "Launch a FIX acceptor",
 	Long:  "Launch a FIX acceptor.",
 	RunE:  Execute,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := initiator.ValidateOptions(cmd, args)
+		err := acceptor.ValidateOptions(cmd, args)
 		if err != nil {
 			return err
 		}
@@ -39,8 +40,8 @@ var InitiatorCmd = &cobra.Command{
 }
 
 func init() {
-	initiator.AddPersistentFlags(InitiatorCmd)
-	initiator.AddPersistentFlagCompletions(InitiatorCmd)
+	initiator.AddPersistentFlags(AcceptorCmd)
+	initiator.AddPersistentFlagCompletions(AcceptorCmd)
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
@@ -66,7 +67,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	app, err := application.NewServer()
+	app, err := application.NewServer(&natsd.Options{})
 	if err != nil {
 		return err
 	}
@@ -74,12 +75,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict
 	app.Logger = logger
-	app.NatsConnect("nats://a:a@127.0.0.1:4222,nats://a:a@127.0.0.1:4223")
+
 	if err != nil {
 		return err
 	}
 
-	acceptor, err := acceptor.NewAcceptor(app, settings)
+	acceptor, err := acceptor.NewAcceptor(app, settings, logger)
 	if err != nil {
 		return err
 	}

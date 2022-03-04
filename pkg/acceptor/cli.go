@@ -1,4 +1,4 @@
-package initiator
+package acceptor
 
 import (
 	"fmt"
@@ -34,12 +34,12 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 
 	if len(options.Context) > 0 {
 		if len(options.Initiator) > 0 || len(options.Session) > 0 {
-			return fmt.Errorf("%w: can't use --initiator/--session with --context", errors.Options)
+			return fmt.Errorf("%w: can't use --acceptor/--session with --context", errors.Options)
 		}
 		contextName = options.Context
 	} else if len(contextName) == 0 {
 		if len(options.Initiator) == 0 || len(options.Session) == 0 {
-			return fmt.Errorf("%w: you need to specify either --context or --initiator/--session", errors.Options)
+			return fmt.Errorf("%w: you need to specify either --context or --acceptor/--session", errors.Options)
 		}
 	}
 
@@ -58,7 +58,7 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = context.GetInitiator()
+	_, err = context.GetAcceptor()
 	if err != nil {
 		return err
 	}
@@ -67,13 +67,8 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	} else {
-		switch len(sessions) {
-		case 0:
+		if len(sessions) == 0 {
 			return errors.ConfigContextNoSession
-		case 1:
-			// OK
-		default:
-			return errors.ConfigContextMultipleSessions
 		}
 	}
 
@@ -84,13 +79,13 @@ func AddPersistentFlags(cmd *cobra.Command) {
 	options := config.GetOptions()
 
 	cmd.PersistentFlags().StringVar(&options.Context, "context", "", "Context to use")
-	cmd.PersistentFlags().StringVar(&options.Initiator, "initiator", "", "Initiator to use (can't be used with --context)")
+	cmd.PersistentFlags().StringVar(&options.Acceptor, "acceptor", "", "Initiator to use (can't be used with --context)")
 	cmd.PersistentFlags().StringVar(&options.Session, "session", "", "Session to use (can't be used with --context)")
 	cmd.PersistentFlags().DurationVar(&options.Timeout, "timeout", 0, "Duration for timeouts")
 }
 
 func AddPersistentFlagCompletions(cmd *cobra.Command) {
 	cmd.RegisterFlagCompletionFunc("context", complete.Context)
-	cmd.RegisterFlagCompletionFunc("initiator", complete.Initiator)
+	cmd.RegisterFlagCompletionFunc("acceptor", complete.Initiator)
 	cmd.RegisterFlagCompletionFunc("session", complete.Session)
 }

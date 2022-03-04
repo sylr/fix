@@ -84,7 +84,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	app.AppDataDictionary = appDict
 	app.Logger = logger
 
-	init, err := initiator.Initiate(app, settings)
+	init, err := initiator.Initiate(app, settings, logger)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,8 @@ func Execute(cmd *cobra.Command, args []string) error {
 LOOP:
 	for {
 		select {
-		case <-interrupt:
+		case signal := <-interrupt:
+			logger.Debug().Msgf("Received signal: %s", signal)
 			break LOOP
 		case _, ok := <-app.Messages:
 			if !ok {
