@@ -21,7 +21,7 @@ func completeContext(cmd *cobra.Command, args []string, toComplete string) ([]st
 	return contexts, cobra.ShellCompDirectiveNoFileComp
 }
 
-func completeAcceptor(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func completeInitiator(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	options := config.GetOptions()
 	fixConfig := config.GetConfig()
 
@@ -29,8 +29,8 @@ func completeAcceptor(cmd *cobra.Command, args []string, toComplete string) ([]s
 		*fixConfig = *conf
 	}
 
-	acceptors := make([]string, 0, len(fixConfig.Acceptors))
-	for _, acceptor := range fixConfig.Acceptors {
+	acceptors := make([]string, 0, len(fixConfig.Initiators))
+	for _, acceptor := range fixConfig.Initiators {
 		acceptors = append(acceptors, acceptor.Name)
 	}
 

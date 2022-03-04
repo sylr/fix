@@ -106,12 +106,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	session, err := context.GetSession()
+	sessions, err := context.GetSessions()
 	if err != nil {
 		return err
 	}
 
-	acceptor, err := context.GetAcceptor()
+	//
+	session := sessions[0]
+	initiatior, err := context.GetInitiator()
 	if err != nil {
 		return err
 	}
@@ -121,7 +123,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	settings, err := context.ToQuickFixSettings()
+	settings, err := context.ToQuickFixInitiatorSettings()
 	if err != nil {
 		return err
 	}
@@ -149,8 +151,8 @@ func Execute(cmd *cobra.Command, args []string) error {
 	var timeout time.Duration
 	if options.Timeout != time.Duration(0) {
 		timeout = options.Timeout
-	} else if acceptor.SocketTimeout != time.Duration(0) {
-		timeout = acceptor.SocketTimeout
+	} else if initiatior.SocketTimeout != time.Duration(0) {
+		timeout = initiatior.SocketTimeout
 	} else {
 		timeout = 5 * time.Second
 	}
@@ -182,7 +184,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	var responseMessage *quickfix.Message
 	select {
 	case <-time.After(timeout):
-		return fmt.Errorf("timeout while waiting for order response")
+		return errors.ResponseTimeout
 	case responseMessage, ok = <-app.FromAppChan:
 		if !ok {
 			return errors.FixLogout
@@ -216,6 +218,8 @@ func Execute(cmd *cobra.Command, args []string) error {
 }
 
 func new(session config.Session) (quickfix.Messagable, error) {
+	var messagable quickfix.Messagable
+
 	eside, err := dict.OrderSideStringToEnum(optionSide)
 	if err != nil {
 		return nil, err
@@ -233,49 +237,17 @@ func new(session config.Session) (quickfix.Messagable, error) {
 
 	// Prepare order
 	clordid := field.NewClOrdID(optionID)
-	handlinst := field.NewHandlInst(enum.HandlInst_AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION)
-	ordside := field.NewSide(eside)
-	transactime := field.NewTransactTime(time.Now())
 	ordtype := field.NewOrdType(etype)
-	quantity := field.NewOrderQty(decimal.NewFromInt(optionQuantity), 2)
-	symbol := field.NewSymbol(optionSymbol)
-	price := field.NewPrice(decimal.NewFromFloat(optionPrice), 2)
-	timeinforce := field.NewTimeInForce(eExpiry)
-	target := field.NewTargetCompID(session.TargetCompID)
-	targetsub := field.NewTargetSubID(session.TargetSubID)
-	sender := field.NewSenderCompID(session.SenderCompID)
-	sendersub := field.NewSenderSubID(session.SenderSubID)
+	transactime := field.NewTransactTime(time.Now())
+	ordside := field.NewSide(eside)
 
-	var order quickfix.Messagable
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
 		case "FIX.5.0SP1":
-			order50sp1 := nos50sp1.New(clordid, ordside, transactime, ordtype)
-			order50sp1.Header.Set(target)
-			order50sp1.Header.Set(targetsub)
-			order50sp1.Header.Set(sender)
-			order50sp1.Header.Set(sendersub)
-			order50sp1.Set(handlinst)
-			order50sp1.Set(symbol)
-			order50sp1.Set(quantity)
-			order50sp1.Set(price)
-			order50sp1.Set(timeinforce)
-
-			order = order50sp1
+			messagable = nos50sp1.New(clordid, ordside, transactime, ordtype)
 		case "FIX.5.0SP2":
-			order50sp2 := nos50sp2.New(clordid, ordside, transactime, ordtype)
-			order50sp2.Header.Set(target)
-			order50sp2.Header.Set(targetsub)
-			order50sp2.Header.Set(sender)
-			order50sp2.Header.Set(sendersub)
-			order50sp2.Set(handlinst)
-			order50sp2.Set(symbol)
-			order50sp2.Set(quantity)
-			order50sp2.Set(price)
-			order50sp2.Set(timeinforce)
-
-			order = order50sp2
+			messagable = nos50sp2.New(clordid, ordside, transactime, ordtype)
 		default:
 			return nil, errors.FixVersionNotImplemented
 		}
@@ -283,5 +255,17 @@ func new(session config.Session) (quickfix.Messagable, error) {
 		return nil, errors.FixVersionNotImplemented
 	}
 
-	return order, nil
+	message := messagable.ToMessage()
+	utils.QuickFixMessagePartSet(&message.Header, session.TargetCompID, field.NewTargetCompID)
+	utils.QuickFixMessagePartSet(&message.Header, session.TargetSubID, field.NewTargetSubID)
+	utils.QuickFixMessagePartSet(&message.Header, session.SenderCompID, field.NewSenderCompID)
+	utils.QuickFixMessagePartSet(&message.Header, session.SenderSubID, field.NewSenderSubID)
+
+	message.Body.Set(field.NewHandlInst(enum.HandlInst_AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION))
+	message.Body.Set(field.NewSymbol(optionSymbol))
+	message.Body.Set(field.NewPrice(decimal.NewFromFloat(optionPrice), 2))
+	message.Body.Set(field.NewOrderQty(decimal.NewFromInt(optionQuantity), 2))
+	message.Body.Set(field.NewTimeInForce(eExpiry))
+
+	return message, nil
 }

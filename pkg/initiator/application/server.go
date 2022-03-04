@@ -39,7 +39,7 @@ type NewOrderSingleNatsSubject struct {
 }
 
 type Server struct {
-	utils.AppMessageLogger
+	utils.QuickFixAppMessageLogger
 
 	natsConnetion *nats.Conn
 	NatsSubject   *template.Template

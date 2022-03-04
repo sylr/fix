@@ -19,7 +19,7 @@ func NewInitiator() *Initiator {
 }
 
 type Initiator struct {
-	utils.AppMessageLogger
+	utils.QuickFixAppMessageLogger
 
 	Settings  *quickfix.Settings
 	SessionID quickfix.SessionID

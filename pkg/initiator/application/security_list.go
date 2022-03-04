@@ -19,7 +19,7 @@ func NewSecurityList() *SecurityList {
 }
 
 type SecurityList struct {
-	utils.AppMessageLogger
+	utils.QuickFixAppMessageLogger
 
 	Settings *quickfix.Settings
 
@@ -84,12 +84,17 @@ func (app *SecurityList) ToAdmin(message *quickfix.Message, sessionID quickfix.S
 func (app *SecurityList) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from admin")
 
-	_, err := message.MsgType()
+	typ, err := message.MsgType()
 	if err != nil {
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
+
+	switch typ {
+	case string(enum.MsgType_REJECT):
+		app.FromAppChan <- message
+	}
 
 	return nil
 }

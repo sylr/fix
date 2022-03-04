@@ -42,13 +42,9 @@ var ListSecurityCmd = &cobra.Command{
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			if parent.PersistentPreRunE != nil {
-				err = parent.PersistentPreRunE(parent, args)
-				if err != nil {
-					return err
-				}
+				return parent.PersistentPreRunE(cmd, args)
 			}
 		}
-
 		return nil
 	},
 	RunE: Execute,
@@ -79,22 +75,23 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	session, err := context.GetSession()
+	sessions, err := context.GetSessions()
 	if err != nil {
 		return err
 	}
 
-	acceptor, err := context.GetAcceptor()
+	acceptor, err := context.GetInitiator()
 	if err != nil {
 		return err
 	}
 
+	session := sessions[0]
 	transportDict, appDict, err := session.GetFIXDictionaries()
 	if err != nil {
 		return err
 	}
 
-	settings, err := context.ToQuickFixSettings()
+	settings, err := context.ToQuickFixInitiatorSettings()
 	if err != nil {
 		return err
 	}
@@ -154,7 +151,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	var responseMessage *quickfix.Message
 	select {
 	case <-time.After(timeout):
-		return fmt.Errorf("timeout while waiting for order response")
+		return errors.ResponseTimeout
 	case responseMessage = <-app.FromAppChan:
 	}
 
@@ -164,15 +161,13 @@ func Execute(cmd *cobra.Command, args []string) error {
 }
 
 func new(session config.Session) (quickfix.Messagable, error) {
-	var order quickfix.Messagable
+	var messagable quickfix.Messagable
 
 	etype, err := dict.SecurityListRequestTypeStringToEnum(optionType)
 	if err != nil {
 		return nil, err
 	}
 
-	target := field.NewTargetCompID(session.TargetCompID)
-	sender := field.NewSenderCompID(session.SenderCompID)
 	stype := field.NewSecurityListRequestType(etype)
 	reqid := field.NewSecurityReqID(string(enum.SecurityRequestType_SYMBOL))
 
@@ -180,17 +175,9 @@ func new(session config.Session) (quickfix.Messagable, error) {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
 		case "FIX.5.0SP1":
-			securitylist50sp1 := slr50sp1.New(reqid, stype)
-			securitylist50sp1.Header.Set(target)
-			securitylist50sp1.Header.Set(sender)
-
-			order = securitylist50sp1
+			messagable = slr50sp1.New(reqid, stype)
 		case "FIX.5.0SP2":
-			securitylist50sp2 := slr50sp2.New(reqid, stype)
-			securitylist50sp2.Header.Set(target)
-			securitylist50sp2.Header.Set(sender)
-
-			order = securitylist50sp2
+			messagable = slr50sp2.New(reqid, stype)
 		default:
 			return nil, errors.FixVersionNotImplemented
 		}
@@ -198,5 +185,11 @@ func new(session config.Session) (quickfix.Messagable, error) {
 		return nil, errors.FixVersionNotImplemented
 	}
 
-	return order, nil
+	message := messagable.ToMessage()
+	utils.QuickFixMessagePartSet(&message.Header, session.TargetCompID, field.NewTargetCompID)
+	utils.QuickFixMessagePartSet(&message.Header, session.TargetSubID, field.NewTargetSubID)
+	utils.QuickFixMessagePartSet(&message.Header, session.SenderCompID, field.NewSenderCompID)
+	utils.QuickFixMessagePartSet(&message.Header, session.SenderSubID, field.NewSenderSubID)
+
+	return message, nil
 }

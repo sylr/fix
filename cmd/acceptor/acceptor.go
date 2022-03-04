@@ -13,7 +13,7 @@ import (
 	"sylr.dev/fix/pkg/initiator"
 )
 
-var AcceptorCmd = &cobra.Command{
+var InitiatorCmd = &cobra.Command{
 	Use:   "acceptor",
 	Short: "Launch a FIX acceptor",
 	Long:  "Launch a FIX acceptor.",
@@ -39,8 +39,8 @@ var AcceptorCmd = &cobra.Command{
 }
 
 func init() {
-	initiator.AddPersistentFlags(AcceptorCmd)
-	initiator.AddPersistentFlagCompletions(AcceptorCmd)
+	initiator.AddPersistentFlags(InitiatorCmd)
+	initiator.AddPersistentFlagCompletions(InitiatorCmd)
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
@@ -51,17 +51,17 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	session, err := context.GetSession()
+	sessions, err := context.GetSessions()
 	if err != nil {
 		return err
 	}
 
-	settings, err := context.ToQuickFixSettings()
+	settings, err := context.ToQuickFixAcceptorSettings()
 	if err != nil {
 		return err
 	}
 
-	transportDict, appDict, err := session.GetFIXDictionaries()
+	transportDict, appDict, err := sessions[0].GetFIXDictionaries()
 	if err != nil {
 		return err
 	}

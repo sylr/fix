@@ -57,21 +57,22 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	session, err := context.GetSession()
+	sessions, err := context.GetSessions()
 	if err != nil {
 		return err
 	}
 
-	acceptor, err := context.GetAcceptor()
+	acceptor, err := context.GetInitiator()
 	if err != nil {
 		return err
 	}
 
-	settings, err := context.ToQuickFixSettings()
+	settings, err := context.ToQuickFixInitiatorSettings()
 	if err != nil {
 		return err
 	}
 
+	session := sessions[0]
 	transportDict, appDict, err := session.GetFIXDictionaries()
 	if err != nil {
 		return err

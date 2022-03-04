@@ -10,9 +10,8 @@ import (
 // ListCmd represents the buy command
 var ListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Send a list FIX Message",
+	Short: "Send a list FIX message",
 	Long:  "Send a list FIX message after initiating a sesion with a FIX acceptor.",
-	RunE:  Execute,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		err := initiator.ValidateOptions(cmd, args)
 		if err != nil {
@@ -38,8 +37,4 @@ func init() {
 	initiator.AddPersistentFlagCompletions(ListCmd)
 
 	ListCmd.AddCommand(listsecurity.ListSecurityCmd)
-}
-
-func Execute(cmd *cobra.Command, args []string) error {
-	return nil
 }

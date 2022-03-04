@@ -18,7 +18,7 @@ func NewNewOrder() *NewOrder {
 }
 
 type NewOrder struct {
-	utils.AppMessageLogger
+	utils.QuickFixAppMessageLogger
 
 	Settings *quickfix.Settings
 

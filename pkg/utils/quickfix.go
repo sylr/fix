@@ -17,13 +17,23 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type AppMessageLogger struct {
+type QuickFixMessagePartSetter interface {
+	Set(field quickfix.FieldWriter) *quickfix.FieldMap
+}
+
+func QuickFixMessagePartSet[T quickfix.FieldWriter](setter QuickFixMessagePartSetter, value string, f func(string) T) {
+	if len(value) > 0 {
+		setter.Set(f(value))
+	}
+}
+
+type QuickFixAppMessageLogger struct {
 	Logger                  *zerolog.Logger
 	TransportDataDictionary *datadictionary.DataDictionary
 	AppDataDictionary       *datadictionary.DataDictionary
 }
 
-func (app *AppMessageLogger) WriteMessage(w io.Writer, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
+func (app *QuickFixAppMessageLogger) WriteMessage(w io.Writer, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
 	if app.Logger.GetLevel() > zerolog.TraceLevel {
 		return
 	}
@@ -63,7 +73,7 @@ func (app *AppMessageLogger) WriteMessage(w io.Writer, message *quickfix.Message
 	}
 }
 
-func (app *AppMessageLogger) LogMessage(level zerolog.Level, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
+func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
 	if app.Logger.GetLevel() > level {
 		return
 	}
@@ -102,7 +112,7 @@ func (app *AppMessageLogger) LogMessage(level zerolog.Level, message *quickfix.M
 	}
 }
 
-func (app *AppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) {
+func (app *QuickFixAppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) {
 	tags := fieldMap.Tags()
 
 	for i, tag := range tags {
@@ -145,7 +155,7 @@ func (app *AppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) 
 	}
 }
 
-func (app *AppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quickfix.Message) {
+func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quickfix.Message) {
 	bodyTags := message.Body.Tags()
 
 	tw := tabwriter.NewWriter(w, 10, 0, 2, ' ', 0)

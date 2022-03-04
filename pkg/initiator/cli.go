@@ -32,22 +32,22 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 	contextName := fixConfig.CurrentContext
 
 	if len(options.Context) > 0 {
-		if len(options.Acceptor) > 0 || len(options.Session) > 0 {
-			return fmt.Errorf("%w: can't use --acceptor/--session with --context", errors.Options)
+		if len(options.Initiator) > 0 || len(options.Session) > 0 {
+			return fmt.Errorf("%w: can't use --initiator/--session with --context", errors.Options)
 		}
 		contextName = options.Context
 	} else if len(contextName) == 0 {
-		if len(options.Acceptor) == 0 || len(options.Session) == 0 {
-			return fmt.Errorf("%w: you need to specify either --context or --acceptor/--session", errors.Options)
+		if len(options.Initiator) == 0 || len(options.Session) == 0 {
+			return fmt.Errorf("%w: you need to specify either --context or --initiator/--session", errors.Options)
 		}
 	}
 
 	if len(contextName) == 0 {
 		contextName = "no-context"
 		fixConfig.Contexts = append(fixConfig.Contexts, &config.Context{
-			Name:     contextName,
-			Acceptor: options.Acceptor,
-			Session:  options.Session,
+			Name:      contextName,
+			Initiator: options.Initiator,
+			Sessions:  []string{options.Session},
 		})
 		(*options).Context = contextName
 	}
@@ -57,14 +57,23 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = context.GetAcceptor()
+	_, err = context.GetInitiator()
 	if err != nil {
 		return err
 	}
 
-	_, err = context.GetSession()
+	sessions, err := context.GetSessions()
 	if err != nil {
 		return err
+	} else {
+		switch len(sessions) {
+		case 0:
+			return errors.ConfigContextNoSession
+		case 1:
+			// OK
+		default:
+			return errors.ConfigContextMultipleSessions
+		}
 	}
 
 	return nil
@@ -74,13 +83,13 @@ func AddPersistentFlags(cmd *cobra.Command) {
 	options := config.GetOptions()
 
 	cmd.PersistentFlags().StringVar(&options.Context, "context", "", "Context to use")
-	cmd.PersistentFlags().StringVar(&options.Acceptor, "acceptor", "", "Acceptor to use (can't be used with --context)")
+	cmd.PersistentFlags().StringVar(&options.Initiator, "acceptor", "", "Initiator to use (can't be used with --context)")
 	cmd.PersistentFlags().StringVar(&options.Session, "session", "", "Session to use (can't be used with --context)")
 	cmd.PersistentFlags().DurationVar(&options.Timeout, "timeout", 0, "Duration for timeouts")
 }
 
 func AddPersistentFlagCompletions(cmd *cobra.Command) {
 	cmd.RegisterFlagCompletionFunc("context", completeContext)
-	cmd.RegisterFlagCompletionFunc("acceptor", completeAcceptor)
+	cmd.RegisterFlagCompletionFunc("acceptor", completeInitiator)
 	cmd.RegisterFlagCompletionFunc("session", completeSession)
 }
