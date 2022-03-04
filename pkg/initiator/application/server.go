@@ -188,7 +188,7 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 func (a *Server) updateOrder(order nos50sp2.NewOrderSingle, status enum.OrdStatus) {
 	execReport := er50sp2.New(
 		field.NewOrderID(MustNot(order.GetClOrdID())),
-		field.NewExecID("aze"),
+		field.NewExecID("0"),
 		field.NewExecType(enum.ExecType(status)),
 		field.NewOrdStatus(status),
 		field.NewSide(MustNot(order.GetSide())),
