@@ -115,9 +115,9 @@ DOCKER_BUILDX_CACHE     ?= /tmp/.buildx-cache
 
 .PHONY: all build crossbuild crossbuild-checksums .FORCE
 
-all: crossbuild crossbuild-checksums
-
 build: $(GO_BUILD_VERSION_TARGET) $(GO_BUILD_TARGET)
+
+all: crossbuild crossbuild-checksums
 
 install:
 	$(GO) install -tags $(GO_BUILD_TAGS) $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS)
