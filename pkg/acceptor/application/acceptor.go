@@ -22,7 +22,7 @@ import (
 func NewServer(natsdOptions *natsd.Options) (*Server, error) {
 	var err error
 
-	tpl := template.New("orders")
+	tpl := template.New("fix")
 	tpl.Parse("orders.{{.Symbol}}.{{.Side}}.{{.Type}}")
 
 	s := Server{
@@ -156,7 +156,6 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 		return ferr
 	}
 
-
 	sideString, _ := dict.OrderSides[side]
 	typeString, _ := dict.OrderTypes[ordType]
 
@@ -188,28 +187,24 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 
 func (a *Server) updateOrder(order nos50sp2.NewOrderSingle, status enum.OrdStatus) {
 	execReport := er50sp2.New(
-		field.NewOrderID(MustNot(order.GetClOrdID())),
+		field.NewOrderID(utils.MustNot(order.GetClOrdID())),
 		field.NewExecID("0"),
 		field.NewExecType(enum.ExecType(status)),
 		field.NewOrdStatus(status),
-		field.NewSide(MustNot(order.GetSide())),
-		field.NewLeavesQty(MustNot(order.GetOrderQty()), 2),
-		field.NewCumQty(MustNot(order.GetOrderQty()), 2),
+		field.NewSide(utils.MustNot(order.GetSide())),
+		field.NewLeavesQty(utils.MustNot(order.GetOrderQty()), 2),
+		field.NewCumQty(utils.MustNot(order.GetOrderQty()), 2),
 	)
-	execReport.SetOrderQty(MustNot(order.GetOrderQty()), 2)
-	execReport.SetClOrdID(MustNot(order.GetClOrdID()))
+	execReport.SetOrderQty(utils.MustNot(order.GetOrderQty()), 2)
+	execReport.SetClOrdID(utils.MustNot(order.GetClOrdID()))
 
-	execReport.Header.SetSenderCompID(MustNot(order.GetTargetCompID()))
-	execReport.Header.SetSenderSubID(MustNot(order.GetTargetSubID()))
-	execReport.Header.SetTargetCompID(MustNot(order.GetSenderCompID()))
-	execReport.Header.SetTargetSubID(MustNot(order.GetSenderSubID()))
+	execReport.Header.SetSenderCompID(utils.MustNot(order.GetTargetCompID()))
+	execReport.Header.SetSenderSubID(utils.MustNot(order.GetTargetSubID()))
+	execReport.Header.SetTargetCompID(utils.MustNot(order.GetSenderCompID()))
+	execReport.Header.SetTargetSubID(utils.MustNot(order.GetSenderSubID()))
 
 	sendErr := quickfix.Send(execReport)
 	if sendErr != nil {
 		fmt.Println(sendErr)
 	}
-}
-
-func MustNot[T any](v T, err quickfix.MessageRejectError) T {
-	return v
 }
