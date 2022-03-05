@@ -332,8 +332,8 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(qfSession, qconfig.BeginString, session.BeginString)
 	setSessionSetting(qfSession, "Username", session.Username)
 	setSessionSetting(qfSession, "Password", session.Password)
-	setSessionSetting(qfSession, qconfig.TransportDataDictionary, session.TransportDataDictionary)
-	setSessionSetting(qfSession, qconfig.AppDataDictionary, session.AppDataDictionary)
+	setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
+	setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
 
 	if options.Timeout != time.Duration(0) {
 		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
@@ -413,8 +413,8 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		setSessionSetting(qfSession, qconfig.TargetCompID, session.TargetCompID)
 		setSessionSetting(qfSession, qconfig.TargetSubID, session.TargetSubID)
 		setSessionSetting(qfSession, qconfig.BeginString, session.BeginString)
-		setSessionSetting(qfSession, qconfig.TransportDataDictionary, session.TransportDataDictionary)
-		setSessionSetting(qfSession, qconfig.AppDataDictionary, session.AppDataDictionary)
+		setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
+		setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
 
 		if options.Timeout != time.Duration(0) {
 			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
@@ -443,7 +443,9 @@ func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadict
 
 	if len(s.TransportDataDictionary) > 0 {
 		if _, ok = fixDict[s.TransportDataDictionary]; !ok {
-			fixDict[s.TransportDataDictionary], err = datadictionary.Parse(os.ExpandEnv(s.TransportDataDictionary))
+			path := os.ExpandEnv(s.TransportDataDictionary)
+			fmt.Println(path)
+			fixDict[s.TransportDataDictionary], err = datadictionary.Parse(path)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -452,7 +454,9 @@ func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadict
 
 	if len(s.AppDataDictionary) > 0 {
 		if _, ok = fixDict[s.AppDataDictionary]; !ok {
-			fixDict[s.AppDataDictionary], err = datadictionary.Parse(os.ExpandEnv(s.AppDataDictionary))
+			path := os.ExpandEnv(s.AppDataDictionary)
+			fmt.Println(path)
+			fixDict[s.AppDataDictionary], err = datadictionary.Parse(path)
 			if err != nil {
 				return nil, nil, err
 			}
