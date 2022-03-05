@@ -443,7 +443,7 @@ func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadict
 
 	if len(s.TransportDataDictionary) > 0 {
 		if _, ok = fixDict[s.TransportDataDictionary]; !ok {
-			fixDict[s.TransportDataDictionary], err = datadictionary.Parse(s.TransportDataDictionary)
+			fixDict[s.TransportDataDictionary], err = datadictionary.Parse(os.ExpandEnv(s.TransportDataDictionary))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -452,7 +452,7 @@ func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadict
 
 	if len(s.AppDataDictionary) > 0 {
 		if _, ok = fixDict[s.AppDataDictionary]; !ok {
-			fixDict[s.AppDataDictionary], err = datadictionary.Parse(s.AppDataDictionary)
+			fixDict[s.AppDataDictionary], err = datadictionary.Parse(os.ExpandEnv(s.AppDataDictionary))
 			if err != nil {
 				return nil, nil, err
 			}

@@ -9,6 +9,7 @@ var (
 	Config                        = errors.New("configuration")
 	ConfigAcceptorNotFound        = fmt.Errorf("%w: acceptor not found", Config)
 	ConfigAlreadyExists           = fmt.Errorf("%w: already exists", Config)
+	ConfigCanNotBeCreated         = fmt.Errorf("%w: file can not be created", Config)
 	ConfigContextMultipleSessions = fmt.Errorf("%w: multiple sessions in initiator context", Config)
 	ConfigContextNoSession        = fmt.Errorf("%w: context has no session", Config)
 	ConfigContextNotFound         = fmt.Errorf("%w: context not found", Config)
