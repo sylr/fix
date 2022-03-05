@@ -146,21 +146,6 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 		return ferr
 	}
 
-	//clOrdID, ferr := order.GetClOrdID()
-	//if ferr != nil {
-	//	return ferr
-	//}
-
-	//senderCompID, ferr := order.Header.GetSenderCompID()
-	//if ferr != nil {
-	//	return ferr
-	//}
-
-	//targetCompID, ferr := order.Header.GetTargetCompID()
-	//if ferr != nil {
-	//	return ferr
-	//}
-
 	side, ferr := order.GetSide()
 	if ferr != nil {
 		return ferr
@@ -171,15 +156,6 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 		return ferr
 	}
 
-	//price, ferr := order.GetPrice()
-	//if ferr != nil {
-	//	return ferr
-	//}
-
-	//orderQty, ferr := order.GetOrderQty()
-	//if ferr != nil {
-	//	return ferr
-	//}
 
 	sideString, _ := dict.OrderSides[side]
 	typeString, _ := dict.OrderTypes[ordType]
