@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	"path"
+	"path/filepath"
 
 	qsql "github.com/quickfixgo/quickfix/_sql"
 	"github.com/spf13/cobra"
@@ -43,66 +44,38 @@ func Execute(cmd *cobra.Command, args []string) error {
 	initiators := config.GetConfig().Initiators
 
 	// Acceptors
-	for _, acceptor := range acceptors {
-		if len(acceptor.SQLStoreDriver) == 0 {
-			continue
-		}
-
-		var file string
-		switch acceptor.SQLStoreDriver {
-		case "sqlite3":
-			file = acceptor.SQLStoreDataSourceName
-			if len(file) == 0 {
-				file = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "acceptor.db"}, string(os.PathSeparator)))
-			}
-			if _, err := os.Stat(file); err == nil {
-				if !overwrite {
-					fmt.Printf("Database %s already exists, skipping.\n", file)
-					continue
-				} else {
-					fmt.Printf("Database %s already exists but will be overwritten.\n", file)
-				}
-			}
-		default:
-			file = acceptor.SQLStoreDataSourceName
-		}
-
-		dbConn, err := sql.Open(acceptor.SQLStoreDriver, file)
-
-		if err != nil {
-			return err
-		}
-
-		defer dbConn.Close()
-
-		dir, _ := qsql.FS.ReadDir(acceptor.SQLStoreDriver)
-
-		for _, f := range dir {
-			if !f.Type().Type().IsRegular() {
-				continue
-			}
-			fd, _ := qsql.FS.Open(strings.Join([]string{acceptor.SQLStoreDriver, f.Name()}, string(os.PathSeparator)))
-			sqlBytes, _ := io.ReadAll(fd)
-
-			if _, err := dbConn.Exec(string(sqlBytes)); err != nil {
-				return err
-			}
-		}
+	if err := createDatabase(acceptors, "acceptor.db"); err != nil {
+		return nil
 	}
 
 	// Initiators
-	for _, initiator := range initiators {
-		if len(initiator.SQLStoreDriver) == 0 {
+	if err := createDatabase(initiators, "initiator.db"); err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+func createDatabase[T config.SQLStoreConfig](values []T, defaultDBName string) error {
+	for _, value := range values {
+		if len(value.GetSQLStoreDriver()) == 0 {
 			continue
 		}
 
 		var file string
-		switch initiator.SQLStoreDriver {
+		switch value.GetSQLStoreDriver() {
 		case "sqlite3":
-			file = initiator.SQLStoreDataSourceName
+			file = value.GetSQLStoreDataSourceName()
 			if len(file) == 0 {
-				file = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "initiator.db"}, string(os.PathSeparator)))
+				file = os.ExpandEnv(filepath.Join("$HOME", ".fix", defaultDBName))
 			}
+
+			databaseDir := path.Dir(file)
+			err := os.MkdirAll(databaseDir, 0700)
+			if err != nil {
+				return err
+			}
+
 			if _, err := os.Stat(file); err == nil {
 				if !overwrite {
 					fmt.Printf("Database %s already exists, skipping.\n", file)
@@ -112,10 +85,10 @@ func Execute(cmd *cobra.Command, args []string) error {
 				}
 			}
 		default:
-			file = initiator.SQLStoreDataSourceName
+			file = value.GetSQLStoreDataSourceName()
 		}
 
-		dbConn, err := sql.Open(initiator.SQLStoreDriver, file)
+		dbConn, err := sql.Open(value.GetSQLStoreDriver(), file)
 
 		if err != nil {
 			return err
@@ -123,13 +96,13 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 		defer dbConn.Close()
 
-		dir, _ := qsql.FS.ReadDir(initiator.SQLStoreDriver)
+		dir, _ := qsql.FS.ReadDir(value.GetSQLStoreDriver())
 
 		for _, f := range dir {
-			if !f.Type().Type().IsRegular() {
+			if !f.Type().IsRegular() {
 				continue
 			}
-			fd, _ := qsql.FS.Open(strings.Join([]string{initiator.SQLStoreDriver, f.Name()}, string(os.PathSeparator)))
+			fd, _ := qsql.FS.Open(filepath.Join(value.GetSQLStoreDriver(), f.Name()))
 			sqlBytes, _ := io.ReadAll(fd)
 
 			if _, err := dbConn.Exec(string(sqlBytes)); err != nil {
