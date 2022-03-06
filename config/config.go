@@ -444,7 +444,6 @@ func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadict
 	if len(s.TransportDataDictionary) > 0 {
 		if _, ok = fixDict[s.TransportDataDictionary]; !ok {
 			path := os.ExpandEnv(s.TransportDataDictionary)
-			fmt.Println(path)
 			fixDict[s.TransportDataDictionary], err = datadictionary.Parse(path)
 			if err != nil {
 				return nil, nil, err
@@ -455,7 +454,6 @@ func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadict
 	if len(s.AppDataDictionary) > 0 {
 		if _, ok = fixDict[s.AppDataDictionary]; !ok {
 			path := os.ExpandEnv(s.AppDataDictionary)
-			fmt.Println(path)
 			fixDict[s.AppDataDictionary], err = datadictionary.Parse(path)
 			if err != nil {
 				return nil, nil, err
