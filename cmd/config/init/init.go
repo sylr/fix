@@ -34,6 +34,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%w: %s", errors.ConfigAlreadyExists, options.Config)
 	}
 
+	configDir := path.Dir(options.Config)
+	err = os.MkdirAll(configDir, 0700)
+	if err != nil {
+		return err
+	}
+
 	config, err := os.OpenFile(options.Config, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("%w: %s", errors.ConfigCanNotBeCreated, options.Config)
@@ -41,7 +47,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 	defer config.Close()
 
-	configDir := path.Dir(options.Config)
 	data := struct{ ConfigDir string }{
 		ConfigDir: configDir,
 	}
