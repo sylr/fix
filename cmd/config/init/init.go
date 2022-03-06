@@ -55,7 +55,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 	// Dictionnaries
 	dicts, err := fs.Glob(templates, "templates/FIX*.xml")
-	fmt.Println(dicts)
 	if err != nil {
 		return err
 	}
