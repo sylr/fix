@@ -111,6 +111,8 @@ DOCKER_BUILD_BUILD_ARGS ?= --build-arg=GO_VERSION=$(DOCKER_BUILD_GO_VERSION)
 DOCKER_BUILDX_PLATFORMS ?= linux/amd64,linux/arm64
 DOCKER_BUILDX_CACHE     ?= /tmp/.buildx-cache
 
+export CGO_ENABLED=1
+
 # ------------------------------------------------------------------------------
 
 .PHONY: all build crossbuild crossbuild-checksums .FORCE
