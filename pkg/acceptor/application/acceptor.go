@@ -2,7 +2,6 @@ package application
 
 import (
 	"bytes"
-	"fmt"
 	"text/template"
 
 	natsd "github.com/nats-io/nats-server/v2/server"
@@ -40,7 +39,6 @@ func NewServer(natsdOptions *natsd.Options) (*Server, error) {
 	}
 
 	s.natsConn, err = nats.Connect("nats://127.0.0.1:4222")
-
 	if err != nil {
 		return nil, err
 	}
@@ -70,12 +68,6 @@ type Server struct {
 func (app *Server) Close() {
 	app.natsConn.Close()
 	app.natsServer.Shutdown()
-}
-
-func (app *Server) NatsConnect(connString string) error {
-	var err error
-	app.natsConn, err = nats.Connect(connString)
-	return err
 }
 
 // Notification of a session begin created.
@@ -160,32 +152,31 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 	typeString, _ := dict.OrderTypes[ordType]
 
 	buf := bytes.NewBuffer([]byte{})
-	err := app.NatsSubject.Execute(
-		buf,
-		NewOrderSingleNatsSubject{
-			Symbol: symbol,
-			Side:   sideString,
-			Type:   typeString,
-		},
-	)
-	if err != nil {
-		return quickfix.NewMessageRejectError(err.Error(), int(tag.SessionRejectReason), nil)
+	subj := NewOrderSingleNatsSubject{
+		Symbol: symbol,
+		Side:   sideString,
+		Type:   typeString,
 	}
 
-	err = app.natsConn.Publish(
-		buf.String(),
-		[]byte(order.ToMessage().String()),
-	)
+	err := app.NatsSubject.Execute(buf, subj)
 	if err != nil {
-		return quickfix.NewMessageRejectError(err.Error(), int(tag.SessionRejectReason), nil)
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.ApplResponseError), nil)
 	}
 
-	app.updateOrder(order, enum.OrdStatus(enum.OrdStatus_NEW))
+	err = app.natsConn.Publish(buf.String(), []byte(order.ToMessage().String()))
+	if err != nil {
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.ApplResponseError), nil)
+	}
+
+	err = app.sendExecutionReport(order, enum.OrdStatus(enum.OrdStatus_NEW))
+	if err != nil {
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.ApplResponseError), nil)
+	}
 
 	return nil
 }
 
-func (a *Server) updateOrder(order nos50sp2.NewOrderSingle, status enum.OrdStatus) {
+func (a *Server) sendExecutionReport(order nos50sp2.NewOrderSingle, status enum.OrdStatus) error {
 	execReport := er50sp2.New(
 		field.NewOrderID(utils.MustNot(order.GetClOrdID())),
 		field.NewExecID("0"),
@@ -195,6 +186,7 @@ func (a *Server) updateOrder(order nos50sp2.NewOrderSingle, status enum.OrdStatu
 		field.NewLeavesQty(utils.MustNot(order.GetOrderQty()), 2),
 		field.NewCumQty(utils.MustNot(order.GetOrderQty()), 2),
 	)
+
 	execReport.SetOrderQty(utils.MustNot(order.GetOrderQty()), 2)
 	execReport.SetClOrdID(utils.MustNot(order.GetClOrdID()))
 
@@ -203,8 +195,5 @@ func (a *Server) updateOrder(order nos50sp2.NewOrderSingle, status enum.OrdStatu
 	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetTargetCompID()), field.NewSenderCompID)
 	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetTargetSubID()), field.NewSenderSubID)
 
-	sendErr := quickfix.Send(execReport)
-	if sendErr != nil {
-		fmt.Println(sendErr)
-	}
+	return quickfix.Send(execReport)
 }
