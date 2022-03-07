@@ -198,10 +198,10 @@ func (a *Server) updateOrder(order nos50sp2.NewOrderSingle, status enum.OrdStatu
 	execReport.SetOrderQty(utils.MustNot(order.GetOrderQty()), 2)
 	execReport.SetClOrdID(utils.MustNot(order.GetClOrdID()))
 
-	execReport.Header.SetSenderCompID(utils.MustNot(order.GetTargetCompID()))
-	execReport.Header.SetSenderSubID(utils.MustNot(order.GetTargetSubID()))
-	execReport.Header.SetTargetCompID(utils.MustNot(order.GetSenderCompID()))
-	execReport.Header.SetTargetSubID(utils.MustNot(order.GetSenderSubID()))
+	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetSenderCompID()), field.NewTargetCompID)
+	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetSenderSubID()), field.NewTargetSubID)
+	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetTargetCompID()), field.NewSenderCompID)
+	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetTargetSubID()), field.NewSenderSubID)
 
 	sendErr := quickfix.Send(execReport)
 	if sendErr != nil {
