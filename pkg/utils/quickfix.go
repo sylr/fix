@@ -118,22 +118,24 @@ func (app *QuickFixAppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.Fi
 	for i, tag := range tags {
 		tagString := strconv.Itoa(int(tag))
 		tagDescription := "<unknown>"
-		values, _ := fieldMap.GetStrings(tag)
+		values := fieldMap.Values(tag)
+		stringValues, _ := fieldMap.GetStrings(tag)
 		valueDescription := ""
 
-		for j := range values {
+		for j, t := range values {
+			tagString = strconv.Itoa(int(t.Tag()))
 			if tag == qtag.Password {
-				values[j] = "<redacted>"
+				stringValues[j] = "<redacted>"
 			}
 			if app.AppDataDictionary != nil {
-				tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
+				tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(t.Tag())]
 				if tok {
 					tagDescription = tagField.Name()
 				}
 				if len(tagField.Enums) > 0 {
-					if en, ok := tagField.Enums[values[j]]; ok {
+					if en, ok := tagField.Enums[stringValues[j]]; ok {
 						valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
-						values[j] += fmt.Sprintf("(%s)", valueDescription)
+						stringValues[j] += fmt.Sprintf("(%s)", valueDescription)
 					}
 				}
 
@@ -142,14 +144,14 @@ func (app *QuickFixAppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.Fi
 					formatStr += ","
 				}
 
-				w.Write([]byte(fmt.Sprintf(formatStr, tagString, tagDescription, values[j])))
+				w.Write([]byte(fmt.Sprintf(formatStr, tagString, tagDescription, stringValues[j])))
 			} else {
 				formatStr := "%s=%s"
 				if i < len(tags)-1 || j < len(values)-1 {
 					formatStr += ","
 				}
 
-				w.Write([]byte(fmt.Sprintf(formatStr, tagString, values[j])))
+				w.Write([]byte(fmt.Sprintf(formatStr, tagString, stringValues[j])))
 			}
 		}
 	}
