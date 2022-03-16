@@ -13,6 +13,7 @@ import (
 	"sylr.dev/fix/cmd/database"
 	"sylr.dev/fix/cmd/initiator"
 	"sylr.dev/fix/cmd/list"
+	"sylr.dev/fix/cmd/marketdata"
 	"sylr.dev/fix/cmd/new"
 	"sylr.dev/fix/config"
 )
@@ -35,6 +36,7 @@ func init() {
 	FixCmd.AddCommand(configcmd.ConfigCmd)
 	FixCmd.AddCommand(database.DatabaseCmd)
 	FixCmd.AddCommand(new.NewCmd)
+	FixCmd.AddCommand(marketdata.MarketDataCmd)
 	FixCmd.AddCommand(cancel.CancelCmd)
 	FixCmd.AddCommand(list.ListCmd)
 	FixCmd.AddCommand(initiator.InitiatorCmd)
