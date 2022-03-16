@@ -3,6 +3,7 @@ package acceptor
 import (
 	"github.com/quickfixgo/quickfix"
 	"github.com/rs/zerolog"
+
 	"sylr.dev/fix/pkg/utils"
 )
 

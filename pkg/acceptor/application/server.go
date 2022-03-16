@@ -8,11 +8,12 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
-	er50sp2 "github.com/quickfixgo/fix50sp2/executionreport"
-	nos50sp2 "github.com/quickfixgo/fix50sp2/newordersingle"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
+
+	fix50sp2er "github.com/quickfixgo/fix50sp2/executionreport"
+	fix50sp2nos "github.com/quickfixgo/fix50sp2/newordersingle"
 
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/utils"
@@ -43,7 +44,7 @@ func NewServer(natsdOptions *natsd.Options) (*Server, error) {
 		return nil, err
 	}
 
-	s.router.AddRoute(nos50sp2.Route(s.onNewOrderSingle))
+	s.router.AddRoute(fix50sp2nos.Route(s.onNewOrderSingle))
 
 	return &s, nil
 }
@@ -132,7 +133,7 @@ func (app *Server) FromApp(message *quickfix.Message, sessionID quickfix.Session
 	return app.router.Route(message, sessionID)
 }
 
-func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *Server) onNewOrderSingle(order fix50sp2nos.NewOrderSingle, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	symbol, ferr := order.GetSymbol()
 	if ferr != nil {
 		return ferr
@@ -176,8 +177,8 @@ func (app *Server) onNewOrderSingle(order nos50sp2.NewOrderSingle, sessionID qui
 	return nil
 }
 
-func (a *Server) sendExecutionReport(order nos50sp2.NewOrderSingle, status enum.OrdStatus) error {
-	execReport := er50sp2.New(
+func (a *Server) sendExecutionReport(order fix50sp2nos.NewOrderSingle, status enum.OrdStatus) error {
+	execReport := fix50sp2er.New(
 		field.NewOrderID(utils.MustNot(order.GetClOrdID())),
 		field.NewExecID("0"),
 		field.NewExecType(enum.ExecType(status)),

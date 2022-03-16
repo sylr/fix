@@ -8,11 +8,12 @@ import (
 
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
-	slr50sp1 "github.com/quickfixgo/fix50sp1/securitylistrequest"
-	slr50sp2 "github.com/quickfixgo/fix50sp2/securitylistrequest"
 	"github.com/quickfixgo/quickfix"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+
+	slr50sp1 "github.com/quickfixgo/fix50sp1/securitylistrequest"
+	slr50sp2 "github.com/quickfixgo/fix50sp2/securitylistrequest"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"

@@ -29,5 +29,6 @@ var (
 	FixVersionNotImplemented      = fmt.Errorf("%w: version not implemented", Fix)
 	NotImplemented                = errors.New("not implemented")
 	Options                       = errors.New("options")
+	OptionsInvalidMarketPrice     = errors.New("%w: can't give price for market order")
 	ResponseTimeout               = errors.New("timeout while waiting for response")
 )
