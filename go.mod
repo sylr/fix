@@ -25,7 +25,7 @@ require (
 	sylr.dev/yaml/v3 v3.0.0-20210127132132-941109e4f08c
 )
 
-replace github.com/quickfixgo/quickfix => github.com/sylr/quickfix v0.6.1-0.20220305100544-6fa3a91d941a
+replace github.com/quickfixgo/quickfix => github.com/sylr/quickfix v0.6.1-0.20220316180208-e5ec93effc7a
 
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
