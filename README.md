@@ -14,11 +14,11 @@ fix config init
 ```
 
 An `initiator` describes the network properties needed to connect to a FIX acceptor.
-An `acceptor` describes the network properites needed to launch a server which will
+An `acceptor` describes the network properties needed to launch a server which will
 accept connection from FIX initiators.
 A `session` describes the properties of a FIX session.
 
-An `acceptor` can have several sessions but an `initiator` can only have one.
+⚠️ An `acceptor` can have several sessions but an <ins>`initiator` can only have one</ins>.
 
 You can use the `current-context` property to define the context to use if none is
 provided as an option.
