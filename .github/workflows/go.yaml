@@ -24,15 +24,11 @@ jobs:
         go-version: ${{ matrix.go }}
       id: go
 
-    - name: Set GO
-      run: |
-        echo "GO=go" >> $GITHUB_ENV
-
     - name: Verify go mod
       run: make go-mod-verify
 
     - name: Test
       run: make test
 
-    - name: Crossbuild
-      run: make crossbuild
+    - name: Build
+      run: make build
