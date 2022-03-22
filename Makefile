@@ -1,4 +1,4 @@
-GO                ?= $(shell which gotip)
+GO                ?= $(shell which go)
 GIT_UPDATE_INDEX  := $(shell git update-index --refresh)
 GIT_REVISION      ?= $(shell git rev-parse HEAD)
 GIT_VERSION       ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
