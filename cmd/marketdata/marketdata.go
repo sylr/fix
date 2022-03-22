@@ -10,8 +10,8 @@ import (
 // MarketDataCmd represents the buy command
 var MarketDataCmd = &cobra.Command{
 	Use:   "marketdata",
-	Short: "Send a new FIX message",
-	Long:  "Send a new FIX message after initiating a sesion with a FIX acceptor.",
+	Short: "Send a MarketData FIX message",
+	Long:  "Send a MarketData FIX message after initiating a sesion with a FIX acceptor.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		err := initiator.ValidateOptions(cmd, args)
 		if err != nil {

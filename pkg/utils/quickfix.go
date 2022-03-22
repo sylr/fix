@@ -10,7 +10,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/iancoleman/strcase"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/quickfix/datadictionary"
 	qtag "github.com/quickfixgo/tag"
@@ -134,7 +133,7 @@ func (app *QuickFixAppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.Fi
 				}
 				if len(tagField.Enums) > 0 {
 					if en, ok := tagField.Enums[stringValues[j]]; ok {
-						valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
+						valueDescription = en.Description
 						stringValues[j] += fmt.Sprintf("(%s)", valueDescription)
 					}
 				}
@@ -179,7 +178,7 @@ func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, messag
 				}
 				if len(tagField.Enums) > 0 {
 					if en, ok := tagField.Enums[values[i]]; ok {
-						valueDescription = strcase.ToCamel(strings.ToLower(en.Description))
+						valueDescription = en.Description
 						values[i] += fmt.Sprintf(" (%s)", valueDescription)
 					}
 				}
