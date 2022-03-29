@@ -18,3 +18,15 @@ func OrderType(cmd *cobra.Command, args []string, toComplete string) ([]string, 
 func OrderTimeInForce(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return utils.PrettyOptionValues(dict.OrderTimeInForcesReversed), cobra.ShellCompDirectiveNoFileComp
 }
+
+func OrderPartyIDSource(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return utils.PrettyOptionValues(dict.PartyIDSourcesReversed), cobra.ShellCompDirectiveNoFileComp
+}
+
+func OrderPartyIDRole(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return utils.PrettyOptionValues(dict.PartyRolesReversed), cobra.ShellCompDirectiveNoFileComp
+}
+
+func OrderOriginationRole(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return utils.PrettyOptionValues(dict.OrderOriginationsReversed), cobra.ShellCompDirectiveNoFileComp
+}
