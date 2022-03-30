@@ -11,6 +11,8 @@ func Context(cmd *cobra.Command, args []string, toComplete string) ([]string, co
 
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
+	} else {
+		return nil, cobra.ShellCompDirectiveError
 	}
 
 	contexts := make([]string, 0, len(fixConfig.Contexts))
@@ -27,6 +29,8 @@ func Acceptor(cmd *cobra.Command, args []string, toComplete string) ([]string, c
 
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
+	} else {
+		return nil, cobra.ShellCompDirectiveError
 	}
 
 	acceptors := make([]string, 0, len(fixConfig.Acceptors))
@@ -43,6 +47,8 @@ func Initiator(cmd *cobra.Command, args []string, toComplete string) ([]string, 
 
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
+	} else {
+		return nil, cobra.ShellCompDirectiveError
 	}
 
 	initiators := make([]string, 0, len(fixConfig.Initiators))
@@ -59,6 +65,8 @@ func Session(cmd *cobra.Command, args []string, toComplete string) ([]string, co
 
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
+	} else {
+		return nil, cobra.ShellCompDirectiveError
 	}
 
 	sessions := make([]string, 0, len(fixConfig.Sessions))

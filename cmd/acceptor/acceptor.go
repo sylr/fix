@@ -5,14 +5,19 @@ import (
 	"os/signal"
 	"syscall"
 
-	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/acceptor"
 	"sylr.dev/fix/pkg/acceptor/application"
-	"sylr.dev/fix/pkg/initiator"
+	"sylr.dev/fix/pkg/utils"
+)
+
+var (
+	optionNatsEmbeded      bool
+	optionNatsURL          string
+	optionNatsOrderSubject string
 )
 
 var AcceptorCmd = &cobra.Command{
@@ -41,8 +46,12 @@ var AcceptorCmd = &cobra.Command{
 }
 
 func init() {
-	initiator.AddPersistentFlags(AcceptorCmd)
-	initiator.AddPersistentFlagCompletions(AcceptorCmd)
+	AcceptorCmd.Flags().StringVar(&optionNatsURL, "nats-url", "nats://127.0.0.1:4222", "NATS URL used to forward FIX messages")
+	AcceptorCmd.Flags().StringVar(&optionNatsOrderSubject, "nats-order-subject", "orders.{{.Symbol}}.{{.Side}}.{{.Type}}", "NATS order subject")
+	utils.AddBothBoolFlags(AcceptorCmd.Flags(), &optionNatsEmbeded, "nats-embeded", "", true, "Launch embeded NATS server")
+
+	acceptor.AddPersistentFlags(AcceptorCmd)
+	acceptor.AddPersistentFlagCompletions(AcceptorCmd)
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
@@ -69,7 +78,13 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	app, err := application.NewServer(&natsd.Options{})
+	acceptorOptions := application.AcceptorOptions{
+		NATSEmbeded:      optionNatsEmbeded,
+		NATSURL:          optionNatsURL,
+		NATSOrderSubject: optionNatsOrderSubject,
+	}
+
+	app, err := application.NewAcceptor(&acceptorOptions)
 	if err != nil {
 		return err
 	}

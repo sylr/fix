@@ -8,9 +8,15 @@ import (
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/errors"
+	"sylr.dev/fix/pkg/utils"
 )
 
 func ValidateOptions(cmd *cobra.Command, args []string) error {
+	err := utils.ReconcileBoolFlags(cmd.Flags())
+	if err != nil {
+		return err
+	}
+
 	options := config.GetOptions()
 	conf, err := config.ReadYAML(options.Config, options.Interactive)
 
@@ -33,12 +39,12 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 	contextName := fixConfig.CurrentContext
 
 	if len(options.Context) > 0 {
-		if len(options.Initiator) > 0 || len(options.Session) > 0 {
+		if len(options.Acceptor) > 0 || len(options.Session) > 0 {
 			return fmt.Errorf("%w: can't use --acceptor/--session with --context", errors.Options)
 		}
 		contextName = options.Context
 	} else if len(contextName) == 0 {
-		if len(options.Initiator) == 0 || len(options.Session) == 0 {
+		if len(options.Acceptor) == 0 || len(options.Session) == 0 {
 			return fmt.Errorf("%w: you need to specify either --context or --acceptor/--session", errors.Options)
 		}
 	}
@@ -46,9 +52,9 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 	if len(contextName) == 0 {
 		contextName = "no-context"
 		fixConfig.Contexts = append(fixConfig.Contexts, &config.Context{
-			Name:      contextName,
-			Initiator: options.Initiator,
-			Sessions:  []string{options.Session},
+			Name:     contextName,
+			Acceptor: options.Acceptor,
+			Sessions: []string{options.Session},
 		})
 		(*options).Context = contextName
 	}

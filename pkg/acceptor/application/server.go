@@ -19,19 +19,28 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
-func NewServer(natsdOptions *natsd.Options) (*Server, error) {
+type AcceptorOptions struct {
+	NATSEmbeded      bool
+	NATSURL          string
+	NATSOrderSubject string
+}
+
+func NewAcceptor(options *AcceptorOptions) (*Acceptor, error) {
 	var err error
 
 	tpl := template.New("fix")
-	tpl.Parse("orders.{{.Symbol}}.{{.Side}}.{{.Type}}")
-
-	s := Server{
-		NatsSubject: tpl,
-		router:      quickfix.NewMessageRouter(),
+	_, err = tpl.Parse(options.NATSOrderSubject)
+	if err != nil {
+		return nil, err
 	}
 
-	if natsdOptions != nil {
-		s.natsServer, err = natsd.NewServer(natsdOptions)
+	s := Acceptor{
+		NatsOrderSubject: tpl,
+		router:           quickfix.NewMessageRouter(),
+	}
+
+	if options.NATSEmbeded {
+		s.natsServer, err = natsd.NewServer(&natsd.Options{})
 		s.natsServer.Start()
 
 		if err != nil {
@@ -39,7 +48,11 @@ func NewServer(natsdOptions *natsd.Options) (*Server, error) {
 		}
 	}
 
-	s.natsConn, err = nats.Connect("nats://127.0.0.1:4222")
+	natsOptions := []nats.Option{
+		nats.DontRandomize(),
+		nats.RetryOnFailedConnect(true),
+	}
+	s.natsConn, err = nats.Connect(options.NATSURL, natsOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,39 +68,39 @@ type NewOrderSingleNatsSubject struct {
 	Type   string
 }
 
-type Server struct {
+type Acceptor struct {
 	utils.QuickFixAppMessageLogger
 
 	natsConn   *nats.Conn
 	natsServer *natsd.Server
 
-	NatsSubject *template.Template
-	router      *quickfix.MessageRouter
-	Settings    *quickfix.Settings
+	NatsOrderSubject *template.Template
+	router           *quickfix.MessageRouter
+	Settings         *quickfix.Settings
 }
 
-func (app *Server) Close() {
+func (app *Acceptor) Close() {
 	app.natsConn.Close()
 	app.natsServer.Shutdown()
 }
 
 // Notification of a session begin created.
-func (app *Server) OnCreate(sessionID quickfix.SessionID) {
+func (app *Acceptor) OnCreate(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("New session: %s", sessionID)
 }
 
 // Notification of a session successfully logging on.
-func (app *Server) OnLogon(sessionID quickfix.SessionID) {
+func (app *Acceptor) OnLogon(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logon: %s", sessionID)
 }
 
 // Notification of a session logging off or disconnecting.
-func (app *Server) OnLogout(sessionID quickfix.SessionID) {
+func (app *Acceptor) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 }
 
 // Notification of admin message being sent to target.
-func (app *Server) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
+func (app *Acceptor) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("-> Sending message to admin")
 
 	_, err := message.MsgType()
@@ -99,7 +112,7 @@ func (app *Server) ToAdmin(message *quickfix.Message, sessionID quickfix.Session
 }
 
 // Notification of admin message being received from target.
-func (app *Server) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *Acceptor) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from admin %s", sessionID)
 
 	_, err := message.MsgType()
@@ -113,7 +126,7 @@ func (app *Server) FromAdmin(message *quickfix.Message, sessionID quickfix.Sessi
 }
 
 // Notification of app message being sent to target.
-func (app *Server) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
+func (app *Acceptor) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
 	app.Logger.Debug().Msgf("-> Sending message to app")
 
 	_, err := message.MsgType()
@@ -127,13 +140,20 @@ func (app *Server) ToApp(message *quickfix.Message, sessionID quickfix.SessionID
 }
 
 // Notification of app message being received from target.
-func (app *Server) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *Acceptor) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from app %s", sessionID)
+
+	_, err := message.MsgType()
+	if err != nil {
+		app.Logger.Error().Msgf("Message type error: %s", err)
+	}
+
+	app.LogMessage(zerolog.TraceLevel, message, sessionID, true)
 
 	return app.router.Route(message, sessionID)
 }
 
-func (app *Server) onNewOrderSingle(order fix50sp2nos.NewOrderSingle, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *Acceptor) onNewOrderSingle(order fix50sp2nos.NewOrderSingle, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	symbol, ferr := order.GetSymbol()
 	if ferr != nil {
 		return ferr
@@ -159,7 +179,7 @@ func (app *Server) onNewOrderSingle(order fix50sp2nos.NewOrderSingle, sessionID 
 		Type:   typeString,
 	}
 
-	err := app.NatsSubject.Execute(buf, subj)
+	err := app.NatsOrderSubject.Execute(buf, subj)
 	if err != nil {
 		return quickfix.NewMessageRejectError(err.Error(), int(tag.ApplResponseError), nil)
 	}
@@ -177,7 +197,7 @@ func (app *Server) onNewOrderSingle(order fix50sp2nos.NewOrderSingle, sessionID 
 	return nil
 }
 
-func (a *Server) sendExecutionReport(order fix50sp2nos.NewOrderSingle, status enum.OrdStatus) error {
+func (a *Acceptor) sendExecutionReport(order fix50sp2nos.NewOrderSingle, status enum.OrdStatus) error {
 	execReport := fix50sp2er.New(
 		field.NewOrderID(utils.MustNot(order.GetClOrdID())),
 		field.NewExecID("0"),
