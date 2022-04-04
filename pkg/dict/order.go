@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/quickfixgo/enum"
-
-	cenum "sylr.dev/fix/pkg/enum"
 )
 
 var OrderSides = map[enum.Side]string{
@@ -154,22 +152,22 @@ func OrderTimeInForceStringToEnum(t string) (enum.TimeInForce, error) {
 	return "", fmt.Errorf("unkown time in force")
 }
 
-var OrderOriginations = map[cenum.OrderOrigination]string{
-	cenum.OrderOriginations_CUSTOMER:                                    "CUSTOMER",
-	cenum.OrderOriginations_WITHIN_THE_FIRM:                             "WITHIN_THE_FIRM",
-	cenum.OrderOriginations_ANOTHER_BROKER_DEALER:                       "ANOTHER_BROKER_DEALER",
-	cenum.OrderOriginations_CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM: "CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM",
-	cenum.OrderOriginations_DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER:  "DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER",
-	cenum.OrderOriginations_FOREIGN_DEALER_EQUIVALENT:                   "FOREIGN_DEALER_EQUIVALENT",
-	cenum.OrderOriginations_EXECUTION_ONLY_SERVICE:                      "EXECUTION_ONLY_SERVICE",
+var OrderOriginations = map[enum.OrderOrigination]string{
+	enum.OrderOrigination_ORDER_RECEIVED_FROM_A_CUSTOMER:                                    "CUSTOMER",
+	enum.OrderOrigination_ORDER_RECEIVED_FROM_WITHIN_THE_FIRM:                               "WITHIN_THE_FIRM",
+	enum.OrderOrigination_ORDER_RECEIVED_FROM_ANOTHER_BROKER_DEALER:                         "ANOTHER_BROKER_DEALER",
+	enum.OrderOrigination_ORDER_RECEIVED_FROM_A_CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM: "A_CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM",
+	enum.OrderOrigination_ORDER_RECEIVED_FROM_A_DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER:  "A_DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER",
+	enum.OrderOrigination_ORDER_RECEIVED_FROM_A_FOREIGN_DEALER_EQUIVALENT:                   "A_FOREIGN_DEALER_EQUIVALENT",
+	enum.OrderOrigination_ORDER_RECEIVED_FROM_AN_EXECUTION_ONLY_SERVICE:                     "AN_EXECUTION_ONLY_SERVICE",
 }
 
-var OrderOriginationsReversed = map[string]cenum.OrderOrigination{
-	"CUSTOMER":              cenum.OrderOriginations_CUSTOMER,
-	"WITHIN_THE_FIRM":       cenum.OrderOriginations_WITHIN_THE_FIRM,
-	"ANOTHER_BROKER_DEALER": cenum.OrderOriginations_ANOTHER_BROKER_DEALER,
-	"CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM": cenum.OrderOriginations_CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM,
-	"DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER":  cenum.OrderOriginations_DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER,
-	"FOREIGN_DEALER_EQUIVALENT":                   cenum.OrderOriginations_FOREIGN_DEALER_EQUIVALENT,
-	"EXECUTION_ONLY_SERVICE":                      cenum.OrderOriginations_EXECUTION_ONLY_SERVICE,
+var OrderOriginationsReversed = map[string]enum.OrderOrigination{
+	"CUSTOMER":              enum.OrderOrigination_ORDER_RECEIVED_FROM_A_CUSTOMER,
+	"WITHIN_THE_FIRM":       enum.OrderOrigination_ORDER_RECEIVED_FROM_WITHIN_THE_FIRM,
+	"ANOTHER_BROKER_DEALER": enum.OrderOrigination_ORDER_RECEIVED_FROM_ANOTHER_BROKER_DEALER,
+	"A_CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM": enum.OrderOrigination_ORDER_RECEIVED_FROM_A_CUSTOMER_OR_ORIGINATED_FROM_WITHIN_THE_FIRM,
+	"A_DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER":  enum.OrderOrigination_ORDER_RECEIVED_FROM_A_DIRECT_ACCESS_OR_SPONSORED_ACCESS_CUSTOMER,
+	"A_FOREIGN_DEALER_EQUIVALENT":                   enum.OrderOrigination_ORDER_RECEIVED_FROM_A_FOREIGN_DEALER_EQUIVALENT,
+	"AN_EXECUTION_ONLY_SERVICE":                     enum.OrderOrigination_ORDER_RECEIVED_FROM_AN_EXECUTION_ONLY_SERVICE,
 }
