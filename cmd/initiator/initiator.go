@@ -6,12 +6,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
+
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
-	"github.com/rs/zerolog"
-	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/errors"

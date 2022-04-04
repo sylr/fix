@@ -59,7 +59,7 @@ func OrderSideStringToEnum(side string) (enum.Side, error) {
 var OrderTypes = map[enum.OrdType]string{
 	enum.OrdType_MARKET:                         "MARKET",
 	enum.OrdType_LIMIT:                          "LIMIT",
-	enum.OrdType_STOP:                           "STOP",
+	enum.OrdType_STOP_STOP_LOSS:                 "STOP",
 	enum.OrdType_STOP_LIMIT:                     "STOP_LIMIT",
 	enum.OrdType_MARKET_ON_CLOSE:                "MARKET_ON_CLOSE",
 	enum.OrdType_WITH_OR_WITHOUT:                "WITH_OR_WITHOUT",
@@ -86,7 +86,7 @@ var OrderTypes = map[enum.OrdType]string{
 var OrderTypesReversed = map[string]enum.OrdType{
 	"MARKET":                         enum.OrdType_MARKET,
 	"LIMIT":                          enum.OrdType_LIMIT,
-	"STOP":                           enum.OrdType_STOP,
+	"STOP":                           enum.OrdType_STOP_STOP_LOSS,
 	"STOP_LIMIT":                     enum.OrdType_STOP_LIMIT,
 	"MARKET_ON_CLOSE":                enum.OrdType_MARKET_ON_CLOSE,
 	"WITH_OR_WITHOUT":                enum.OrdType_WITH_OR_WITHOUT,

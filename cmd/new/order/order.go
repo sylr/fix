@@ -7,21 +7,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
 
-	nos50sp1 "github.com/quickfixgo/fix50sp1/newordersingle"
-	nos50sp2 "github.com/quickfixgo/fix50sp2/newordersingle"
+	"github.com/quickfixgo/enum"
+	"github.com/quickfixgo/field"
+	"github.com/quickfixgo/fixt11"
+	"github.com/quickfixgo/quickfix"
+	"github.com/quickfixgo/tag"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
-	cenum "sylr.dev/fix/pkg/enum"
 	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/initiator/application"
@@ -287,8 +285,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 }
 
 func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	var messagable quickfix.Messagable
-
 	eside, err := dict.OrderSideStringToEnum(optionOrderSide)
 	if err != nil {
 		return nil, err
@@ -310,43 +306,41 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	transactime := field.NewTransactTime(time.Now())
 	ordside := field.NewSide(eside)
 
+	// Message
+	message := quickfix.NewMessage()
+	header := fixt11.NewHeader(&message.Header)
+
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
-		case "FIX.5.0SP1":
-			request := nos50sp1.New(clordid, ordside, transactime, ordtype)
-			parties := nos50sp1.NewNoPartyIDsRepeatingGroup()
-			for i := range optionPartyIDs {
-				party := parties.Add()
-				party.SetPartyID(optionPartyIDs[i])
-				party.SetPartyIDSource(enum.PartyIDSource(dict.PartyIDSourcesReversed[strings.ToUpper(optionPartyIDSources[i])]))
-				party.SetPartyRole(enum.PartyRole(dict.PartyRolesReversed[strings.ToUpper(optionPartyRoles[i])]))
-
-				// PartyRoleQualifier
-				if len(optionPartyRoleQualifiers) > 0 && optionPartyRoleQualifiers[i] != 0 {
-					party.Set(NewPartyRoleQualifier(optionPartyRoleQualifiers[i]))
-				}
-			}
-			request.SetNoPartyIDs(parties)
-			messagable = request.Message
-
 		case "FIX.5.0SP2":
-			request := nos50sp2.New(clordid, ordside, transactime, ordtype)
-			parties := nos50sp2.NewNoPartyIDsRepeatingGroup()
+			header.Set(field.NewMsgType(enum.MsgType_ORDER_SINGLE))
+			message.Body.Set(clordid)
+			message.Body.Set(ordside)
+			message.Body.Set(transactime)
+			message.Body.Set(ordtype)
+
+			parties := quickfix.NewRepeatingGroup(
+				tag.NoPartyIDs,
+				quickfix.GroupTemplate{
+					quickfix.GroupElement(tag.PartyID),
+					quickfix.GroupElement(tag.PartyIDSource),
+					quickfix.GroupElement(tag.PartyRole),
+				},
+			)
 
 			for i := range optionPartyIDs {
 				party := parties.Add()
-				party.SetPartyID(optionPartyIDs[i])
-				party.SetPartyIDSource(enum.PartyIDSource(dict.PartyIDSourcesReversed[strings.ToUpper(optionPartyIDSources[i])]))
-				party.SetPartyRole(enum.PartyRole(dict.PartyRolesReversed[strings.ToUpper(optionPartyRoles[i])]))
+				party.Set(field.NewPartyID(optionPartyIDs[i]))
+				party.Set(field.NewPartyIDSource(enum.PartyIDSource(dict.PartyIDSourcesReversed[strings.ToUpper(optionPartyIDSources[i])])))
+				party.Set(field.NewPartyRole(enum.PartyRole(dict.PartyRolesReversed[strings.ToUpper(optionPartyRoles[i])])))
 
 				// PartyRoleQualifier
 				if len(optionPartyRoleQualifiers) > 0 && optionPartyRoleQualifiers[i] != 0 {
-					party.Set(NewPartyRoleQualifier(optionPartyRoleQualifiers[i]))
+					party.Set(field.NewPartyRoleQualifier(optionPartyRoleQualifiers[i]))
 				}
 			}
-			request.SetNoPartyIDs(parties)
-			messagable = request.Message
+			message.Body.SetGroup(parties)
 
 		default:
 			return nil, errors.FixVersionNotImplemented
@@ -355,7 +349,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 		return nil, errors.FixVersionNotImplemented
 	}
 
-	message := messagable.ToMessage()
 	utils.QuickFixMessagePartSet(&message.Header, session.TargetCompID, field.NewTargetCompID)
 	utils.QuickFixMessagePartSet(&message.Header, session.TargetSubID, field.NewTargetSubID)
 	utils.QuickFixMessagePartSet(&message.Header, session.SenderCompID, field.NewSenderCompID)
@@ -370,36 +363,8 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	message.Body.Set(field.NewTimeInForce(eExpiry))
 
 	if len(optionOrderOrigination) > 0 {
-		message.Body.Set(NewOrderOrigination(optionOrderOrigination))
+		message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginationsReversed[strings.ToUpper(optionOrderOrigination)])))
 	}
 
 	return message, nil
-}
-
-// OrderOrigination is a enum.TimeInForce field
-type OrderOrigination struct{ quickfix.FIXString }
-
-//Tag returns tag.TimeInForce (59)
-func (f OrderOrigination) Tag() quickfix.Tag { return 1724 }
-
-func NewOrderOrigination(val string) OrderOrigination {
-	return OrderOrigination{quickfix.FIXString(val)}
-}
-
-func (f OrderOrigination) Value() cenum.OrderOrigination {
-	return cenum.OrderOrigination(f.String())
-}
-
-// OrderOrigination is a enum.TimeInForce field
-type PartyRoleQualifier struct{ quickfix.FIXInt }
-
-//Tag returns tag.TimeInForce (59)
-func (f PartyRoleQualifier) Tag() quickfix.Tag { return 2376 }
-
-func NewPartyRoleQualifier(val int) PartyRoleQualifier {
-	return PartyRoleQualifier{quickfix.FIXInt(val)}
-}
-
-func (f PartyRoleQualifier) Value() int {
-	return f.Int()
 }

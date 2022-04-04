@@ -8,12 +8,11 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
+	"github.com/quickfixgo/fixt11"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
-
-	fix50sp2er "github.com/quickfixgo/fix50sp2/executionreport"
-	fix50sp2nos "github.com/quickfixgo/fix50sp2/newordersingle"
+	"github.com/shopspring/decimal"
 
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/utils"
@@ -57,7 +56,8 @@ func NewAcceptor(options *AcceptorOptions) (*Acceptor, error) {
 		return nil, err
 	}
 
-	s.router.AddRoute(fix50sp2nos.Route(s.onNewOrderSingle))
+	//s.router.AddRoute(fix50sp2nos.Route(s.onNewOrderSingle))
+	s.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_ORDER_SINGLE), s.onNewOrderSingle)
 
 	return &s, nil
 }
@@ -153,24 +153,24 @@ func (app *Acceptor) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 	return app.router.Route(message, sessionID)
 }
 
-func (app *Acceptor) onNewOrderSingle(order fix50sp2nos.NewOrderSingle, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	symbol, ferr := order.GetSymbol()
+func (app *Acceptor) onNewOrderSingle(order *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+	symbol, ferr := order.Body.GetString(tag.Symbol)
 	if ferr != nil {
 		return ferr
 	}
 
-	side, ferr := order.GetSide()
+	side, ferr := order.Body.GetString(tag.Side)
 	if ferr != nil {
 		return ferr
 	}
 
-	ordType, ferr := order.GetOrdType()
+	ordType, ferr := order.Body.GetString(tag.OrdType)
 	if ferr != nil {
 		return ferr
 	}
 
-	sideString, _ := dict.OrderSides[side]
-	typeString, _ := dict.OrderTypes[ordType]
+	sideString, _ := dict.OrderSides[enum.Side(side)]
+	typeString, _ := dict.OrderTypes[enum.OrdType(ordType)]
 
 	buf := bytes.NewBuffer([]byte{})
 	subj := NewOrderSingleNatsSubject{
@@ -197,24 +197,26 @@ func (app *Acceptor) onNewOrderSingle(order fix50sp2nos.NewOrderSingle, sessionI
 	return nil
 }
 
-func (a *Acceptor) sendExecutionReport(order fix50sp2nos.NewOrderSingle, status enum.OrdStatus) error {
-	execReport := fix50sp2er.New(
-		field.NewOrderID(utils.MustNot(order.GetClOrdID())),
-		field.NewExecID("0"),
-		field.NewExecType(enum.ExecType(status)),
-		field.NewOrdStatus(status),
-		field.NewSide(utils.MustNot(order.GetSide())),
-		field.NewLeavesQty(utils.MustNot(order.GetOrderQty()), 2),
-		field.NewCumQty(utils.MustNot(order.GetOrderQty()), 2),
-	)
+func (a *Acceptor) sendExecutionReport(order *quickfix.Message, status enum.OrdStatus) error {
+	message := quickfix.NewMessage()
+	header := fixt11.NewHeader(&message.Header)
 
-	execReport.SetOrderQty(utils.MustNot(order.GetOrderQty()), 2)
-	execReport.SetClOrdID(utils.MustNot(order.GetClOrdID()))
+	header.SetField(tag.MsgType, field.NewMsgType(enum.MsgType_EXECUTION_REPORT))
+	message.Body.Set(field.NewOrderID(utils.MustNot(order.Body.GetString(tag.OrderID))))
+	message.Body.Set(field.NewExecID("0"))
+	message.Body.Set(field.NewExecType(enum.ExecType(status)))
+	message.Body.Set(field.NewOrdStatus(status))
+	message.Body.Set(field.NewSide(enum.Side(utils.MustNot(order.Body.GetString(tag.Side)))))
+	message.Body.Set(field.NewLeavesQty(utils.MustNot(decimal.NewFromString(utils.MustNot(order.Body.GetString(tag.LeavesQty)))), 2))
+	message.Body.Set(field.NewCumQty(utils.MustNot(decimal.NewFromString(utils.MustNot(order.Body.GetString(tag.CumQty)))), 2))
 
-	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetSenderCompID()), field.NewTargetCompID)
-	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetSenderSubID()), field.NewTargetSubID)
-	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetTargetCompID()), field.NewSenderCompID)
-	utils.QuickFixMessagePartSet(&execReport.Header, utils.MustNot(order.GetTargetSubID()), field.NewSenderSubID)
+	message.Body.Set(field.NewOrderQty(utils.MustNot(decimal.NewFromString(utils.MustNot(order.Body.GetString(tag.OrderQty)))), 2))
+	message.Body.Set(field.NewClOrdID(utils.MustNot(order.Body.GetString(tag.ClOrdID))))
 
-	return quickfix.Send(execReport)
+	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.SenderCompID)), field.NewTargetCompID)
+	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.SenderSubID)), field.NewTargetSubID)
+	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.TargetCompID)), field.NewSenderCompID)
+	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.TargetSubID)), field.NewSenderSubID)
+
+	return quickfix.Send(message)
 }

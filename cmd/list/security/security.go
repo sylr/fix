@@ -8,12 +8,10 @@ import (
 
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
+	"github.com/quickfixgo/fixt11"
 	"github.com/quickfixgo/quickfix"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-
-	slr50sp1 "github.com/quickfixgo/fix50sp1/securitylistrequest"
-	slr50sp2 "github.com/quickfixgo/fix50sp2/securitylistrequest"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
@@ -168,8 +166,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 }
 
 func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	var messagable quickfix.Messagable
-
 	etype, err := dict.SecurityListRequestTypeStringToEnum(optionType)
 	if err != nil {
 		return nil, err
@@ -178,13 +174,17 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	stype := field.NewSecurityListRequestType(etype)
 	reqid := field.NewSecurityReqID(string(enum.SecurityRequestType_SYMBOL))
 
+	// Message
+	message := quickfix.NewMessage()
+	header := fixt11.NewHeader(&message.Header)
+
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
-		case "FIX.5.0SP1":
-			messagable = slr50sp1.New(reqid, stype)
 		case "FIX.5.0SP2":
-			messagable = slr50sp2.New(reqid, stype)
+			header.Set(field.NewMsgType("x"))
+			message.Body.Set(reqid)
+			message.Body.Set(stype)
 		default:
 			return nil, errors.FixVersionNotImplemented
 		}
@@ -192,7 +192,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 		return nil, errors.FixVersionNotImplemented
 	}
 
-	message := messagable.ToMessage()
 	utils.QuickFixMessagePartSet(&message.Header, session.TargetCompID, field.NewTargetCompID)
 	utils.QuickFixMessagePartSet(&message.Header, session.TargetSubID, field.NewTargetSubID)
 	utils.QuickFixMessagePartSet(&message.Header, session.SenderCompID, field.NewSenderCompID)

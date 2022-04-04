@@ -14,12 +14,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 
-	fix50sp1mdir "github.com/quickfixgo/fix50sp1/marketdataincrementalrefresh"
-	fix50sp2mdir "github.com/quickfixgo/fix50sp2/marketdataincrementalrefresh"
-
-	fix50sp1mdsfr "github.com/quickfixgo/fix50sp1/marketdatasnapshotfullrefresh"
-	fix50sp2mdsfr "github.com/quickfixgo/fix50sp2/marketdatasnapshotfullrefresh"
-
 	"sylr.dev/fix/pkg/utils"
 )
 
@@ -30,10 +24,8 @@ func NewMarketDataRequest() *MarketDataRequest {
 		router:      quickfix.NewMessageRouter(),
 	}
 
-	mdr.router.AddRoute(fix50sp1mdsfr.Route(mdr.onFIX50SP1MarketDataSnapshotFullRefresh))
-	mdr.router.AddRoute(fix50sp2mdsfr.Route(mdr.onFIX50SP2MarketDataSnapshotFullRefresh))
-	mdr.router.AddRoute(fix50sp1mdir.Route(mdr.onFIX50SP1MarketDataIncrementalRefresh))
-	mdr.router.AddRoute(fix50sp2mdir.Route(mdr.onFIX50SP2MarketDataIncrementalRefresh))
+	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_INCREMENTAL_REFRESH), mdr.onFIX50SP2MarketDataIncrementalRefresh)
+	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_SNAPSHOT_FULL_REFRESH), mdr.onFIX50SP2MarketDataSnapshotFullRefresh)
 
 	return &mdr
 }
@@ -148,72 +140,42 @@ func (app *MarketDataRequest) FromApp(message *quickfix.Message, sessionID quick
 	return app.router.Route(message, sessionID)
 }
 
-func (app *MarketDataRequest) onFIX50SP1MarketDataSnapshotFullRefresh(msg fix50sp1mdsfr.MarketDataSnapshotFullRefresh, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	group := fix50sp1mdsfr.NewNoMDEntriesRepeatingGroup()
-	msg.GetGroup(group)
+func (app *MarketDataRequest) onFIX50SP2MarketDataSnapshotFullRefresh(msg *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+	group := quickfix.NewRepeatingGroup(
+		tag.NoMDEntries,
+		quickfix.GroupTemplate{
+			quickfix.GroupElement(tag.MDEntryType),
+			quickfix.GroupElement(tag.MDEntryPx),
+			quickfix.GroupElement(tag.MDEntrySize),
+		},
+	)
+	msg.Body.GetGroup(group)
 
-	printFIX50NoMDEntriesFull[NoMDEntriesFullRG[fix50sp1mdsfr.NoMDEntries], fix50sp1mdsfr.NoMDEntries](group, msg, app.AppDataDictionary)
-
-	app.FromAppChan <- msg
-
-	return nil
-}
-
-func (app *MarketDataRequest) onFIX50SP2MarketDataSnapshotFullRefresh(msg fix50sp2mdsfr.MarketDataSnapshotFullRefresh, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	group := fix50sp2mdsfr.NewNoMDEntriesRepeatingGroup()
-	msg.GetGroup(group)
-
-	printFIX50NoMDEntriesFull[NoMDEntriesFullRG[fix50sp2mdsfr.NoMDEntries], fix50sp2mdsfr.NoMDEntries](group, msg, app.AppDataDictionary)
+	printFIX50NoMDEntriesFull(group, msg, app.AppDataDictionary)
 
 	app.FromAppChan <- msg
 
 	return nil
 }
 
-func (app *MarketDataRequest) onFIX50SP1MarketDataIncrementalRefresh(msg fix50sp1mdir.MarketDataIncrementalRefresh, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	group := fix50sp1mdir.NewNoMDEntriesRepeatingGroup()
-	msg.GetGroup(group)
+func (app *MarketDataRequest) onFIX50SP2MarketDataIncrementalRefresh(msg *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+	group := quickfix.NewRepeatingGroup(
+		tag.NoMDEntries,
+		quickfix.GroupTemplate{
+			quickfix.GroupElement(tag.MDEntryType),
+			quickfix.GroupElement(tag.MDEntryPx),
+			quickfix.GroupElement(tag.MDEntrySize),
+		},
+	)
+	msg.Body.GetGroup(group)
 
-	printFIX50NoMDEntriesInc[NoMDEntriesIncRG[fix50sp1mdir.NoMDEntries], fix50sp1mdir.NoMDEntries](group, app.AppDataDictionary)
-
-	app.FromAppChan <- msg
-
-	return nil
-}
-
-func (app *MarketDataRequest) onFIX50SP2MarketDataIncrementalRefresh(msg fix50sp2mdir.MarketDataIncrementalRefresh, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	group := fix50sp2mdir.NewNoMDEntriesRepeatingGroup()
-	msg.GetGroup(group)
-
-	printFIX50NoMDEntriesInc[NoMDEntriesIncRG[fix50sp2mdir.NoMDEntries], fix50sp2mdir.NoMDEntries](group, app.AppDataDictionary)
+	printFIX50NoMDEntriesInc(group, app.AppDataDictionary)
 
 	app.FromAppChan <- msg
 
 	return nil
 }
 
-type MDFullGrp interface {
-	GetMDEntryType() (enum.MDEntryType, quickfix.MessageRejectError)
-	GetMDEntryPx() (decimal.Decimal, quickfix.MessageRejectError)
-	GetMDEntrySize() (decimal.Decimal, quickfix.MessageRejectError)
-}
-
-type NoMDEntriesFullRG[T MDFullGrp] interface {
-	Len() int
-	Get(int) T
-}
-
-type MDIncGrp interface {
-	GetMDEntryType() (enum.MDEntryType, quickfix.MessageRejectError)
-	GetMDEntryPx() (decimal.Decimal, quickfix.MessageRejectError)
-	GetMDEntrySize() (decimal.Decimal, quickfix.MessageRejectError)
-	GetSymbol() (string, quickfix.MessageRejectError)
-}
-
-type NoMDEntriesIncRG[T MDFullGrp] interface {
-	Len() int
-	Get(int) T
-}
 type Messager interface {
 	GetSymbol() (string, quickfix.MessageRejectError)
 }
@@ -226,37 +188,38 @@ var (
 	}
 )
 
-func printFIX50NoMDEntriesFull[T NoMDEntriesFullRG[U], U MDFullGrp](group T, msg Messager, dict *datadictionary.DataDictionary) {
+func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Message, dict *datadictionary.DataDictionary) {
 	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
 	tw.Write([]byte(fmt.Sprintf("   SYMBOL\tTYPE\tPRICE\tSIZE\n")))
 
 	for i := 0; i < group.Len(); i++ {
 		s := group.Get(i)
-		v, _ := s.GetMDEntryType()
+		v, _ := s.GetString(tag.MDEntryType)
 		tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
+
 		ty := strcase.ToCamel(strings.ToLower(tagField.Enums[string(v)].Description))
-		sy, _ := msg.GetSymbol()
-		px, _ := s.GetMDEntryPx()
-		si, _ := s.GetMDEntrySize()
+		sy, _ := msg.Body.GetString(tag.Symbol)
+		px, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntryPx)))
+		si, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntrySize)))
 		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%s\t\n", type2sym[ty], sy, ty, px.StringFixed(2), si.StringFixed(2))))
 	}
 
 	tw.Flush()
 }
 
-func printFIX50NoMDEntriesInc[T NoMDEntriesIncRG[U], U MDIncGrp](group T, dict *datadictionary.DataDictionary) {
+func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictionary.DataDictionary) {
 	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
 	tw.Write([]byte(fmt.Sprintf("   SYMBOL\tTYPE\tPRICE\tSIZE\n")))
 
 	for i := 0; i < group.Len(); i++ {
 		s := group.Get(i)
-		v, _ := s.GetMDEntryType()
+		v, _ := s.GetString(tag.MDEntryType)
 		tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
 
 		ty := strcase.ToCamel(strings.ToLower(tagField.Enums[string(v)].Description))
-		sy, _ := s.GetSymbol()
-		px, _ := s.GetMDEntryPx()
-		si, _ := s.GetMDEntrySize()
+		sy, _ := s.GetString(tag.Symbol)
+		px, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntryPx)))
+		si, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntrySize)))
 		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%s\t\n", type2sym[ty], sy, ty, px.StringFixed(2), si.StringFixed(2))))
 	}
 

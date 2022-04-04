@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/quickfix"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	mdr50sp1 "github.com/quickfixgo/fix50sp1/marketdatarequest"
-	mdr50sp2 "github.com/quickfixgo/fix50sp2/marketdatarequest"
+	"github.com/quickfixgo/enum"
+	"github.com/quickfixgo/field"
+	"github.com/quickfixgo/fixt11"
+	"github.com/quickfixgo/quickfix"
+	"github.com/quickfixgo/tag"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
@@ -208,8 +208,6 @@ LOOP:
 }
 
 func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	var messagable quickfix.Messagable
-
 	mdReqID := field.NewMDReqID(optionMDReqID)
 	subReqType := field.NewSubscriptionRequestType(dict.SubscriptionRequestTypesReversed[strings.ToUpper(optionSubType)])
 	marketDepth := field.NewMarketDepth(0)
@@ -221,43 +219,41 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 		updateType = enum.MDUpdateType_INCREMENTAL_REFRESH
 	}
 
+	// Message
+	message := quickfix.NewMessage()
+	header := fixt11.NewHeader(&message.Header)
+
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
-		case "FIX.5.0SP1":
-			request := mdr50sp1.New(mdReqID, subReqType, marketDepth)
-			request.SetMDUpdateType(updateType)
-
-			entryTypes := mdr50sp1.NewNoMDEntryTypesRepeatingGroup()
-			for _, t := range optionTypes {
-				entryTypes.Add().SetMDEntryType(dict.MDEntryTypesReversed[strings.ToUpper(t)])
-			}
-			request.SetNoMDEntryTypes(entryTypes)
-
-			relatedSym := mdr50sp1.NewNoRelatedSymRepeatingGroup()
-			for _, sym := range optionSymbols {
-				relatedSym.Add().SetSymbol(sym)
-			}
-			request.SetNoRelatedSym(relatedSym)
-
-			messagable = request.Message
 		case "FIX.5.0SP2":
-			request := mdr50sp2.New(mdReqID, subReqType, marketDepth)
-			request.SetMDUpdateType(updateType)
+			header.Set(field.NewMsgType(enum.MsgType_MARKET_DATA_REQUEST))
+			message.Body.Set(mdReqID)
+			message.Body.Set(subReqType)
+			message.Body.Set(marketDepth)
+			message.Body.Set(field.NewMDUpdateType(updateType))
 
-			entryTypes := mdr50sp2.NewNoMDEntryTypesRepeatingGroup()
+			entryTypes := quickfix.NewRepeatingGroup(
+				tag.NoMDEntryTypes,
+				quickfix.GroupTemplate{
+					quickfix.GroupElement(tag.MDEntryType),
+				},
+			)
 			for _, t := range optionTypes {
-				entryTypes.Add().SetMDEntryType(dict.MDEntryTypesReversed[strings.ToUpper(t)])
+				entryTypes.Add().Set(field.NewMDEntryType(dict.MDEntryTypesReversed[strings.ToUpper(t)]))
 			}
-			request.SetNoMDEntryTypes(entryTypes)
+			message.Body.SetGroup(entryTypes)
 
-			relatedSym := mdr50sp2.NewNoRelatedSymRepeatingGroup()
+			relatedSym := quickfix.NewRepeatingGroup(
+				tag.NoRelatedSym,
+				quickfix.GroupTemplate{
+					quickfix.GroupElement(tag.Symbol),
+				},
+			)
 			for _, sym := range optionSymbols {
-				relatedSym.Add().SetSymbol(sym)
+				relatedSym.Add().Set(field.NewSymbol(sym))
 			}
-			request.SetNoRelatedSym(relatedSym)
-
-			messagable = request.Message
+			message.Body.SetGroup(relatedSym)
 		default:
 			return nil, errors.FixVersionNotImplemented
 		}
@@ -265,7 +261,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 		return nil, errors.FixVersionNotImplemented
 	}
 
-	message := messagable.ToMessage()
 	utils.QuickFixMessagePartSet(&message.Header, session.TargetCompID, field.NewTargetCompID)
 	utils.QuickFixMessagePartSet(&message.Header, session.TargetSubID, field.NewTargetSubID)
 	utils.QuickFixMessagePartSet(&message.Header, session.SenderCompID, field.NewSenderCompID)
