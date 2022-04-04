@@ -14,7 +14,7 @@ jobs:
         go: ["1.18"]
     steps:
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -23,6 +23,15 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
       id: go
+
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
 
     - name: Verify go mod
       run: make go-mod-verify
