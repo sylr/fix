@@ -1,10 +1,11 @@
 package application
 
 import (
+	"github.com/rs/zerolog"
+
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
-	"github.com/rs/zerolog"
 
 	"sylr.dev/fix/pkg/utils"
 )

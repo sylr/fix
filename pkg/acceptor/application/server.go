@@ -6,13 +6,14 @@ import (
 
 	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
+	"github.com/rs/zerolog"
+	"github.com/shopspring/decimal"
+
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
 	"github.com/quickfixgo/fixt11"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
-	"github.com/rs/zerolog"
-	"github.com/shopspring/decimal"
 
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/utils"

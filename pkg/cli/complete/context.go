@@ -2,6 +2,7 @@ package complete
 
 import (
 	"github.com/spf13/cobra"
+
 	"sylr.dev/fix/config"
 )
 

@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
+
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
 	"github.com/quickfixgo/fixt11"
 	"github.com/quickfixgo/quickfix"
-	"github.com/rs/zerolog"
-	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"

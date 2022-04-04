@@ -1,8 +1,9 @@
 package acceptor
 
 import (
-	"github.com/quickfixgo/quickfix"
 	"github.com/rs/zerolog"
+
+	"github.com/quickfixgo/quickfix"
 
 	"sylr.dev/fix/pkg/utils"
 )

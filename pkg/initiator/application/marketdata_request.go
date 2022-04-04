@@ -7,12 +7,13 @@ import (
 	"text/tabwriter"
 
 	"github.com/iancoleman/strcase"
+	"github.com/rs/zerolog"
+	"github.com/shopspring/decimal"
+
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/quickfix/datadictionary"
 	"github.com/quickfixgo/tag"
-	"github.com/rs/zerolog"
-	"github.com/shopspring/decimal"
 
 	"sylr.dev/fix/pkg/utils"
 )
