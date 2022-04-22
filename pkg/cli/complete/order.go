@@ -8,29 +8,29 @@ import (
 )
 
 func OrderSide(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.OrderSidesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.OrderSides), cobra.ShellCompDirectiveNoFileComp
 }
 
 func OrderType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.OrderTypesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.OrderTypes), cobra.ShellCompDirectiveNoFileComp
 }
 
 func OrderTimeInForce(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.OrderTimeInForcesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.OrderTimeInForces), cobra.ShellCompDirectiveNoFileComp
 }
 
 func OrderPartyIDSource(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.PartyIDSourcesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.PartyIDSources), cobra.ShellCompDirectiveNoFileComp
 }
 
 func OrderPartySubIDTypes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.PartySubIDTypesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.PartySubIDTypes), cobra.ShellCompDirectiveNoFileComp
 }
 
 func OrderPartyIDRole(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.PartyRolesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.PartyRoles), cobra.ShellCompDirectiveNoFileComp
 }
 
 func OrderOriginationRole(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.OrderOriginationsReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.OrderOriginations), cobra.ShellCompDirectiveNoFileComp
 }

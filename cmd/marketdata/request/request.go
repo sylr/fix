@@ -85,12 +85,12 @@ func Validate(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, t := range optionTypes {
-		if _, ok := dict.MDEntryTypesReversed[strings.ToUpper(t)]; !ok {
+		if _, ok := dict.MDEntryTypes[strings.ToUpper(t)]; !ok {
 			return fmt.Errorf("%w: unkonwn type `%s`", errors.Options, t)
 		}
 	}
 
-	if _, ok := dict.SubscriptionRequestTypesReversed[strings.ToUpper(optionSubType)]; !ok {
+	if _, ok := dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]; !ok {
 		return fmt.Errorf("%w: unkonwn subscription type `%s`", errors.Options, optionSubType)
 	}
 
@@ -209,7 +209,7 @@ LOOP:
 
 func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	mdReqID := field.NewMDReqID(optionMDReqID)
-	subReqType := field.NewSubscriptionRequestType(dict.SubscriptionRequestTypesReversed[strings.ToUpper(optionSubType)])
+	subReqType := field.NewSubscriptionRequestType(dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)])
 	marketDepth := field.NewMarketDepth(0)
 
 	var updateType enum.MDUpdateType
@@ -240,7 +240,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 				},
 			)
 			for _, t := range optionTypes {
-				entryTypes.Add().Set(field.NewMDEntryType(dict.MDEntryTypesReversed[strings.ToUpper(t)]))
+				entryTypes.Add().Set(field.NewMDEntryType(dict.MDEntryTypes[strings.ToUpper(t)]))
 			}
 			message.Body.SetGroup(entryTypes)
 

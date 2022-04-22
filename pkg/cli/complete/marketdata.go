@@ -8,9 +8,9 @@ import (
 )
 
 func MDEntryTypes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.MDEntryTypesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.MDEntryTypes), cobra.ShellCompDirectiveNoFileComp
 }
 
 func SubscriptionRequestTypes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.SubscriptionRequestTypesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.SubscriptionRequestTypes), cobra.ShellCompDirectiveNoFileComp
 }

@@ -101,20 +101,20 @@ func init() {
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
-	sides := utils.PrettyOptionValues(dict.OrderSidesReversed)
+	sides := utils.PrettyOptionValues(dict.OrderSides)
 	search := utils.Search(sides, strings.ToLower(optionOrderSide))
 	if search < 0 {
 		return errors.OptionOrderSideUnknown
 	}
 
-	types := utils.PrettyOptionValues(dict.OrderTypesReversed)
+	types := utils.PrettyOptionValues(dict.OrderTypes)
 	search = utils.Search(types, strings.ToLower(optionOrderType))
 	if search < 0 {
 		return errors.OptionOrderTypeUnknown
 	}
 
 	if len(optionOrderOrigination) > 0 {
-		originations := utils.PrettyOptionValues(dict.OrderOriginationsReversed)
+		originations := utils.PrettyOptionValues(dict.OrderOriginations)
 		search = utils.Search(originations, strings.ToLower(optionOrderOrigination))
 		if search < 0 {
 			return errors.OptionOrderOriginationUnknown
@@ -150,7 +150,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-sub-id-types", errors.OptionsInconsistentValues)
 	}
 
-	partySubIDTypes := utils.PrettyOptionValues(dict.PartySubIDTypesReversed)
+	partySubIDTypes := utils.PrettyOptionValues(dict.PartySubIDTypes)
 	for k := range optionPartySubIDs {
 		subIDs := strings.Split(optionPartySubIDs[k], " ")
 		subIDTypes := strings.Split(optionPartySubIDTypes[k], " ")
@@ -170,13 +170,13 @@ func Validate(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, t := range optionPartyIDSources {
-		if _, ok := dict.PartyIDSourcesReversed[strings.ToUpper(t)]; !ok {
+		if _, ok := dict.PartyIDSources[strings.ToUpper(t)]; !ok {
 			return fmt.Errorf("%w: unknown party ID source `%s`", errors.Options, t)
 		}
 	}
 
 	for _, t := range optionPartyRoles {
-		if _, ok := dict.PartyRolesReversed[strings.ToUpper(t)]; !ok {
+		if _, ok := dict.PartyRoles[strings.ToUpper(t)]; !ok {
 			return fmt.Errorf("%w: unknown party role `%s`", errors.Options, t)
 		}
 	}
@@ -376,8 +376,8 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			for i := range optionPartyIDs {
 				party := parties.Add()
 				party.Set(field.NewPartyID(optionPartyIDs[i]))
-				party.Set(field.NewPartyIDSource(enum.PartyIDSource(dict.PartyIDSourcesReversed[strings.ToUpper(optionPartyIDSources[i])])))
-				party.Set(field.NewPartyRole(enum.PartyRole(dict.PartyRolesReversed[strings.ToUpper(optionPartyRoles[i])])))
+				party.Set(field.NewPartyIDSource(enum.PartyIDSource(dict.PartyIDSources[strings.ToUpper(optionPartyIDSources[i])])))
+				party.Set(field.NewPartyRole(enum.PartyRole(dict.PartyRoles[strings.ToUpper(optionPartyRoles[i])])))
 
 				// PartyRoleQualifier
 				if len(optionPartyRoleQualifiers) > 0 && optionPartyRoleQualifiers[i] != 0 {
@@ -398,7 +398,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 						}
 						if len(partySubIDTypes[k]) > 0 {
 							mustAdd = true
-							subID.Set(field.NewPartySubIDType(enum.PartySubIDType(dict.PartySubIDTypesReversed[strings.ToUpper(partySubIDTypes[k])])))
+							subID.Set(field.NewPartySubIDType(enum.PartySubIDType(dict.PartySubIDTypes[strings.ToUpper(partySubIDTypes[k])])))
 						}
 						if mustAdd {
 							party.SetGroup(subIDs)
@@ -429,7 +429,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	message.Body.Set(field.NewTimeInForce(eExpiry))
 
 	if len(optionOrderOrigination) > 0 {
-		message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginationsReversed[strings.ToUpper(optionOrderOrigination)])))
+		message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginations[strings.ToUpper(optionOrderOrigination)])))
 	}
 
 	return message, nil

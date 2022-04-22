@@ -58,7 +58,7 @@ func init() {
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
-	types := utils.PrettyOptionValues(dict.SecurityListRequestTypesReversed)
+	types := utils.PrettyOptionValues(dict.SecurityListRequestTypes)
 	search := utils.Search(types, strings.ToLower(optionType))
 	if search < 0 {
 		return fmt.Errorf("unknown security type")

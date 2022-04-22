@@ -8,5 +8,5 @@ import (
 )
 
 func SecurityListRequestType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.SecurityListRequestTypesReversed), cobra.ShellCompDirectiveNoFileComp
+	return utils.PrettyOptionValues(dict.SecurityListRequestTypes), cobra.ShellCompDirectiveNoFileComp
 }
