@@ -34,6 +34,7 @@ replace (
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a // indirect
+	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.1 // indirect

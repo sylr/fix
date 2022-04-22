@@ -39,3 +39,21 @@ func TestPartyRolesMapsSync(t *testing.T) {
 		}
 	}
 }
+
+func TestPartySubIDTypesMapsSync(t *testing.T) {
+	for k, v := range PartySubIDTypes {
+		if rv, ok := PartySubIDTypesReversed[v]; !ok {
+			t.Errorf("maps not in sync: `%s` key is missing in dict.PartySubIDTypesReversed", v)
+		} else if k != rv {
+			t.Errorf("maps not in sync: dict.PartySubIDTypes[%s] = `%s` AND dict.PartySubIDTypesReversed[`%s`] = `%s`", k, v, v, rv)
+		}
+	}
+
+	for k, v := range PartySubIDTypesReversed {
+		if rv, ok := PartySubIDTypes[v]; !ok {
+			t.Errorf("maps not in sync: `%s` key is missing in dict.PartySubIDTypes", v)
+		} else if k != rv {
+			t.Errorf("maps not in sync: dict.PartySubIDTypesReversed[`%s`] = `%s` AND dict.PartySubIDTypes[`%s`] = `%s`", k, v, v, rv)
+		}
+	}
+}

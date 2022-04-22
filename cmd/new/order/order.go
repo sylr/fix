@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
@@ -35,6 +36,8 @@ var (
 	optionOrderOrigination           string
 	optionPartyIDs                   []string
 	optionPartyIDSources             []string
+	optionPartySubIDs                []string
+	optionPartySubIDTypes            []string
 	optionPartyRoles                 []string
 	optionPartyRoleQualifiers        []int
 )
@@ -74,8 +77,10 @@ func init() {
 
 	NewOrderCmd.Flags().StringSliceVar(&optionPartyIDs, "party-id", []string{}, "Order party ids")
 	NewOrderCmd.Flags().StringSliceVar(&optionPartyIDSources, "party-id-source", []string{}, "Order party id sources")
+	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDs, "party-sub-ids", []string{}, "Order party sub ids (space separated)")
+	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDTypes, "party-sub-id-types", []string{}, "Order party sub ids types (space separated)")
 	NewOrderCmd.Flags().StringSliceVar(&optionPartyRoles, "party-role", []string{}, "Order party roles")
-	NewOrderCmd.Flags().IntSliceVar(&optionPartyRoleQualifiers, "party-role-qualifier", []int{}, "Order party role quelifiers")
+	NewOrderCmd.Flags().IntSliceVar(&optionPartyRoleQualifiers, "party-role-qualifier", []int{}, "Order party role qualifiers")
 
 	NewOrderCmd.MarkFlagRequired("side")
 	NewOrderCmd.MarkFlagRequired("type")
@@ -89,6 +94,8 @@ func init() {
 	NewOrderCmd.RegisterFlagCompletionFunc("origination", complete.OrderOriginationRole)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-id", cobra.NoFileCompletions)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-id-source", complete.OrderPartyIDSource)
+	NewOrderCmd.RegisterFlagCompletionFunc("party-sub-ids", cobra.NoFileCompletions)
+	NewOrderCmd.RegisterFlagCompletionFunc("party-sub-id-types", complete.OrderPartySubIDTypes)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-role", complete.OrderPartyIDRole)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-role-qualifier", cobra.NoFileCompletions)
 }
@@ -97,20 +104,20 @@ func Validate(cmd *cobra.Command, args []string) error {
 	sides := utils.PrettyOptionValues(dict.OrderSidesReversed)
 	search := utils.Search(sides, strings.ToLower(optionOrderSide))
 	if search < 0 {
-		return errors.FixOrderSideUnknown
+		return errors.OptionOrderSideUnknown
 	}
 
 	types := utils.PrettyOptionValues(dict.OrderTypesReversed)
 	search = utils.Search(types, strings.ToLower(optionOrderType))
 	if search < 0 {
-		return errors.FixOrderTypeUnknown
+		return errors.OptionOrderTypeUnknown
 	}
 
 	if len(optionOrderOrigination) > 0 {
 		originations := utils.PrettyOptionValues(dict.OrderOriginationsReversed)
 		search = utils.Search(originations, strings.ToLower(optionOrderOrigination))
 		if search < 0 {
-			return errors.FixOrderOriginationUnknown
+			return errors.OptionOrderOriginationUnknown
 		}
 	}
 
@@ -128,23 +135,49 @@ func Validate(cmd *cobra.Command, args []string) error {
 	if len(optionPartyIDs) != len(optionPartyIDSources) ||
 		len(optionPartyIDs) != len(optionPartyRoles) ||
 		len(optionPartyIDSources) != len(optionPartyRoles) {
-		return fmt.Errorf("%v: you must provide the same number of --party-id, --party-id-source and --party-role", errors.OptionsInconsistentValues)
+		return fmt.Errorf("%v: you must provide the same number of --party-id, --party-id-source, --party-sub-id and --party-role", errors.OptionsInconsistentValues)
 	}
 
-	if len(optionPartyRoleQualifiers) > 0 &&
-		len(optionPartyRoleQualifiers) != len(optionPartyIDs) {
-		return fmt.Errorf("%v: you must provide the same number of --party-id, --party-id-source and --party-role", errors.OptionsInconsistentValues)
+	if len(optionPartyRoleQualifiers) > 0 && len(optionPartyRoleQualifiers) != len(optionPartyIDs) {
+		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-role-qualifier", errors.OptionsInconsistentValues)
+	}
+
+	if len(optionPartySubIDs) > 0 && len(optionPartySubIDs) != len(optionPartyIDs) {
+		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-sub-ids", errors.OptionsInconsistentValues)
+	}
+
+	if len(optionPartySubIDTypes) > 0 && len(optionPartySubIDTypes) != len(optionPartyIDs) {
+		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-sub-id-types", errors.OptionsInconsistentValues)
+	}
+
+	partySubIDTypes := utils.PrettyOptionValues(dict.PartySubIDTypesReversed)
+	for k := range optionPartySubIDs {
+		subIDs := strings.Split(optionPartySubIDs[k], " ")
+		subIDTypes := strings.Split(optionPartySubIDTypes[k], " ")
+
+		if len(subIDs) > 0 && len(subIDTypes) > 0 && len(subIDs) != len(subIDTypes) {
+			return fmt.Errorf("%v: %s occurence of --party-sub-ids and --party-sub-id-types do not have same number of elements (space separated)", errors.OptionsInconsistentValues, humanize.Ordinal(k))
+		}
+
+		if len(subIDTypes) > 0 {
+			for kk := range subIDTypes {
+				search = utils.Search(partySubIDTypes, strings.ToLower(subIDTypes[kk]))
+				if search < 0 {
+					return fmt.Errorf("%w: `%s`", errors.OptionPartySubIDTypeUnknown, subIDTypes[kk])
+				}
+			}
+		}
 	}
 
 	for _, t := range optionPartyIDSources {
 		if _, ok := dict.PartyIDSourcesReversed[strings.ToUpper(t)]; !ok {
-			return fmt.Errorf("%w: unkonwn party ID source `%s`", errors.Options, t)
+			return fmt.Errorf("%w: unknown party ID source `%s`", errors.Options, t)
 		}
 	}
 
 	for _, t := range optionPartyRoles {
 		if _, ok := dict.PartyRolesReversed[strings.ToUpper(t)]; !ok {
-			return fmt.Errorf("%w: unkonwn party role `%s`", errors.Options, t)
+			return fmt.Errorf("%w: unknown party role `%s`", errors.Options, t)
 		}
 	}
 
@@ -320,12 +353,23 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(transactime)
 			message.Body.Set(ordtype)
 
+			NewNoPartySubIDsRepeatingGroup := func() *quickfix.RepeatingGroup {
+				return quickfix.NewRepeatingGroup(
+					tag.NoPartySubIDs,
+					quickfix.GroupTemplate{
+						quickfix.GroupElement(tag.PartySubID),
+						quickfix.GroupElement(tag.PartySubIDType),
+					},
+				)
+			}
+
 			parties := quickfix.NewRepeatingGroup(
 				tag.NoPartyIDs,
 				quickfix.GroupTemplate{
 					quickfix.GroupElement(tag.PartyID),
 					quickfix.GroupElement(tag.PartyIDSource),
 					quickfix.GroupElement(tag.PartyRole),
+					NewNoPartySubIDsRepeatingGroup(),
 				},
 			)
 
@@ -338,6 +382,28 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 				// PartyRoleQualifier
 				if len(optionPartyRoleQualifiers) > 0 && optionPartyRoleQualifiers[i] != 0 {
 					party.Set(field.NewPartyRoleQualifier(optionPartyRoleQualifiers[i]))
+				}
+
+				// NoPartySubIDs
+				partySubIDs := strings.Split(optionPartySubIDs[i], " ")
+				partySubIDTypes := strings.Split(optionPartySubIDTypes[i], " ")
+				if len(partySubIDs) > 0 || len(partySubIDTypes) > 0 {
+					subIDs := NewNoPartySubIDsRepeatingGroup()
+					for k := range partySubIDs {
+						subID := subIDs.Add()
+						mustAdd := false
+						if len(partySubIDs[k]) > 0 {
+							mustAdd = true
+							subID.Set(field.NewPartySubID(partySubIDs[k]))
+						}
+						if len(partySubIDTypes[k]) > 0 {
+							mustAdd = true
+							subID.Set(field.NewPartySubIDType(enum.PartySubIDType(dict.PartySubIDTypesReversed[strings.ToUpper(partySubIDTypes[k])])))
+						}
+						if mustAdd {
+							party.SetGroup(subIDs)
+						}
+					}
 				}
 			}
 			message.Body.SetGroup(parties)
