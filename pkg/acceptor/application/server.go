@@ -7,7 +7,6 @@ import (
 	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
-	"github.com/shopspring/decimal"
 
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
@@ -170,8 +169,8 @@ func (app *Acceptor) onNewOrderSingle(order *quickfix.Message, sessionID quickfi
 		return ferr
 	}
 
-	sideString, _ := dict.OrderSides[enum.Side(side)]
-	typeString, _ := dict.OrderTypes[enum.OrdType(ordType)]
+	sideString := dict.OrderSides[enum.Side(side)]
+	typeString := dict.OrderTypes[enum.OrdType(ordType)]
 
 	buf := bytes.NewBuffer([]byte{})
 	subj := NewOrderSingleNatsSubject{
@@ -203,21 +202,20 @@ func (a *Acceptor) sendExecutionReport(order *quickfix.Message, status enum.OrdS
 	header := fixt11.NewHeader(&message.Header)
 
 	header.SetField(tag.MsgType, field.NewMsgType(enum.MsgType_EXECUTION_REPORT))
-	message.Body.Set(field.NewOrderID(utils.MustNot(order.Body.GetString(tag.OrderID))))
-	message.Body.Set(field.NewExecID("0"))
-	message.Body.Set(field.NewExecType(enum.ExecType(status)))
-	message.Body.Set(field.NewOrdStatus(status))
-	message.Body.Set(field.NewSide(enum.Side(utils.MustNot(order.Body.GetString(tag.Side)))))
-	message.Body.Set(field.NewLeavesQty(utils.MustNot(decimal.NewFromString(utils.MustNot(order.Body.GetString(tag.LeavesQty)))), 2))
-	message.Body.Set(field.NewCumQty(utils.MustNot(decimal.NewFromString(utils.MustNot(order.Body.GetString(tag.CumQty)))), 2))
+	utils.QuickFixMessagePartSetString(&header, utils.MustNot(order.Header.GetString(tag.SenderCompID)), field.NewTargetCompID)
+	utils.QuickFixMessagePartSetString(&header, utils.MustNot(order.Header.GetString(tag.SenderSubID)), field.NewTargetSubID)
+	utils.QuickFixMessagePartSetString(&header, utils.MustNot(order.Header.GetString(tag.TargetCompID)), field.NewSenderCompID)
+	utils.QuickFixMessagePartSetString(&header, utils.MustNot(order.Header.GetString(tag.TargetSubID)), field.NewSenderSubID)
 
-	message.Body.Set(field.NewOrderQty(utils.MustNot(decimal.NewFromString(utils.MustNot(order.Body.GetString(tag.OrderQty)))), 2))
-	message.Body.Set(field.NewClOrdID(utils.MustNot(order.Body.GetString(tag.ClOrdID))))
-
-	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.SenderCompID)), field.NewTargetCompID)
-	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.SenderSubID)), field.NewTargetSubID)
-	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.TargetCompID)), field.NewSenderCompID)
-	utils.QuickFixMessagePartSet(&message.Header, utils.MustNot(order.Header.GetString(tag.TargetSubID)), field.NewSenderSubID)
+	utils.QuickFixMessagePartSetString(&message.Body, (utils.MustNot(order.Body.GetString(tag.ClOrdID))), field.NewOrderID)
+	utils.QuickFixMessagePartSetString(&message.Body, "0", field.NewExecID)
+	utils.QuickFixMessagePartSetString(&message.Body, enum.ExecType(status), field.NewExecType)
+	utils.QuickFixMessagePartSetString(&message.Body, status, field.NewOrdStatus)
+	utils.QuickFixMessagePartSetString(&message.Body, enum.Side(utils.MustNot(order.Body.GetString(tag.Side))), field.NewSide)
+	utils.QuickFixMessagePartSetString(&message.Body, utils.MustNot(order.Body.GetString(tag.ClOrdID)), field.NewClOrdID)
+	utils.QuickFixMessagePartSetDecimal(&message.Body, utils.MustNot(order.Body.GetString(tag.LeavesQty)), field.NewLeavesQty, 2)
+	utils.QuickFixMessagePartSetDecimal(&message.Body, utils.MustNot(order.Body.GetString(tag.CumQty)), field.NewCumQty, 2)
+	utils.QuickFixMessagePartSetDecimal(&message.Body, utils.MustNot(order.Body.GetString(tag.OrderQty)), field.NewOrderQty, 2)
 
 	return quickfix.Send(message)
 }

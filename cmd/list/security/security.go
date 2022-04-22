@@ -193,10 +193,10 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 		return nil, errors.FixVersionNotImplemented
 	}
 
-	utils.QuickFixMessagePartSet(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSet(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSet(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSet(&message.Header, session.SenderSubID, field.NewSenderSubID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
 	return message, nil
 }

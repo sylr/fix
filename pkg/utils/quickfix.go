@@ -10,19 +10,28 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/quickfix/datadictionary"
 	qtag "github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
+	"github.com/shopspring/decimal"
+
+	"github.com/quickfixgo/quickfix"
+	"github.com/quickfixgo/quickfix/datadictionary"
 )
 
 type QuickFixMessagePartSetter interface {
 	Set(field quickfix.FieldWriter) *quickfix.FieldMap
 }
 
-func QuickFixMessagePartSet[T quickfix.FieldWriter](setter QuickFixMessagePartSetter, value string, f func(string) T) {
+func QuickFixMessagePartSetString[T quickfix.FieldWriter, T2 ~string](setter QuickFixMessagePartSetter, value T2, f func(T2) T) {
 	if len(value) > 0 {
 		setter.Set(f(value))
+	}
+}
+
+func QuickFixMessagePartSetDecimal[T quickfix.FieldWriter, T2 ~string](setter QuickFixMessagePartSetter, value T2, f func(decimal.Decimal, int32) T, scale int32) {
+	decimal.NewFromString(string(value))
+	if len(value) > 0 {
+		setter.Set(f(MustNot(decimal.NewFromString(string(value))), scale))
 	}
 }
 
