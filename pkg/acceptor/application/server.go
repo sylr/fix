@@ -169,14 +169,14 @@ func (app *Acceptor) onNewOrderSingle(order *quickfix.Message, sessionID quickfi
 		return ferr
 	}
 
-	sideString := dict.OrderSides[enum.Side(side)]
-	typeString := dict.OrderTypes[enum.OrdType(ordType)]
+	sideString, _ := dict.Search(dict.OrderSides, side)
+	typeString, _ := dict.Search(dict.OrderTypes, ordType)
 
 	buf := bytes.NewBuffer([]byte{})
 	subj := NewOrderSingleNatsSubject{
 		Symbol: symbol,
-		Side:   sideString,
-		Type:   typeString,
+		Side:   string(sideString),
+		Type:   string(typeString),
 	}
 
 	err := app.NatsOrderSubject.Execute(buf, subj)
