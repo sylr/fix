@@ -3,6 +3,7 @@ package neworder
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,12 +35,14 @@ var (
 	optionOrderQuantity              int64
 	optionOrderPrice                 float64
 	optionOrderOrigination           string
+	optionOrderAttributeType         []string
+	optionOrderAttributeValue        []string
 	optionPartyIDs                   []string
 	optionPartyIDSources             []string
 	optionPartySubIDs                []string
 	optionPartySubIDTypes            []string
 	optionPartyRoles                 []string
-	optionPartyRoleQualifiers        []int
+	optionPartyRoleQualifiers        []string
 )
 
 var NewOrderCmd = &cobra.Command{
@@ -74,13 +77,15 @@ func init() {
 	NewOrderCmd.Flags().StringVar(&optionOrderExpiry, "expiry", "day", "Order expiry (day, good_till_cancel ... etc)")
 	NewOrderCmd.Flags().Float64Var(&optionOrderPrice, "price", 0.0, "Order price")
 	NewOrderCmd.Flags().StringVar(&optionOrderOrigination, "origination", "", "Order origination")
+	NewOrderCmd.Flags().StringSliceVar(&optionOrderAttributeType, "attribute-type", []string{}, "Order attribute types")
+	NewOrderCmd.Flags().StringSliceVar(&optionOrderAttributeValue, "attribute-value", []string{}, "Order attribute value")
 
 	NewOrderCmd.Flags().StringSliceVar(&optionPartyIDs, "party-id", []string{}, "Order party ids")
 	NewOrderCmd.Flags().StringSliceVar(&optionPartyIDSources, "party-id-source", []string{}, "Order party id sources")
-	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDs, "party-sub-ids", []string{}, "Order party sub ids (space separated)")
-	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDTypes, "party-sub-id-types", []string{}, "Order party sub ids types (space separated)")
 	NewOrderCmd.Flags().StringSliceVar(&optionPartyRoles, "party-role", []string{}, "Order party roles")
-	NewOrderCmd.Flags().IntSliceVar(&optionPartyRoleQualifiers, "party-role-qualifier", []int{}, "Order party role qualifiers")
+	NewOrderCmd.Flags().StringSliceVar(&optionPartyRoleQualifiers, "party-role-qualifier", []string{}, "Order party role qualifiers")
+	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDs, "party-sub-ids", []string{}, "Order party sub ids (space separated)")
+	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDTypes, "party-sub-id-types", []string{}, "Order party sub id types (space separated)")
 
 	NewOrderCmd.MarkFlagRequired("side")
 	NewOrderCmd.MarkFlagRequired("type")
@@ -92,12 +97,14 @@ func init() {
 	NewOrderCmd.RegisterFlagCompletionFunc("expiry", complete.OrderTimeInForce)
 	NewOrderCmd.RegisterFlagCompletionFunc("symbol", cobra.NoFileCompletions)
 	NewOrderCmd.RegisterFlagCompletionFunc("origination", complete.OrderOriginationRole)
+	NewOrderCmd.RegisterFlagCompletionFunc("attribute-type", complete.OrderAttributeType)
+	NewOrderCmd.RegisterFlagCompletionFunc("attribute-value", cobra.NoFileCompletions)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-id", cobra.NoFileCompletions)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-id-source", complete.OrderPartyIDSource)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-sub-ids", cobra.NoFileCompletions)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-sub-id-types", complete.OrderPartySubIDTypes)
 	NewOrderCmd.RegisterFlagCompletionFunc("party-role", complete.OrderPartyIDRole)
-	NewOrderCmd.RegisterFlagCompletionFunc("party-role-qualifier", cobra.NoFileCompletions)
+	NewOrderCmd.RegisterFlagCompletionFunc("party-role-qualifier", complete.OrderPartyRoleQualifier)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
@@ -113,6 +120,11 @@ func Validate(cmd *cobra.Command, args []string) error {
 		return errors.OptionOrderTypeUnknown
 	}
 
+	if len(optionOrderID) == 0 {
+		uid := uuid.New()
+		optionOrderID = uid.String()
+	}
+
 	if len(optionOrderOrigination) > 0 {
 		originations := utils.PrettyOptionValues(dict.OrderOriginations)
 		search = utils.Search(originations, strings.ToLower(optionOrderOrigination))
@@ -121,17 +133,27 @@ func Validate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if len(optionOrderID) == 0 {
-		uid := uuid.New()
-		optionOrderID = uid.String()
-	}
-
 	if strings.ToLower(optionOrderType) == "market" && optionOrderPrice > 0 {
 		return errors.OptionsInvalidMarketPrice
 	} else if strings.ToLower(optionOrderType) != "market" && optionOrderPrice == 0 {
 		return errors.OptionsNoPriceGiven
 	}
 
+	// Attributes
+	if len(optionOrderAttributeType) != len(optionOrderAttributeValue) &&
+		len(optionOrderAttributeValue) > 0 {
+		return fmt.Errorf("%v: you must provide the same number of --attribute-type and --attribute-values", errors.OptionsInconsistentValues)
+	}
+
+	attributeTypes := utils.PrettyOptionValues(dict.OrderAttributeTypes)
+	for k := range optionOrderAttributeType {
+		search = utils.Search(attributeTypes, strings.ToLower(optionOrderAttributeType[k]))
+		if search < 0 {
+			return fmt.Errorf("%w: `%s`", errors.OptionOrderAttributeTypeUnkonwn, optionOrderAttributeType[k])
+		}
+	}
+
+	// Parties
 	if len(optionPartyIDs) != len(optionPartyIDSources) ||
 		len(optionPartyIDs) != len(optionPartyRoles) ||
 		len(optionPartyIDSources) != len(optionPartyRoles) {
@@ -139,7 +161,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(optionPartyRoleQualifiers) > 0 && len(optionPartyRoleQualifiers) != len(optionPartyIDs) {
-		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-role-qualifier", errors.OptionsInconsistentValues)
+		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-role-qualifier (%d != %d), %#v", errors.OptionsInconsistentValues, len(optionPartyIDs), len(optionPartyRoleQualifiers), optionPartyRoleQualifiers)
 	}
 
 	if len(optionPartySubIDs) > 0 && len(optionPartySubIDs) != len(optionPartyIDs) {
@@ -150,10 +172,42 @@ func Validate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-sub-id-types", errors.OptionsInconsistentValues)
 	}
 
+	sources := utils.PrettyOptionValues(dict.PartyIDSources)
+	for k := range optionPartyIDSources {
+		search = utils.Search(sources, strings.ToLower(optionPartyIDSources[k]))
+		if search < 0 {
+			return fmt.Errorf("%w: `%s`", errors.OptionOrderIDSourceUnknown, optionPartyIDSources[k])
+		}
+	}
+
+	roles := utils.PrettyOptionValues(dict.PartyRoles)
+	for k := range optionPartyRoles {
+		search = utils.Search(roles, strings.ToLower(optionPartyRoles[k]))
+		if search < 0 {
+			return fmt.Errorf("%w: `%s`", errors.OptionOrderRoleUnknown, optionPartyRoles[k])
+		}
+	}
+
+	roleQualifiers := utils.PrettyOptionValues(dict.PartyRoleQualifiers)
+	for k := range optionPartyRoleQualifiers {
+		search = utils.Search(roleQualifiers, strings.ToLower(optionPartyRoleQualifiers[k]))
+		if search < 0 {
+			return fmt.Errorf("%w: `%s`", errors.OptionOrderRoleQualifierUnknown, optionPartyRoleQualifiers[k])
+		}
+	}
+
+	// Sub Parties
 	partySubIDTypes := utils.PrettyOptionValues(dict.PartySubIDTypes)
 	for k := range optionPartySubIDs {
-		subIDs := strings.Split(optionPartySubIDs[k], " ")
-		subIDTypes := strings.Split(optionPartySubIDTypes[k], " ")
+		var subIDs, subIDTypes []string
+
+		if len(optionPartySubIDs) > 0 {
+			subIDs = strings.Split(optionPartySubIDs[k], " ")
+		}
+
+		if len(optionPartySubIDTypes) > 0 {
+			subIDTypes = strings.Split(optionPartySubIDTypes[k], " ")
+		}
 
 		if len(subIDs) > 0 && len(subIDTypes) > 0 && len(subIDs) != len(subIDTypes) {
 			return fmt.Errorf("%v: %s occurence of --party-sub-ids and --party-sub-id-types do not have same number of elements (space separated)", errors.OptionsInconsistentValues, humanize.Ordinal(k))
@@ -166,18 +220,6 @@ func Validate(cmd *cobra.Command, args []string) error {
 					return fmt.Errorf("%w: `%s`", errors.OptionPartySubIDTypeUnknown, subIDTypes[kk])
 				}
 			}
-		}
-	}
-
-	for _, t := range optionPartyIDSources {
-		if _, ok := dict.PartyIDSources[strings.ToUpper(t)]; !ok {
-			return fmt.Errorf("%w: unknown party ID source `%s`", errors.Options, t)
-		}
-	}
-
-	for _, t := range optionPartyRoles {
-		if _, ok := dict.PartyRoles[strings.ToUpper(t)]; !ok {
-			return fmt.Errorf("%w: unknown party role `%s`", errors.Options, t)
 		}
 	}
 
@@ -353,6 +395,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(transactime)
 			message.Body.Set(ordtype)
 
+			// Parties
 			NewNoPartySubIDsRepeatingGroup := func() *quickfix.RepeatingGroup {
 				return quickfix.NewRepeatingGroup(
 					tag.NoPartySubIDs,
@@ -362,7 +405,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 					},
 				)
 			}
-
 			parties := quickfix.NewRepeatingGroup(
 				tag.NoPartyIDs,
 				quickfix.GroupTemplate{
@@ -375,38 +417,72 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 
 			for i := range optionPartyIDs {
 				party := parties.Add()
+
 				party.Set(field.NewPartyID(optionPartyIDs[i]))
 				party.Set(field.NewPartyIDSource(enum.PartyIDSource(dict.PartyIDSources[strings.ToUpper(optionPartyIDSources[i])])))
 				party.Set(field.NewPartyRole(enum.PartyRole(dict.PartyRoles[strings.ToUpper(optionPartyRoles[i])])))
 
-				// PartyRoleQualifier
-				if len(optionPartyRoleQualifiers) > 0 && optionPartyRoleQualifiers[i] != 0 {
-					party.Set(field.NewPartyRoleQualifier(optionPartyRoleQualifiers[i]))
+				// Role Qualifier
+				if len(optionPartyRoleQualifiers) > 0 && len(optionPartyRoleQualifiers[i]) > 0 {
+					party.Set(field.NewPartyRoleQualifier(utils.Must(strconv.Atoi(string(dict.PartyRoleQualifiers[strings.ToUpper(optionPartyRoleQualifiers[i])])))))
 				}
 
-				// NoPartySubIDs
-				partySubIDs := strings.Split(optionPartySubIDs[i], " ")
-				partySubIDTypes := strings.Split(optionPartySubIDTypes[i], " ")
-				if len(partySubIDs) > 0 || len(partySubIDTypes) > 0 {
-					subIDs := NewNoPartySubIDsRepeatingGroup()
-					for k := range partySubIDs {
-						subID := subIDs.Add()
-						mustAdd := false
-						if len(partySubIDs[k]) > 0 {
-							mustAdd = true
-							subID.Set(field.NewPartySubID(partySubIDs[k]))
-						}
-						if len(partySubIDTypes[k]) > 0 {
-							mustAdd = true
-							subID.Set(field.NewPartySubIDType(enum.PartySubIDType(dict.PartySubIDTypes[strings.ToUpper(partySubIDTypes[k])])))
-						}
-						if mustAdd {
-							party.SetGroup(subIDs)
+				if len(optionPartySubIDs) == len(optionPartyIDs) ||
+					len(optionPartySubIDTypes) == len(optionPartyIDs) {
+					var partySubIDs, partySubIDTypes []string
+
+					if len(optionPartySubIDs) > 0 {
+						partySubIDs = strings.Split(optionPartySubIDs[i], " ")
+					}
+
+					if len(optionPartySubIDTypes) > 0 {
+						partySubIDTypes = strings.Split(optionPartySubIDTypes[i], " ")
+					}
+
+					if len(partySubIDs) > 0 || len(partySubIDTypes) > 0 {
+						subIDs := NewNoPartySubIDsRepeatingGroup()
+						for k := range partySubIDs {
+							subID := subIDs.Add()
+							mustAdd := false
+							if len(partySubIDs) > 0 {
+								mustAdd = true
+								subID.Set(field.NewPartySubID(partySubIDs[k]))
+							}
+							if len(partySubIDTypes) > 0 {
+								mustAdd = true
+								subID.Set(field.NewPartySubIDType(enum.PartySubIDType(dict.PartySubIDTypes[strings.ToUpper(partySubIDTypes[k])])))
+							}
+							if mustAdd {
+								party.SetGroup(subIDs)
+							}
 						}
 					}
+
 				}
 			}
 			message.Body.SetGroup(parties)
+
+			// Attributes
+			attributes := quickfix.NewRepeatingGroup(
+				tag.NoOrderAttributes,
+				quickfix.GroupTemplate{
+					quickfix.GroupElement(tag.OrderAttributeType),
+					quickfix.GroupElement(tag.OrderAttributeValue),
+				},
+			)
+
+			for i := range optionOrderAttributeType {
+				attribute := attributes.Add()
+				attribute.Set(field.NewOrderAttributeType(enum.OrderAttributeType(dict.OrderAttributeTypes[strings.ToUpper(optionOrderAttributeType[i])])))
+
+				if len(optionOrderAttributeValue) > 0 {
+					if len(optionOrderAttributeValue[i]) > 0 {
+						attribute.SetString(tag.OrderAttributeValue, optionOrderAttributeValue[i])
+					}
+				}
+			}
+
+			message.Body.SetGroup(attributes)
 
 		default:
 			return nil, errors.FixVersionNotImplemented
@@ -422,11 +498,12 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 
 	message.Body.Set(field.NewHandlInst(enum.HandlInst_AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION))
 	message.Body.Set(field.NewSymbol(optionOrderSymbol))
+	message.Body.Set(field.NewOrderQty(decimal.NewFromInt(optionOrderQuantity), 2))
+	message.Body.Set(field.NewTimeInForce(eExpiry))
+
 	if etype != enum.OrdType_MARKET {
 		message.Body.Set(field.NewPrice(decimal.NewFromFloat(optionOrderPrice), 2))
 	}
-	message.Body.Set(field.NewOrderQty(decimal.NewFromInt(optionOrderQuantity), 2))
-	message.Body.Set(field.NewTimeInForce(eExpiry))
 
 	if len(optionOrderOrigination) > 0 {
 		message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginations[strings.ToUpper(optionOrderOrigination)])))
