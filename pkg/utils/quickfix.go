@@ -126,7 +126,7 @@ func (app *QuickFixAppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.Fi
 	for i, tag := range tags {
 		values := fieldMap.Values(tag)
 		for j, t := range values {
-			tagString := strconv.Itoa(int(tag))
+			tagString := strconv.Itoa(int(t.Tag()))
 			tagDescription := "<unknown>"
 			stringValues, _ := fieldMap.GetStrings(tag)
 			valueDescription := ""
