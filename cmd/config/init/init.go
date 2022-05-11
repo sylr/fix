@@ -81,7 +81,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		ConfigDir: configDir,
 	}
 
-	t, err := template.ParseFS(templates, "templates/**")
+	t, err := template.ParseFS(templates, "templates/config")
 	if err != nil {
 		return err
 	}
