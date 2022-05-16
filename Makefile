@@ -36,6 +36,25 @@ GO_BUILD_LDFLAGS_OPTIMS  += -s -w
 endif # $(DEBUG)
 
 GO_BUILD_FLAGS_TARGET   := .go-build-flags
+GO_CROSSBUILD_LINUX_AMD64_TARGET   := dist/fix-$(GIT_VERSION)-linux-amd64
+#GO_CROSSBUILD_LINUX_ARM_TARGET     := dist/fix-$(GIT_VERSION)-linux-arm
+GO_CROSSBUILD_LINUX_ARM64_TARGET   := dist/fix-$(GIT_VERSION)-linux-arm64
+GO_CROSSBUILD_DARWIN_AMD64_TARGET  := dist/fix-$(GIT_VERSION)-darwin-amd64
+GO_CROSSBUILD_DARWIN_ARM64_TARGET  := dist/fix-$(GIT_VERSION)-darwin-arm64
+GO_CROSSBUILD_WINDOWS_AMD64_TARGET := dist/fix-$(GIT_VERSION)-windows-amd64.exe
+GO_CROSSBUILD_WINDOWS_ARM64_TARGET := dist/fix-$(GIT_VERSION)-windows-arm64.exe
+
+GO_CROSSBUILD_TARGETS  = $(GO_CROSSBUILD_LINUX_AMD64_TARGET)
+GO_CROSSBUILD_TARGETS += $(GO_CROSSBUILD_LINUX_ARM_TARGET)
+GO_CROSSBUILD_TARGETS += $(GO_CROSSBUILD_LINUX_ARM64_TARGET)
+GO_CROSSBUILD_TARGETS += $(GO_CROSSBUILD_DARWIN_AMD64_TARGET)
+GO_CROSSBUILD_TARGETS += $(GO_CROSSBUILD_DARWIN_ARM64_TARGET)
+GO_CROSSBUILD_TARGETS += $(GO_CROSSBUILD_WINDOWS_AMD64_TARGET)
+GO_CROSSBUILD_TARGETS += $(GO_CROSSBUILD_WINDOWS_ARM64_TARGET)
+
+ZIG_CROSSBUILD_MACOS_FRAMEWORK ?= /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks
+ZIG_CROSSBUILD_MACOS_LIB       ?= /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib
+
 GO_BUILD_EXTLDFLAGS     := $(strip $(GO_BUILD_EXTLDFLAGS))
 GO_BUILD_TAGS           := $(strip $(GO_BUILD_TAGS))
 GO_BUILD_TARGET_DEPS    := $(strip $(GO_BUILD_TARGET_DEPS))
@@ -47,7 +66,7 @@ GO_TOOLS_GOLANGCI_LINT ?= $(shell $(GO) env GOPATH)/bin/golangci-lint
 
 DOCKER_BUILD_IMAGE      ?= ghcr.io/sylr/fix
 DOCKER_BUILD_VERSION    ?= $(GIT_VERSION)
-DOCKER_BUILD_GO_VERSION ?= 1.17
+DOCKER_BUILD_GO_VERSION ?= 1.18
 DOCKER_BUILD_LABELS      = --label org.opencontainers.image.title=fix
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.description="fix client"
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.url="https://github.com/sylr/fix"
@@ -96,6 +115,31 @@ $(GO_BUILD_TARGET): $(GO_BUILD_VERSION_TARGET)
 
 $(GO_BUILD_VERSION_TARGET): $(GO_BUILD_SRC) $(GO_GENERATE_TARGET) $(GO_BUILD_FLAGS_TARGET) | $(GO_BUILD_TARGET_DEPS)
 	GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) $(GO) build -tags $(GO_BUILD_TAGS) $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+crossbuild: $(GO_BUILD_VERSION_TARGET) $(GO_CROSSBUILD_TARGETS)
+
+$(GO_CROSSBUILD_LINUX_AMD64_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET)
+	GOOS=linux GOARCH=amd64 CC="zig cc -target x86_64-linux" CXX="zig cc -target x86_64-linux" $(GO) build -tags $(GO_BUILD_TAGS),crossbuild $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+$(GO_CROSSBUILD_LINUX_ARM_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET)
+	GOOS=linux GOARCH=arm CC="zig cc -target arm-linux-gnueabihf" CXX="zig cc -target arm-linux-gnueabihf" $(GO) build -tags $(GO_BUILD_TAGS),crossbuild $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+$(GO_CROSSBUILD_LINUX_ARM64_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET)
+	GOOS=linux GOARCH=arm64 CC="zig cc -target aarch64-linux" CXX="zig cc -target aarch64-linux" $(GO) build -tags $(GO_BUILD_TAGS),crossbuild $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+$(GO_CROSSBUILD_DARWIN_AMD64_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET)
+	GOOS=darwin GOARCH=amd64 CC="zig cc -target x86_64-macos -F$(ZIG_CROSSBUILD_MACOS_FRAMEWORK) -L$(ZIG_CROSSBUILD_MACOS_LIB)" CXX="zig cc -target x86_64-macos -F$(ZIG_CROSSBUILD_MACOS_FRAMEWORK) -L$(ZIG_CROSSBUILD_MACOS_LIB)" $(GO) build -tags $(GO_BUILD_TAGS),crossbuild $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+$(GO_CROSSBUILD_DARWIN_ARM64_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET)
+	GOOS=darwin GOARCH=arm64 CC="zig cc -target aarch64-macos -F$(ZIG_CROSSBUILD_MACOS_FRAMEWORK) -L$(ZIG_CROSSBUILD_MACOS_LIB)" CXX="zig cc -target aarch64-macos -F$(ZIG_CROSSBUILD_MACOS_FRAMEWORK) -L$(ZIG_CROSSBUILD_MACOS_LIB)" $(GO) build -tags $(GO_BUILD_TAGS),crossbuild $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+$(GO_CROSSBUILD_WINDOWS_AMD64_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET)
+	GOOS=windows GOARCH=amd64 CC="zig cc -target x86_64-windows" CXX="zig cc -target x86_64-windows" $(GO) build -tags $(GO_BUILD_TAGS),crossbuild $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+$(GO_CROSSBUILD_WINDOWS_ARM64_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET)
+	GOOS=windows GOARCH=arm64 CC="zig cc -target aarch64-windows" CXX="zig cc -target aarch64-windows" $(GO) build -tags $(GO_BUILD_TAGS),crossbuild $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+
+crossbuild-checksums: dist/checksums
 
 dist/checksums : $(GO_CROSSBUILD_TARGETS)
 	cd dist && shasum -a 256 fix-*-* > checksums
