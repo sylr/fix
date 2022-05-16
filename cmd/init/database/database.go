@@ -11,6 +11,7 @@ import (
 	qsql "github.com/quickfixgo/quickfix/_sql"
 	"github.com/spf13/cobra"
 	"sylr.dev/fix/config"
+	"sylr.dev/fix/pkg/database"
 )
 
 var (
@@ -18,13 +19,18 @@ var (
 )
 
 // ConfigCmd represents the buy command
-var DatabaseInitCmd = &cobra.Command{
-	Use:               "init",
+var InitDatabaseCmd = &cobra.Command{
+	Use:               "database",
 	Short:             "Initialize quickfix database",
 	Long:              "Initialize quickfix database.",
 	RunE:              Execute,
 	ValidArgsFunction: cobra.NoFileCompletions,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		err := database.ValidateOptions(cmd, args)
+		if err != nil {
+			return err
+		}
+
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			if parent.PersistentPreRunE != nil {
@@ -36,7 +42,7 @@ var DatabaseInitCmd = &cobra.Command{
 }
 
 func init() {
-	DatabaseInitCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing databases")
+	InitDatabaseCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Overwrite existing databases")
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
@@ -45,12 +51,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 	// Acceptors
 	if err := createDatabase(acceptors, "acceptor.db"); err != nil {
-		return nil
+		return err
 	}
 
 	// Initiators
 	if err := createDatabase(initiators, "initiator.db"); err != nil {
-		return nil
+		return err
 	}
 
 	return nil

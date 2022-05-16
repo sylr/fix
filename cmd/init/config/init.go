@@ -1,4 +1,4 @@
-package configinit
+package init_config
 
 import (
 	"compress/bzip2"
@@ -19,8 +19,8 @@ import (
 )
 
 // ConfigCmd represents the buy command
-var ConfigInitCmd = &cobra.Command{
-	Use:   "init",
+var InitConfigCmd = &cobra.Command{
+	Use:   "config",
 	Short: "Initialize fix configuration",
 	Long:  "Initialize fix configuration.",
 	RunE:  Execute,

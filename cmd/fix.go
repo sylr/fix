@@ -9,8 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/cmd/cancel"
-	configcmd "sylr.dev/fix/cmd/config"
-	"sylr.dev/fix/cmd/database"
+	initcmd "sylr.dev/fix/cmd/init"
 	"sylr.dev/fix/cmd/initiator"
 	"sylr.dev/fix/cmd/list"
 	"sylr.dev/fix/cmd/marketdata"
@@ -33,8 +32,7 @@ var FixCmd = &cobra.Command{
 func init() {
 	options := config.GetOptions()
 
-	FixCmd.AddCommand(configcmd.ConfigCmd)
-	FixCmd.AddCommand(database.DatabaseCmd)
+	FixCmd.AddCommand(initcmd.InitCmd)
 	FixCmd.AddCommand(new.NewCmd)
 	FixCmd.AddCommand(marketdata.MarketDataCmd)
 	FixCmd.AddCommand(cancel.CancelCmd)
