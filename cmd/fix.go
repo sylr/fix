@@ -14,6 +14,7 @@ import (
 	"sylr.dev/fix/cmd/list"
 	"sylr.dev/fix/cmd/marketdata"
 	"sylr.dev/fix/cmd/new"
+	"sylr.dev/fix/cmd/status"
 	"sylr.dev/fix/config"
 )
 
@@ -38,6 +39,7 @@ func init() {
 	FixCmd.AddCommand(cancel.CancelCmd)
 	FixCmd.AddCommand(list.ListCmd)
 	FixCmd.AddCommand(initiator.InitiatorCmd)
+	FixCmd.AddCommand(status.StatusCmd)
 
 	configPath := strings.Join([]string{"$HOME", ".fix", "config"}, string(os.PathSeparator))
 

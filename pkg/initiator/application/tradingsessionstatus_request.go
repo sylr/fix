@@ -1,4 +1,5 @@
 package application
+
 import (
 	"github.com/rs/zerolog"
 
@@ -47,6 +48,7 @@ func (app *TradingSessionStatusRequest) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
+	close(app.FromAdminChan)
 	close(app.FromAppChan)
 }
 
@@ -82,6 +84,7 @@ func (app *TradingSessionStatusRequest) ToAdmin(message *quickfix.Message, sessi
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, true)
 }
+
 // Notification of admin message being received from target.
 func (app *TradingSessionStatusRequest) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from admin")
@@ -114,6 +117,7 @@ func (app *TradingSessionStatusRequest) ToApp(message *quickfix.Message, session
 
 	return nil
 }
+
 // Notification of app message being received from target.
 func (app *TradingSessionStatusRequest) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from app")
@@ -124,6 +128,8 @@ func (app *TradingSessionStatusRequest) FromApp(message *quickfix.Message, sessi
 	}
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
-	return nil
 
+	app.FromAppChan <- message
+
+	return nil
 }
