@@ -1,14 +1,14 @@
-package tradingsessionstatus
+package status
 
 import (
 	"github.com/spf13/cobra"
 
-	tradingsessionstatusrequest "sylr.dev/fix/cmd/tradingsessionstatus/request"
+	status_tradingsession "sylr.dev/fix/cmd/status/tradingsession"
 	"sylr.dev/fix/pkg/initiator"
 )
-// TradingSessionStatusCmd represents the buy command
-var TradingSessionStatusCmd = &cobra.Command{
-	Use:   "tradingsessionstatus",
+
+var StatusCmd = &cobra.Command{
+	Use:   "status",
 	Short: "Send a TradingSessionStatus FIX message",
 	Long:  "Send a TradingSessionStatus FIX message after initiating a sesion with a FIX acceptor.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -32,9 +32,7 @@ var TradingSessionStatusCmd = &cobra.Command{
 }
 
 func init() {
-	initiator.AddPersistentFlags(TradingSessionStatusCmd)
+	initiator.AddPersistentFlags(StatusCmd)
 
-	TradingSessionStatusCmd.AddCommand(tradingsessionstatusrequest.TradingSessionStatusRequestCmd)
+	StatusCmd.AddCommand(status_tradingsession.StatusTradingSessionCmd)
 }
-
-
