@@ -33,12 +33,12 @@ var FixCmd = &cobra.Command{
 func init() {
 	options := config.GetOptions()
 
-	FixCmd.AddCommand(initcmd.InitCmd)
-	FixCmd.AddCommand(new.NewCmd)
-	FixCmd.AddCommand(marketdata.MarketDataCmd)
 	FixCmd.AddCommand(cancel.CancelCmd)
-	FixCmd.AddCommand(list.ListCmd)
+	FixCmd.AddCommand(initcmd.InitCmd)
 	FixCmd.AddCommand(initiator.InitiatorCmd)
+	FixCmd.AddCommand(list.ListCmd)
+	FixCmd.AddCommand(marketdata.MarketDataCmd)
+	FixCmd.AddCommand(new.NewCmd)
 	FixCmd.AddCommand(status.StatusCmd)
 
 	configPath := strings.Join([]string{"$HOME", ".fix", "config"}, string(os.PathSeparator))

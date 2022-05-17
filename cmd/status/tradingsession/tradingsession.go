@@ -64,6 +64,10 @@ func init() {
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
+	if len(optionTradingSessionID) == 0 {
+		return fmt.Errorf("%w: --trading-session-id can not be empty", errors.Options)
+	}
+
 	if _, ok := dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]; !ok {
 		return fmt.Errorf("%w: unkonwn subscription type `%s`", errors.Options, optionSubType)
 	}
