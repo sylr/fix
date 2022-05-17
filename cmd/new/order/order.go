@@ -240,7 +240,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	//
 	session := sessions[0]
 	initiatior, err := context.GetInitiator()
 	if err != nil {
