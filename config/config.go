@@ -251,6 +251,9 @@ type Session struct {
 	Password                string `yaml:"Password"`
 	TransportDataDictionary string `yaml:"TransportDataDictionary"`
 	AppDataDictionary       string `yaml:"AppDataDictionary"`
+	ResetOnLogon            bool   `yaml:"ResetOnLogon"`
+	ResetOnLogout           bool   `yaml:"ResetOnLogout"`
+	ResetOnDisconnect       bool   `yaml:"ResetOnDisconnect"`
 }
 
 func (s *Session) GetName() string {
@@ -334,6 +337,9 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(qfSession, "Password", session.Password)
 	setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
 	setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
+	setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)
+	setSessionSetting(qfSession, qconfig.ResetOnLogout, session.ResetOnLogout)
+	setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
 
 	if options.Timeout != time.Duration(0) {
 		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
@@ -415,6 +421,9 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		setSessionSetting(qfSession, qconfig.BeginString, session.BeginString)
 		setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
 		setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
+		setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)
+		setSessionSetting(qfSession, qconfig.ResetOnLogout, session.ResetOnLogout)
+		setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
 
 		if options.Timeout != time.Duration(0) {
 			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
