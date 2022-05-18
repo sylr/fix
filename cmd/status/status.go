@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	status_tradingsession "sylr.dev/fix/cmd/status/tradingsession"
+	status_security "sylr.dev/fix/cmd/status/security"
 	"sylr.dev/fix/pkg/initiator"
 )
 
@@ -35,4 +36,5 @@ func init() {
 	initiator.AddPersistentFlags(StatusCmd)
 
 	StatusCmd.AddCommand(status_tradingsession.StatusTradingSessionCmd)
+	StatusCmd.AddCommand(status_security.StatusSecurityCmd)
 }

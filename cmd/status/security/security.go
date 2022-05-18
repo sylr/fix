@@ -1,4 +1,4 @@
-package status_tradingsession
+package status_security
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	// "github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
@@ -25,14 +25,18 @@ import (
 )
 
 var (
-	optionTradingSessionID string
+	optionSecurityStatReqID string = "MDDS_MONA_EUR"
 	optionSubType          string
+	optionSymbol	string = "MONA_EUR"
+	// optionSecurityID 	string
+	// optionSecurityIDSrc	string
+
 )
 
-var StatusTradingSessionCmd = &cobra.Command{
-	Use:               "tradingsession",
-	Short:             "trading session status",
-	Long:              "Send a Trading Session Status Request after initiating a session with a FIX acceptor.",
+var StatusSecurityCmd = &cobra.Command{
+	Use:               "security",
+	Short:             "security status",
+	Long:              "Send a security Session Status Request after initiating a session with a FIX acceptor.",
 	Args:              cobra.ExactArgs(0),
 	ValidArgsFunction: cobra.NoFileCompletions,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -57,16 +61,24 @@ var StatusTradingSessionCmd = &cobra.Command{
 }
 
 func init() {
-	StatusTradingSessionCmd.Flags().StringVar(&optionTradingSessionID, "trading-session-id", uuid.NewString(), "Trading session ID")
-	StatusTradingSessionCmd.Flags().StringVar(&optionSubType, "subscription-type", "snapshot", "Subscription type")
+	//StatusSecurityCmd.Flags().StringVar(&optionSecurityStatReqID, "security-sta-id", uuid.NewString(), "Security status ID")
+	//StatusSecurityCmd.Flags().StringVar(&optionSecurityID, "security-id", uuid.NewString(), "Security ID")
+	//StatusSecurityCmd.Flags().StringVar(&optionSecurityIDSrc, "security-id-src", uuid.NewString(), "Security ID Source")
+	StatusSecurityCmd.Flags().StringVar(&optionSubType, "subscription-type", "snapshot", "Subscription type")
 
-	StatusTradingSessionCmd.RegisterFlagCompletionFunc("subscription-type", complete.SubscriptionRequestTypes)
+	StatusSecurityCmd.RegisterFlagCompletionFunc("subscription-type", complete.SubscriptionRequestTypes)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
-	if len(optionTradingSessionID) == 0 {
-		return fmt.Errorf("%w: --trading-session-id can not be empty", errors.Options)
+	if len(optionSecurityStatReqID) == 0 {
+		return fmt.Errorf("%w: --security-session-id can not be empty", errors.Options)
 	}
+	// if len(optionSecurityID) == 0 {
+	// 	return fmt.Errorf("%w: --security-id can not be empty", errors.Options)
+	// }
+	// if len(optionSecurityIDSrc) == 0 {
+	// 	return fmt.Errorf("%w: --security-id-src can not be empty", errors.Options)
+	// }
 
 	if _, ok := dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]; !ok {
 		return fmt.Errorf("%w: unkonwn subscription type `%s`", errors.Options, optionSubType)
@@ -105,7 +117,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	app := application.NewTradingSessionStatusRequest()
+	app := application.NewSecurityStatusRequest()
 	app.Logger = logger
 	app.Settings = settings
 	app.TransportDataDictionary = transportDict
@@ -149,13 +161,13 @@ func Execute(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Prepare Trading Session Status Request
+	// Prepare security Status Request
 	tssr, err := buildMessage(*session)
 	if err != nil {
 		return err
 	}
 
-	// Send the trading session status request
+	// Send the security status request
 	err = quickfix.Send(tssr)
 	if err != nil {
 		return err
@@ -187,15 +199,25 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	// Message
 	message := quickfix.NewMessage()
 	header := fixt11.NewHeader(&message.Header)
-	header.Set(field.NewMsgType(enum.MsgType_TRADING_SESSION_STATUS_REQUEST))
-	// utils.QuickFixMessagePartSetString(&message.Header,enum.MsgType_TRADING_SESSION_STATUS_REQUEST,field.NewMsgType)
+	header.Set(field.NewMsgType(enum.MsgType_SECURITY_STATUS_REQUEST))
+
+
 	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
 	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
-	utils.QuickFixMessagePartSetString(&message.Body, optionTradingSessionID, field.NewTradSesReqID)
+	utils.QuickFixMessagePartSetString(&message.Body, optionSecurityStatReqID, field.NewSecurityStatusReqID)
+	utils.QuickFixMessagePartSetString(&message.Body, optionSymbol , field.NewSymbol)
 	utils.QuickFixMessagePartSetString(&message.Body, dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)], field.NewSubscriptionRequestType)
+	
+	
+	// utils.QuickFixMessagePartSetString(&message.Body, optionSecurityID, field.NewSecurityID)
+	// utils.QuickFixMessagePartSetString(&message.Body, optionSecurityIDSrc, field.NewSecurityIDSource)
+	
+
+
+
 
 	return message, nil
 }
