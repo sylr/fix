@@ -25,8 +25,8 @@ func NewMarketDataRequest() *MarketDataRequest {
 		router:      quickfix.NewMessageRouter(),
 	}
 
-	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_INCREMENTAL_REFRESH), mdr.onFIX50SP2MarketDataIncrementalRefresh)
-	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_SNAPSHOT_FULL_REFRESH), mdr.onFIX50SP2MarketDataSnapshotFullRefresh)
+	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_INCREMENTAL_REFRESH), mdr.onMarketDataIncrementalRefresh)
+	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_SNAPSHOT_FULL_REFRESH), mdr.onMarketDataSnapshotFullRefresh)
 
 	return &mdr
 }
@@ -141,7 +141,7 @@ func (app *MarketDataRequest) FromApp(message *quickfix.Message, sessionID quick
 	return app.router.Route(message, sessionID)
 }
 
-func (app *MarketDataRequest) onFIX50SP2MarketDataSnapshotFullRefresh(msg *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *MarketDataRequest) onMarketDataSnapshotFullRefresh(msg *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	group := quickfix.NewRepeatingGroup(
 		tag.NoMDEntries,
 		quickfix.GroupTemplate{
@@ -159,7 +159,7 @@ func (app *MarketDataRequest) onFIX50SP2MarketDataSnapshotFullRefresh(msg *quick
 	return nil
 }
 
-func (app *MarketDataRequest) onFIX50SP2MarketDataIncrementalRefresh(msg *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	group := quickfix.NewRepeatingGroup(
 		tag.NoMDEntries,
 		quickfix.GroupTemplate{
