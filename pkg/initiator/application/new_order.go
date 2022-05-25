@@ -7,6 +7,7 @@ import (
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 
+	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/utils"
 )
 
@@ -131,7 +132,17 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
-	app.FromAppChan <- message
+	switch typ {
+	case string(enum.MsgType_EXECUTION_REPORT):
+		app.FromAppChan <- message
+	default:
+		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
+		if err != nil {
+			app.Logger.Info().Msgf("Received unexpected message type: %s", typ)
+		} else {
+			app.Logger.Info().Msgf("Received unexpected message type: %s(%s)", typ, typName)
+		}
+	}
 
 	return nil
 }
