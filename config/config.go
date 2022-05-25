@@ -173,9 +173,6 @@ type common struct {
 	SocketCertificateFile    string        `yaml:"SocketCertificateFile"`
 	SocketCAFile             string        `yaml:"SocketCAFile"`
 	SocketTimeout            time.Duration `yaml:"SocketTimeout"`
-	ResetOnLogon             bool          `yaml:"ResetOnLogon"`
-	ResetOnLogout            bool          `yaml:"ResetOnLogout"`
-	ResetOnDisconnect        bool          `yaml:"ResetOnDisconnect"`
 	SQLStoreDriver           string        `yaml:"SQLStoreDriver"`
 	SQLStoreDataSourceName   string        `yaml:"SQLStoreDataSourceName"`
 }
@@ -192,13 +189,17 @@ func (c *common) GetSQLStoreDataSourceName() string {
 	return c.SQLStoreDataSourceName
 }
 
-func (c *common) setQuickFixGlobalSettings(session *quickfix.SessionSettings) {
-	session.Set(qconfig.ResetOnLogon, FixBoolString(c.ResetOnLogon))
-	session.Set(qconfig.ResetOnLogout, FixBoolString(c.ResetOnLogout))
-	session.Set(qconfig.ResetOnDisconnect, FixBoolString(c.ResetOnDisconnect))
-
+func (c *common) setQuickFixGlobalSettings(globalSettings *quickfix.SessionSettings, session *quickfix.SessionSettings) {
 	session.Set(qconfig.SocketUseSSL, FixBoolString(c.SocketUseSSL))
 	session.Set(qconfig.SocketInsecureSkipVerify, FixBoolString(c.SocketInsecureSkipVerify))
+
+	if len(c.SQLStoreDriver) > 0 {
+		globalSettings.Set(qconfig.SQLStoreDriver, c.SQLStoreDriver)
+	}
+
+	if len(c.SQLStoreDataSourceName) > 0 {
+		globalSettings.Set(qconfig.SQLStoreDataSourceName, c.SQLStoreDataSourceName)
+	}
 
 	if len(c.SocketPrivateKeyFile) != 0 {
 		session.Set(qconfig.SocketPrivateKeyFile, c.SocketPrivateKeyFile)
@@ -292,13 +293,10 @@ func (c Context) GetSessions() ([]*Session, error) {
 	return sessions, nil
 }
 
-func (c Context) quickFixGlobalSettings(*quickfix.Settings) error {
-	return nil
-}
-
 func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	settings := quickfix.NewSettings()
 	qfSession := quickfix.NewSessionSettings()
+	globalSettings := settings.GlobalSettings()
 
 	initiator, err := GetInitiator(c.Initiator)
 	if err != nil {
@@ -312,20 +310,19 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 		return nil, errors.ConfigContextMultipleSessions
 	}
 
-	// Session settings
-	session := sessions[0]
-
-	initiator.setQuickFixGlobalSettings(qfSession)
-
+	// Configure SQLStore
 	if len(initiator.SQLStoreDriver) > 0 {
 		if initiator.SQLStoreDriver == "sqlite3" {
 			if len(initiator.SQLStoreDataSourceName) == 0 {
 				initiator.SQLStoreDataSourceName = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "initiator.db"}, string(os.PathSeparator)))
 			}
-			qfSession.Set(qconfig.SQLStoreDriver, initiator.SQLStoreDriver)
-			qfSession.Set(qconfig.SQLStoreDataSourceName, initiator.SQLStoreDataSourceName)
 		}
 	}
+
+	// Session settings
+	session := sessions[0]
+
+	initiator.setQuickFixGlobalSettings(globalSettings, qfSession)
 
 	setSessionSetting(qfSession, qconfig.SocketConnectHost, initiator.SocketConnectHost)
 	setSessionSetting(qfSession, qconfig.SocketConnectPort, initiator.SocketConnectPort)
@@ -345,6 +342,8 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)
 	setSessionSetting(qfSession, qconfig.ResetOnLogout, session.ResetOnLogout)
 	setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
+	setSessionSetting(qfSession, qconfig.SQLStoreDriver, initiator.SQLStoreDriver)
+	setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, initiator.SQLStoreDataSourceName)
 
 	if options.Timeout != time.Duration(0) {
 		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
@@ -388,6 +387,7 @@ func setSessionSetting(session *quickfix.SessionSettings, key string, value inte
 func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 	settings := quickfix.NewSettings()
 	qfSession := quickfix.NewSessionSettings()
+	globalSettings := settings.GlobalSettings()
 
 	acceptor, err := GetAcceptor(c.Acceptor)
 	if err != nil {
@@ -399,18 +399,17 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		return nil, err
 	}
 
-	for _, session := range sessions {
-		acceptor.setQuickFixGlobalSettings(qfSession)
-
-		if len(acceptor.SQLStoreDriver) > 0 {
-			if acceptor.SQLStoreDriver == "sqlite3" {
-				if len(acceptor.SQLStoreDataSourceName) == 0 {
-					acceptor.SQLStoreDataSourceName = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "acceptor.db"}, string(os.PathSeparator)))
-				}
-				qfSession.Set(qconfig.SQLStoreDriver, acceptor.SQLStoreDriver)
-				qfSession.Set(qconfig.SQLStoreDataSourceName, acceptor.SQLStoreDataSourceName)
+	// Tune SQLStore
+	if len(acceptor.SQLStoreDriver) > 0 {
+		if acceptor.SQLStoreDriver == "sqlite3" {
+			if len(acceptor.SQLStoreDataSourceName) == 0 {
+				acceptor.SQLStoreDataSourceName = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "acceptor.db"}, string(os.PathSeparator)))
 			}
 		}
+	}
+
+	for _, session := range sessions {
+		acceptor.setQuickFixGlobalSettings(globalSettings, qfSession)
 
 		qfSession.Set(qconfig.SocketAcceptHost, acceptor.SocketAcceptHost)
 		qfSession.Set(qconfig.SocketAcceptPort, strconv.Itoa(acceptor.SocketAcceptPort))
@@ -428,6 +427,8 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)
 		setSessionSetting(qfSession, qconfig.ResetOnLogout, session.ResetOnLogout)
 		setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
+		setSessionSetting(qfSession, qconfig.SQLStoreDriver, acceptor.SQLStoreDriver)
+		setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, acceptor.SQLStoreDataSourceName)
 
 		if options.Timeout != time.Duration(0) {
 			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
