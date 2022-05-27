@@ -132,8 +132,8 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
-	switch typ {
-	case string(enum.MsgType_EXECUTION_REPORT):
+	switch enum.MsgType(typ) {
+	case enum.MsgType_EXECUTION_REPORT:
 		app.FromAppChan <- message
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))

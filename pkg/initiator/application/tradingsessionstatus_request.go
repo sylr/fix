@@ -130,8 +130,8 @@ func (app *TradingSessionStatusRequest) FromApp(message *quickfix.Message, sessi
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
-	switch typ {
-	case string(enum.MsgType_TRADING_SESSION_STATUS):
+	switch enum.MsgType(typ) {
+	case enum.MsgType_TRADING_SESSION_STATUS:
 		app.FromAppChan <- message
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))

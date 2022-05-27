@@ -191,7 +191,7 @@ var (
 
 func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Message, dict *datadictionary.DataDictionary) {
 	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
-	tw.Write([]byte(fmt.Sprintf("   SYMBOL\tTYPE\tPRICE\tSIZE\n")))
+	tw.Write([]byte("   SYMBOL\tTYPE\tPRICE\tSIZE\n"))
 
 	for i := 0; i < group.Len(); i++ {
 		s := group.Get(i)

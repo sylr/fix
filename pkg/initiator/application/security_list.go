@@ -126,8 +126,8 @@ func (app *SecurityList) FromApp(message *quickfix.Message, sessionID quickfix.S
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
-	switch typ {
-	case string(enum.MsgType_SECURITY_LIST):
+	switch enum.MsgType(typ) {
+	case enum.MsgType_SECURITY_LIST:
 		app.FromAppChan <- message
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
