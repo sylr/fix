@@ -125,7 +125,7 @@ func (app *NewOrder) ToApp(message *quickfix.Message, sessionID quickfix.Session
 func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from app")
 
-	_, err := message.MsgType()
+	typ, err := message.MsgType()
 	if err != nil {
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
