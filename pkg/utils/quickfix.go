@@ -41,46 +41,6 @@ type QuickFixAppMessageLogger struct {
 	AppDataDictionary       *datadictionary.DataDictionary
 }
 
-func (app *QuickFixAppMessageLogger) WriteMessage(w io.Writer, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
-	if app.Logger.GetLevel() > zerolog.TraceLevel {
-		return
-	}
-
-	message.Cook()
-	sort.Sort(message.Header)
-
-	loop := []struct {
-		prefix string
-		fm     quickfix.FieldMap
-		dict   *datadictionary.DataDictionary
-	}{
-		{"Headers ", message.Header.FieldMap, app.TransportDataDictionary},
-		{"Body    ", message.Body.FieldMap, app.AppDataDictionary},
-		{"Trailers", message.Trailer.FieldMap, app.TransportDataDictionary},
-	}
-	for _, i := range loop {
-		if len(i.fm.Tags()) == 0 {
-			continue
-		}
-
-		b := bytes.NewBuffer([]byte{})
-		bw := bufio.NewWriter(b)
-		br := bufio.NewReader(b)
-
-		app.WriteTags(bw, i.fm)
-		bw.Flush()
-
-		str, _ := io.ReadAll(br)
-
-		formatStr := "%s <- %s\n"
-		if sending {
-			formatStr = "%s -> %s\n"
-		}
-
-		fmt.Fprintf(w, formatStr, i.prefix, str)
-	}
-}
-
 func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
 	if app.Logger.GetLevel() > level {
 		return
@@ -89,7 +49,20 @@ func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *qu
 	message.Cook()
 	sort.Sort(message.Header)
 
-	loop := []struct {
+	var fields []quickfix.TagValue
+	if sending {
+		// When we are sending messages the quickfix.Message.fields is empty,
+		// we need to call ParseMessageWithDataDictionary to get it populated.
+		newMessage := quickfix.NewMessage()
+		message.CopyInto(newMessage)
+		br := bytes.NewBufferString(message.String())
+		quickfix.ParseMessageWithDataDictionary(newMessage, br, app.TransportDataDictionary, app.AppDataDictionary)
+		fields = newMessage.GetFields()
+	} else {
+		fields = message.GetFields()
+	}
+
+	parts := []struct {
 		prefix string
 		fm     quickfix.FieldMap
 		dict   *datadictionary.DataDictionary
@@ -98,16 +71,30 @@ func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *qu
 		{"Body    ", message.Body.FieldMap, app.AppDataDictionary},
 		{"Trailers", message.Trailer.FieldMap, app.TransportDataDictionary},
 	}
-	for _, i := range loop {
-		if len(i.fm.Tags()) == 0 {
+	for _, part := range parts {
+		if len(part.fm.Tags()) == 0 {
 			continue
 		}
+
 		w := bytes.NewBuffer([]byte{})
 		bw := bufio.NewWriter(w)
 		br := bufio.NewReader(w)
 
-		app.WriteTags(bw, i.fm)
-		bw.Flush()
+		skipped := 0
+		for i, field := range fields {
+			if !part.fm.Has(field.Tag()) {
+				skipped++
+				continue
+			}
+
+			if i-skipped > 0 {
+				bw.Write([]byte(","))
+			}
+
+			app.WriteField(bw, field)
+
+			bw.Flush()
+		}
 
 		str, _ := io.ReadAll(br)
 
@@ -116,52 +103,34 @@ func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *qu
 			formatStr = "%s -> %s"
 		}
 
-		app.Logger.WithLevel(level).Msgf(formatStr, i.prefix, str)
+		app.Logger.WithLevel(level).Msgf(formatStr, part.prefix, str)
 	}
 }
 
-func (app *QuickFixAppMessageLogger) WriteTags(w io.Writer, fieldMap quickfix.FieldMap) {
-	tags := fieldMap.Tags()
+func (app *QuickFixAppMessageLogger) WriteField(w io.Writer, field quickfix.TagValue) {
+	fieldTag := field.Tag()
+	fieldTagDescription := "<unknown>"
+	fieldValue := field.Value()
 
-	for i, tag := range tags {
-		values := fieldMap.Values(tag)
-		for j, t := range values {
-			tagString := strconv.Itoa(int(t.Tag()))
-			tagDescription := "<unknown>"
-			stringValues, _ := fieldMap.GetStrings(tag)
-			valueDescription := ""
+	if fieldTag == qtag.Password {
+		fieldValue = "<redacted>"
+	}
 
-			if tag == qtag.Password {
-				stringValues[j] = "<redacted>"
-			}
+	if app.AppDataDictionary != nil {
+		tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(fieldTag)]
+		if tok {
+			fieldTagDescription = tagField.Name()
+		}
 
-			if app.AppDataDictionary != nil {
-				tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(t.Tag())]
-				if tok {
-					tagDescription = tagField.Name()
-				}
-
-				if tagField != nil && len(tagField.Enums) > 0 {
-					if en, ok := tagField.Enums[stringValues[j]]; ok {
-						valueDescription = en.Description
-						stringValues[j] += fmt.Sprintf("(%s)", valueDescription)
-					}
-				}
-				formatStr := "%s(%s)=%s"
-				if i < len(tags)-1 || j < len(values)-1 {
-					formatStr += ","
-				}
-
-				w.Write([]byte(fmt.Sprintf(formatStr, tagString, tagDescription, stringValues[j])))
-			} else {
-				formatStr := "%s=%s"
-				if i < len(tags)-1 || j < len(values)-1 {
-					formatStr += ","
-				}
-
-				w.Write([]byte(fmt.Sprintf(formatStr, tagString, stringValues[j])))
+		if tagField != nil && len(tagField.Enums) > 0 {
+			if en, ok := tagField.Enums[fieldValue]; ok {
+				fieldValue += fmt.Sprintf("(%s)", en.Description)
 			}
 		}
+
+		w.Write([]byte(fmt.Sprintf("%d(%s)=%s", fieldTag, fieldTagDescription, fieldValue)))
+	} else {
+		w.Write([]byte(fmt.Sprintf("%d=%s", fieldTag, fieldValue)))
 	}
 }
 
@@ -169,7 +138,7 @@ func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, messag
 	bodyTags := message.Body.Tags()
 
 	tw := tabwriter.NewWriter(w, 10, 0, 2, ' ', 0)
-	tw.Write([]byte(fmt.Sprintf("TAG\tTYPE\tVALUE\n")))
+	tw.Write([]byte("TAG\tTYPE\tVALUE\n"))
 
 	var line []string
 	for _, tag := range bodyTags {
