@@ -148,6 +148,7 @@ func (app *MarketDataRequest) onMarketDataSnapshotFullRefresh(msg *quickfix.Mess
 			quickfix.GroupElement(tag.MDEntryType),
 			quickfix.GroupElement(tag.MDEntryPx),
 			quickfix.GroupElement(tag.MDEntrySize),
+			quickfix.GroupElement(tag.OrderID),
 		},
 	)
 	msg.Body.GetGroup(group)
@@ -166,6 +167,7 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 			quickfix.GroupElement(tag.MDEntryType),
 			quickfix.GroupElement(tag.MDEntryPx),
 			quickfix.GroupElement(tag.MDEntrySize),
+			quickfix.GroupElement(tag.OrderID),
 		},
 	)
 	msg.Body.GetGroup(group)
