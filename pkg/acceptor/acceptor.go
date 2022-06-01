@@ -12,7 +12,13 @@ func NewAcceptor(app quickfix.Application, settings *quickfix.Settings, logger *
 	var msgStoreFactory quickfix.MessageStoreFactory
 
 	if settings.GlobalSettings().HasSetting("SQLStoreDriver") {
-		if driver, err := settings.GlobalSettings().Setting("SQLStoreDriver"); err == nil && driver == "sqlite3" {
+		driver, err := settings.GlobalSettings().Setting("SQLStoreDriver")
+		if err != nil {
+			return nil, err
+		}
+		switch driver {
+		case "sqlite3":
+		case "postgres":
 			msgStoreFactory = quickfix.NewSQLStoreFactory(settings)
 		}
 	}
