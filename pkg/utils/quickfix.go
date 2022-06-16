@@ -49,27 +49,29 @@ func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *qu
 	message.Cook()
 	sort.Sort(message.Header)
 
-	var fields []quickfix.TagValue
+	loggedMessage := quickfix.NewMessage()
+	message.CopyInto(loggedMessage)
+
 	if sending {
 		// When we are sending messages the quickfix.Message.fields is empty,
 		// we need to call ParseMessageWithDataDictionary to get it populated.
-		newMessage := quickfix.NewMessage()
-		message.CopyInto(newMessage)
 		br := bytes.NewBufferString(message.String())
-		quickfix.ParseMessageWithDataDictionary(newMessage, br, app.TransportDataDictionary, app.AppDataDictionary)
-		fields = newMessage.GetFields()
-	} else {
-		fields = message.GetFields()
+		err := quickfix.ParseMessageWithDataDictionary(loggedMessage, br, app.TransportDataDictionary, app.AppDataDictionary)
+		if err != nil {
+			app.Logger.Error().Err(err).Msg("")
+		}
 	}
+
+	fields := loggedMessage.GetFields()
 
 	parts := []struct {
 		prefix string
 		fm     quickfix.FieldMap
 		dict   *datadictionary.DataDictionary
 	}{
-		{"Headers ", message.Header.FieldMap, app.TransportDataDictionary},
-		{"Body    ", message.Body.FieldMap, app.AppDataDictionary},
-		{"Trailers", message.Trailer.FieldMap, app.TransportDataDictionary},
+		{"Headers ", loggedMessage.Header.FieldMap, app.TransportDataDictionary},
+		{"Body    ", loggedMessage.Body.FieldMap, app.AppDataDictionary},
+		{"Trailers", loggedMessage.Trailer.FieldMap, app.TransportDataDictionary},
 	}
 	for _, part := range parts {
 		if len(part.fm.Tags()) == 0 {
