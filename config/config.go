@@ -343,7 +343,7 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(qfSession, qconfig.ResetOnLogout, session.ResetOnLogout)
 	setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
 	setSessionSetting(qfSession, qconfig.SQLStoreDriver, initiator.SQLStoreDriver)
-	setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, initiator.SQLStoreDataSourceName)
+	setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, os.ExpandEnv(initiator.SQLStoreDataSourceName))
 
 	if options.Timeout != time.Duration(0) {
 		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
@@ -428,7 +428,7 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		setSessionSetting(qfSession, qconfig.ResetOnLogout, session.ResetOnLogout)
 		setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
 		setSessionSetting(qfSession, qconfig.SQLStoreDriver, acceptor.SQLStoreDriver)
-		setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, acceptor.SQLStoreDataSourceName)
+		setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, os.ExpandEnv(acceptor.SQLStoreDataSourceName))
 
 		if options.Timeout != time.Duration(0) {
 			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
