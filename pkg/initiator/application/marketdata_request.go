@@ -164,6 +164,7 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 	group := quickfix.NewRepeatingGroup(
 		tag.NoMDEntries,
 		quickfix.GroupTemplate{
+			quickfix.GroupElement(tag.MDUpdateAction),
 			quickfix.GroupElement(tag.MDEntryType),
 			quickfix.GroupElement(tag.MDEntryPx),
 			quickfix.GroupElement(tag.MDEntrySize),
@@ -174,7 +175,6 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 			quickfix.GroupElement(tag.MDEntryDate),
 			quickfix.GroupElement(tag.TradeCondition),
 			quickfix.GroupElement(tag.OpenCloseSettlFlag),
-			quickfix.GroupElement(tag.MDUpdateAction),
 			quickfix.GroupElement(tag.Symbol),
 		},
 	)
