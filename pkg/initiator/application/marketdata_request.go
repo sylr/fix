@@ -8,7 +8,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/rs/zerolog"
-	"github.com/shopspring/decimal"
 
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/quickfix"
@@ -201,38 +200,97 @@ var (
 
 func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Message, dict *datadictionary.DataDictionary) {
 	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
-	tw.Write([]byte("   SYMBOL\tTYPE\tPRICE\tSIZE\n"))
+	tw.Write([]byte(fmt.Sprintf("    SYMBOL\t TYPE\t PRICE\t SIZE\n")))
+	tw.Write([]byte("   " + strings.Repeat("-", 52) + "\n"))
 
 	for i := 0; i < group.Len(); i++ {
-		s := group.Get(i)
-		v, _ := s.GetString(tag.MDEntryType)
-		tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
+		var typSign, typ, symbol, price, size string
 
-		ty := strcase.ToCamel(strings.ToLower(tagField.Enums[string(v)].Description))
-		sy, _ := msg.Body.GetString(tag.Symbol)
-		px, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntryPx)))
-		si, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntrySize)))
-		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%s\t\n", type2sym[ty], sy, ty, px.StringFixed(2), si.StringFixed(2))))
+		s := group.Get(i)
+
+		entryType, err := s.GetString(tag.MDEntryType)
+		if err != nil {
+			typ = "<nil>"
+		} else {
+			tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
+			typ = strcase.ToCamel(strings.ToLower(tagField.Enums[entryType].Description))
+			typSign = type2sym[typ]
+		}
+
+		symbol, err = msg.Body.GetString(tag.Symbol)
+		if err != nil {
+			symbol = "<nil>"
+		}
+
+		price, err = s.GetString(tag.MDEntryPx)
+		if err != nil {
+			price = "<nil>"
+		}
+
+		size, err = s.GetString(tag.MDEntrySize)
+		if err != nil {
+			size = "<nil>"
+		}
+
+		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%10s\t%10s\n", typSign, symbol, typ, price, size)))
 	}
+
+	tw.Write([]byte{10})
 
 	tw.Flush()
 }
 
 func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictionary.DataDictionary) {
 	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
-	tw.Write([]byte(fmt.Sprintf("   SYMBOL\tTYPE\tPRICE\tSIZE\n")))
+	tw.Write([]byte(fmt.Sprintf("    SYMBOL\t ACTION\t TYPE\t PRICE\t SIZE\t       TIME\n")))
+	tw.Write([]byte("   " + strings.Repeat("-", 92) + "\n"))
 
 	for i := 0; i < group.Len(); i++ {
-		s := group.Get(i)
-		v, _ := s.GetString(tag.MDEntryType)
-		tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
+		var typSign, typ, action, symbol, price, size, tim string
 
-		ty := strcase.ToCamel(strings.ToLower(tagField.Enums[string(v)].Description))
-		sy, _ := s.GetString(tag.Symbol)
-		px, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntryPx)))
-		si, _ := decimal.NewFromString(utils.MustNot(s.GetString(tag.MDEntrySize)))
-		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%s\t\n", type2sym[ty], sy, ty, px.StringFixed(2), si.StringFixed(2))))
+		s := group.Get(i)
+
+		updateAction, err := s.GetString(tag.MDUpdateAction)
+		if err != nil {
+			action = "<nil>"
+		} else {
+			tagField := dict.FieldTypeByTag[int(tag.MDUpdateAction)]
+			action = strcase.ToCamel(strings.ToLower(tagField.Enums[updateAction].Description))
+		}
+
+		entryType, err := s.GetString(tag.MDEntryType)
+		if err != nil {
+			typ = "<nil>"
+		} else {
+			tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
+			typ = strcase.ToCamel(strings.ToLower(tagField.Enums[entryType].Description))
+			typSign = type2sym[typ]
+		}
+
+		symbol, err = s.GetString(tag.Symbol)
+		if err != nil {
+			symbol = "<nil>"
+		}
+
+		price, err = s.GetString(tag.MDEntryPx)
+		if err != nil {
+			price = "<nil>"
+		}
+
+		size, err = s.GetString(tag.MDEntrySize)
+		if err != nil {
+			size = "<nil>"
+		}
+
+		tim, err = s.GetString(tag.MDEntryTime)
+		if err != nil {
+			size = "<nil>"
+		}
+
+		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%10s\t%10s\t%s\n", typSign, symbol, action, typ, price, size, tim)))
 	}
+
+	tw.Write([]byte{10})
 
 	tw.Flush()
 }
