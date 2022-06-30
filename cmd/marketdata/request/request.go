@@ -154,8 +154,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer init.Stop()
-
 	// Choose right timeout cli option > config > default value (5s)
 	var timeout time.Duration
 	if options.Timeout != time.Duration(0) {
@@ -196,6 +194,10 @@ LOOP:
 		select {
 		case signal := <-interrupt:
 			logger.Debug().Msgf("Received signal: %s", signal)
+
+			app.Stop()
+			init.Stop()
+
 			break LOOP
 		case _, ok := <-app.FromAppChan:
 			if !ok {

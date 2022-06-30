@@ -1,6 +1,8 @@
 package application
 
 import (
+	"sync"
+
 	"github.com/rs/zerolog"
 
 	"github.com/quickfixgo/enum"
@@ -27,6 +29,8 @@ type Initiator struct {
 
 	Connected chan interface{}
 	Messages  chan *quickfix.Message
+
+	mux sync.RWMutex
 }
 
 // Notification of a session begin created.
@@ -44,6 +48,9 @@ func (app *Initiator) OnLogon(sessionID quickfix.SessionID) {
 
 // Notification of a session logging off or disconnecting.
 func (app *Initiator) OnLogout(sessionID quickfix.SessionID) {
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
@@ -52,6 +59,9 @@ func (app *Initiator) OnLogout(sessionID quickfix.SessionID) {
 
 // Notification of admin message being sent to target.
 func (app *Initiator) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
 	app.Logger.Debug().Msgf("-> Sending message to admin")
 
 	typ, err := message.MsgType()
@@ -85,6 +95,9 @@ func (app *Initiator) ToAdmin(message *quickfix.Message, sessionID quickfix.Sess
 
 // Notification of admin message being received from target.
 func (app *Initiator) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
 	app.Logger.Debug().Msgf("<- Message received from admin")
 
 	_, err := message.MsgType()
@@ -99,6 +112,9 @@ func (app *Initiator) FromAdmin(message *quickfix.Message, sessionID quickfix.Se
 
 // Notification of app message being sent to target.
 func (app *Initiator) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
+	app.mux.RLock()
+	defer app.mux.RUnlock()
+
 	app.Logger.Debug().Msgf("-> Sending message to app")
 
 	_, err := message.MsgType()
@@ -115,6 +131,9 @@ func (app *Initiator) ToApp(message *quickfix.Message, sessionID quickfix.Sessio
 
 // Notification of app message being received from target.
 func (app *Initiator) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+	app.mux.RLock()
+	defer app.mux.RUnlock()
+
 	app.Logger.Debug().Msgf("<- Message received from app")
 
 	_, err := message.MsgType()

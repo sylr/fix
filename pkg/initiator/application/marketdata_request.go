@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"text/tabwriter"
 
 	"github.com/iancoleman/strcase"
@@ -16,6 +17,8 @@ import (
 
 	"sylr.dev/fix/pkg/utils"
 )
+
+const nilstr = "<nil>"
 
 func NewMarketDataRequest() *MarketDataRequest {
 	mdr := MarketDataRequest{
@@ -38,6 +41,25 @@ type MarketDataRequest struct {
 
 	Connected   chan interface{}
 	FromAppChan chan quickfix.Messagable
+
+	mux     sync.Mutex
+	stopped bool
+}
+
+// Stopped
+func (app *MarketDataRequest) Stop() {
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
+	app.stopped = true
+}
+
+// IsStopped
+func (app *MarketDataRequest) IsStopped() bool {
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
+	return app.stopped
 }
 
 // Notification of a session begin created.
@@ -154,7 +176,9 @@ func (app *MarketDataRequest) onMarketDataSnapshotFullRefresh(msg *quickfix.Mess
 
 	printFIX50NoMDEntriesFull(group, msg, app.AppDataDictionary)
 
-	app.FromAppChan <- msg
+	if !app.IsStopped() {
+		app.FromAppChan <- msg
+	}
 
 	return nil
 }
@@ -181,7 +205,9 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 
 	printFIX50NoMDEntriesInc(group, app.AppDataDictionary)
 
-	app.FromAppChan <- msg
+	if !app.IsStopped() {
+		app.FromAppChan <- msg
+	}
 
 	return nil
 }
@@ -200,17 +226,17 @@ var (
 
 func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Message, dict *datadictionary.DataDictionary) {
 	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
-	tw.Write([]byte(fmt.Sprintf("    SYMBOL\t TYPE\t PRICE\t SIZE\n")))
-	tw.Write([]byte("   " + strings.Repeat("-", 52) + "\n"))
+	tw.Write([]byte(fmt.Sprintf("    SYMBOL\t ORDER ID\t TYPE\t PRICE\t SIZE\n")))
+	tw.Write([]byte("   " + strings.Repeat("-", 62) + "\n"))
 
 	for i := 0; i < group.Len(); i++ {
-		var typSign, typ, symbol, price, size string
+		var typSign, typ, symbol, orderID, price, size string
 
 		s := group.Get(i)
 
 		entryType, err := s.GetString(tag.MDEntryType)
 		if err != nil {
-			typ = "<nil>"
+			typ = nilstr
 		} else {
 			tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
 			typ = strcase.ToCamel(strings.ToLower(tagField.Enums[entryType].Description))
@@ -219,20 +245,25 @@ func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Mes
 
 		symbol, err = msg.Body.GetString(tag.Symbol)
 		if err != nil {
-			symbol = "<nil>"
+			symbol = nilstr
+		}
+
+		orderID, err = s.GetString(tag.OrderID)
+		if err != nil {
+			symbol = nilstr
 		}
 
 		price, err = s.GetString(tag.MDEntryPx)
 		if err != nil {
-			price = "<nil>"
+			price = nilstr
 		}
 
 		size, err = s.GetString(tag.MDEntrySize)
 		if err != nil {
-			size = "<nil>"
+			size = nilstr
 		}
 
-		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%10s\t%10s\n", typSign, symbol, typ, price, size)))
+		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%10s\t%10s\n", typSign, symbol, orderID, typ, price, size)))
 	}
 
 	tw.Write([]byte{10})
@@ -242,17 +273,17 @@ func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Mes
 
 func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictionary.DataDictionary) {
 	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
-	tw.Write([]byte(fmt.Sprintf("    SYMBOL\t ACTION\t TYPE\t PRICE\t SIZE\t       TIME\n")))
-	tw.Write([]byte("   " + strings.Repeat("-", 92) + "\n"))
+	tw.Write([]byte("    SYMBOL\t   ORDER/TRADE ID     \t ACTION\t TYPE\t PRICE\t SIZE\t       TIME\n"))
+	tw.Write([]byte("   " + strings.Repeat("-", 115) + "\n"))
 
 	for i := 0; i < group.Len(); i++ {
-		var typSign, typ, action, symbol, price, size, tim string
+		var typSign, typ, orderTradeID, action, symbol, price, size, tim string
 
 		s := group.Get(i)
 
 		updateAction, err := s.GetString(tag.MDUpdateAction)
 		if err != nil {
-			action = "<nil>"
+			action = nilstr
 		} else {
 			tagField := dict.FieldTypeByTag[int(tag.MDUpdateAction)]
 			action = strcase.ToCamel(strings.ToLower(tagField.Enums[updateAction].Description))
@@ -260,34 +291,46 @@ func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictiona
 
 		entryType, err := s.GetString(tag.MDEntryType)
 		if err != nil {
-			typ = "<nil>"
+			typ = nilstr
 		} else {
 			tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
 			typ = strcase.ToCamel(strings.ToLower(tagField.Enums[entryType].Description))
 			typSign = type2sym[typ]
 		}
 
+		orderTradeID, err = s.GetString(tag.OrderID)
+		if err != nil {
+			orderTradeID = nilstr
+		}
+
+		if len(orderTradeID) == 0 || orderTradeID == nilstr {
+			orderTradeID, err = s.GetString(tag.TradeID)
+			if err != nil {
+				orderTradeID = nilstr
+			}
+		}
+
 		symbol, err = s.GetString(tag.Symbol)
 		if err != nil {
-			symbol = "<nil>"
+			symbol = nilstr
 		}
 
 		price, err = s.GetString(tag.MDEntryPx)
 		if err != nil {
-			price = "<nil>"
+			price = nilstr
 		}
 
 		size, err = s.GetString(tag.MDEntrySize)
 		if err != nil {
-			size = "<nil>"
+			size = nilstr
 		}
 
 		tim, err = s.GetString(tag.MDEntryTime)
 		if err != nil {
-			size = "<nil>"
+			size = nilstr
 		}
 
-		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%10s\t%10s\t%s\n", typSign, symbol, action, typ, price, size, tim)))
+		tw.Write([]byte(fmt.Sprintf("%s  %s\t%-21s\t%s\t%s\t%10s\t%10s\t%s\n", typSign, symbol, orderTradeID, action, typ, price, size, tim)))
 	}
 
 	tw.Write([]byte{10})
