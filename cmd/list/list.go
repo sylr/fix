@@ -35,6 +35,7 @@ var ListCmd = &cobra.Command{
 func init() {
 	initiator.AddPersistentFlags(ListCmd)
 	initiator.AddPersistentFlagCompletions(ListCmd)
+	initiator.AddPersistentFlagCompletions(listsecurity.ListSecurityCmd)
 
 	ListCmd.AddCommand(listsecurity.ListSecurityCmd)
 }

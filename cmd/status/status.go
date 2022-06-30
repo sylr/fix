@@ -34,6 +34,9 @@ var StatusCmd = &cobra.Command{
 
 func init() {
 	initiator.AddPersistentFlags(StatusCmd)
+	initiator.AddPersistentFlagCompletions(StatusCmd)
+	initiator.AddPersistentFlagCompletions(status_security.StatusSecurityCmd)
+	initiator.AddPersistentFlagCompletions(status_tradingsession.StatusTradingSessionCmd)
 
 	StatusCmd.AddCommand(status_tradingsession.StatusTradingSessionCmd)
 	StatusCmd.AddCommand(status_security.StatusSecurityCmd)

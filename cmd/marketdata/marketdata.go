@@ -34,6 +34,8 @@ var MarketDataCmd = &cobra.Command{
 
 func init() {
 	initiator.AddPersistentFlags(MarketDataCmd)
+	initiator.AddPersistentFlagCompletions(MarketDataCmd)
+	initiator.AddPersistentFlagCompletions(markedatarequest.MarketDataRequestCmd)
 
 	MarketDataCmd.AddCommand(markedatarequest.MarketDataRequestCmd)
 }
