@@ -1,6 +1,9 @@
 package complete
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/config"
@@ -13,6 +16,9 @@ func Context(cmd *cobra.Command, args []string, toComplete string) ([]string, co
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
 	} else {
+		if options.Verbose > 0 {
+			fmt.Fprintf(os.Stdout, "%s\n", err)
+		}
 		return nil, cobra.ShellCompDirectiveError
 	}
 
@@ -31,6 +37,9 @@ func Acceptor(cmd *cobra.Command, args []string, toComplete string) ([]string, c
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
 	} else {
+		if options.Verbose > 0 {
+			fmt.Fprintf(os.Stdout, "%s\n", err)
+		}
 		return nil, cobra.ShellCompDirectiveError
 	}
 
@@ -49,6 +58,9 @@ func Initiator(cmd *cobra.Command, args []string, toComplete string) ([]string, 
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
 	} else {
+		if options.Verbose > 0 {
+			fmt.Fprintf(os.Stdout, "%s\n", err)
+		}
 		return nil, cobra.ShellCompDirectiveError
 	}
 
@@ -67,6 +79,9 @@ func Session(cmd *cobra.Command, args []string, toComplete string) ([]string, co
 	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
 		*fixConfig = *conf
 	} else {
+		if options.Verbose > 0 {
+			fmt.Fprintf(os.Stdout, "%s\n", err)
+		}
 		return nil, cobra.ShellCompDirectiveError
 	}
 

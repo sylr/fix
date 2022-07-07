@@ -90,8 +90,18 @@ func AddPersistentFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVar(&options.QuickFixLogging, "quickfix-logging", false, "Enable quickfix logging")
 }
 
-func AddPersistentFlagCompletions(cmd *cobra.Command) {
-	cmd.RegisterFlagCompletionFunc("context", complete.Context)
-	cmd.RegisterFlagCompletionFunc("initiator", complete.Initiator)
-	cmd.RegisterFlagCompletionFunc("session", complete.Session)
+func AddPersistentFlagCompletions(cmd *cobra.Command) error {
+	if err := cmd.RegisterFlagCompletionFunc("context", complete.Context); err != nil {
+		return err
+	}
+
+	if err := cmd.RegisterFlagCompletionFunc("initiator", complete.Initiator); err != nil {
+		return err
+	}
+
+	if err := cmd.RegisterFlagCompletionFunc("session", complete.Session); err != nil {
+		return err
+	}
+
+	return nil
 }
