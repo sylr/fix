@@ -175,6 +175,7 @@ type common struct {
 	SocketTimeout            time.Duration `yaml:"SocketTimeout"`
 	SQLStoreDriver           string        `yaml:"SQLStoreDriver"`
 	SQLStoreDataSourceName   string        `yaml:"SQLStoreDataSourceName"`
+	RejectInvalidMessage     bool          `yaml:"RejectInvalidMessage"`
 }
 
 func (c *common) GetName() string {
@@ -192,6 +193,7 @@ func (c *common) GetSQLStoreDataSourceName() string {
 func (c *common) setQuickFixGlobalSettings(globalSettings *quickfix.SessionSettings, session *quickfix.SessionSettings) {
 	session.Set(qconfig.SocketUseSSL, FixBoolString(c.SocketUseSSL))
 	session.Set(qconfig.SocketInsecureSkipVerify, FixBoolString(c.SocketInsecureSkipVerify))
+	session.Set(qconfig.RejectInvalidMessage, FixBoolString(c.RejectInvalidMessage))
 
 	if len(c.SQLStoreDriver) > 0 {
 		globalSettings.Set(qconfig.SQLStoreDriver, c.SQLStoreDriver)
@@ -344,6 +346,7 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
 	setSessionSetting(qfSession, qconfig.SQLStoreDriver, initiator.SQLStoreDriver)
 	setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, os.ExpandEnv(initiator.SQLStoreDataSourceName))
+	setSessionSetting(qfSession, qconfig.RejectInvalidMessage, initiator.RejectInvalidMessage)
 
 	if options.Timeout != time.Duration(0) {
 		qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
@@ -429,6 +432,7 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		setSessionSetting(qfSession, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
 		setSessionSetting(qfSession, qconfig.SQLStoreDriver, acceptor.SQLStoreDriver)
 		setSessionSetting(qfSession, qconfig.SQLStoreDataSourceName, os.ExpandEnv(acceptor.SQLStoreDataSourceName))
+		setSessionSetting(qfSession, qconfig.RejectInvalidMessage, acceptor.RejectInvalidMessage)
 
 		if options.Timeout != time.Duration(0) {
 			qfSession.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
