@@ -5,9 +5,10 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"text/tabwriter"
+	"time"
 
 	"github.com/iancoleman/strcase"
+	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 
 	"github.com/quickfixgo/enum"
@@ -170,6 +171,11 @@ func (app *MarketDataRequest) onMarketDataSnapshotFullRefresh(msg *quickfix.Mess
 			quickfix.GroupElement(tag.MDEntryPx),
 			quickfix.GroupElement(tag.MDEntrySize),
 			quickfix.GroupElement(tag.OrderID),
+			quickfix.GroupElement(tag.OrdType),
+			quickfix.GroupElement(tag.TradeID),
+			quickfix.GroupElement(tag.MDEntryDate),
+			quickfix.GroupElement(tag.MDEntryTime),
+			quickfix.GroupElement(tag.Text),
 		},
 	)
 	msg.Body.GetGroup(group)
@@ -192,13 +198,15 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 			quickfix.GroupElement(tag.MDEntryPx),
 			quickfix.GroupElement(tag.MDEntrySize),
 			quickfix.GroupElement(tag.OrderID),
+			quickfix.GroupElement(tag.OrdType),
 			quickfix.GroupElement(tag.Text),
 			quickfix.GroupElement(tag.TradeID),
-			quickfix.GroupElement(tag.MDEntryTime),
 			quickfix.GroupElement(tag.MDEntryDate),
+			quickfix.GroupElement(tag.MDEntryTime),
 			quickfix.GroupElement(tag.TradeCondition),
 			quickfix.GroupElement(tag.OpenCloseSettlFlag),
 			quickfix.GroupElement(tag.Symbol),
+			quickfix.GroupElement(tag.Text),
 		},
 	)
 	msg.Body.GetGroup(group)
@@ -225,12 +233,19 @@ var (
 )
 
 func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Message, dict *datadictionary.DataDictionary) {
-	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
-	tw.Write([]byte(fmt.Sprintf("    SYMBOL\t ORDER ID\t TYPE\t PRICE\t SIZE\n")))
-	tw.Write([]byte("   " + strings.Repeat("-", 62) + "\n"))
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"SYMBOL", "ORDER ID", "TYPE", "PRICE", "SIZE", "TIME"})
+	table.SetBorder(false)
+	table.SetColumnSeparator(" ")
+	table.SetCenterSeparator("-")
+
+	symbol, err := msg.Body.GetString(tag.Symbol)
+	if err != nil {
+		symbol = nilstr
+	}
 
 	for i := 0; i < group.Len(); i++ {
-		var typSign, typ, symbol, orderID, price, size string
+		var typSign, typ, orderTradeID, price, size, tim string
 
 		s := group.Get(i)
 
@@ -243,14 +258,23 @@ func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Mes
 			typSign = type2sym[typ]
 		}
 
-		symbol, err = msg.Body.GetString(tag.Symbol)
-		if err != nil {
-			symbol = nilstr
+		orderType, err := s.GetString(tag.OrdType)
+		if err == nil {
+			tagField := dict.FieldTypeByTag[int(tag.OrdType)]
+			ordTyp := strcase.ToCamel(strings.ToLower(tagField.Enums[orderType].Description))
+			typ = fmt.Sprintf("%s (%s)", typ, ordTyp)
 		}
 
-		orderID, err = s.GetString(tag.OrderID)
+		orderTradeID, err = s.GetString(tag.OrderID)
 		if err != nil {
-			symbol = nilstr
+			orderTradeID = nilstr
+		}
+
+		if len(orderTradeID) == 0 || orderTradeID == nilstr {
+			orderTradeID, err = s.GetString(tag.TradeID)
+			if err != nil {
+				orderTradeID = nilstr
+			}
 		}
 
 		price, err = s.GetString(tag.MDEntryPx)
@@ -263,18 +287,39 @@ func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Mes
 			size = nilstr
 		}
 
-		tw.Write([]byte(fmt.Sprintf("%s  %s\t%s\t%s\t%10s\t%10s\n", typSign, symbol, orderID, typ, price, size)))
+		stringDate, errDate := s.GetString(tag.MDEntryDate)
+		stringTime, errTime := s.GetString(tag.MDEntryTime)
+
+		if errDate == nil && errTime == nil {
+			timeDate, _ := time.Parse("20060102", stringDate)
+			timeTime, _ := time.Parse("15:04:05.999999999", stringTime)
+			tim = utils.CombineDateAndTime(timeDate, timeTime).Format(time.RFC3339Nano)
+		} else if errDate == nil {
+			timeDate, _ := time.Parse("20060102", stringDate)
+			tim = timeDate.Format("2006-01-02")
+		} else if errTime == nil {
+			timeTime, _ := time.Parse("15:04:05.999999999", stringTime)
+			tim = timeTime.Format("15:04:05.999")
+		}
+
+		table.Append([]string{fmt.Sprintf("%s %s", typSign, symbol), orderTradeID, typ, price, size, tim})
 	}
 
-	tw.Write([]byte{10})
+	last, err := msg.Body.GetTime(tag.LastUpdateTime)
+	if err == nil {
+		table.SetFooter([]string{"", "", "", "", "Last Time", last.Format(time.RFC3339Nano)})
+	}
 
-	tw.Flush()
+	table.Render()
+	fmt.Println()
 }
 
 func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictionary.DataDictionary) {
-	tw := tabwriter.NewWriter(os.Stdout, 15, 0, 2, ' ', 0)
-	tw.Write([]byte("    SYMBOL\t   ORDER/TRADE ID     \t ACTION\t TYPE\t PRICE\t SIZE\t       TIME\n"))
-	tw.Write([]byte("   " + strings.Repeat("-", 115) + "\n"))
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"SYMBOL", "ID", "ACTION", "TYPE", "PRICE", "SIZE", "TIME"})
+	table.SetBorder(false)
+	table.SetColumnSeparator(" ")
+	table.SetCenterSeparator("-")
 
 	for i := 0; i < group.Len(); i++ {
 		var typSign, typ, orderTradeID, action, symbol, price, size, tim string
@@ -296,6 +341,13 @@ func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictiona
 			tagField := dict.FieldTypeByTag[int(tag.MDEntryType)]
 			typ = strcase.ToCamel(strings.ToLower(tagField.Enums[entryType].Description))
 			typSign = type2sym[typ]
+		}
+
+		orderType, err := s.GetString(tag.OrdType)
+		if err == nil {
+			tagField := dict.FieldTypeByTag[int(tag.OrdType)]
+			ordTyp := strcase.ToCamel(strings.ToLower(tagField.Enums[orderType].Description))
+			typ = fmt.Sprintf("%s (%s)", typ, ordTyp)
 		}
 
 		orderTradeID, err = s.GetString(tag.OrderID)
@@ -325,15 +377,24 @@ func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictiona
 			size = nilstr
 		}
 
-		tim, err = s.GetString(tag.MDEntryTime)
-		if err != nil {
-			size = nilstr
+		stringDate, errDate := s.GetString(tag.MDEntryDate)
+		stringTime, errTime := s.GetString(tag.MDEntryTime)
+
+		if errDate == nil && errTime == nil {
+			timeDate, _ := time.Parse("20060102", stringDate)
+			timeTime, _ := time.Parse("15:04:05.999999999", stringTime)
+			tim = utils.CombineDateAndTime(timeDate, timeTime).Format(time.RFC3339Nano)
+		} else if errDate == nil {
+			timeDate, _ := time.Parse("20060102", stringDate)
+			tim = timeDate.Format("2006-01-02")
+		} else if errTime == nil {
+			timeTime, _ := time.Parse("15:04:05.999999999", stringTime)
+			tim = timeTime.Format("15:04:05.999")
 		}
 
-		tw.Write([]byte(fmt.Sprintf("%s  %s\t%-21s\t%s\t%s\t%10s\t%10s\t%s\n", typSign, symbol, orderTradeID, action, typ, price, size, tim)))
+		table.Append([]string{fmt.Sprintf("%s %s", typSign, symbol), orderTradeID, action, typ, price, size, tim})
 	}
 
-	tw.Write([]byte{10})
-
-	tw.Flush()
+	table.Render()
+	fmt.Println()
 }

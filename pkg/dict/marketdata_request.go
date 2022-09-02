@@ -41,4 +41,14 @@ var MDEntryTypes = map[string]enum.MDEntryType{
 	"RECOVERY_RATE":                    enum.MDEntryType_RECOVERY_RATE,
 	"RECOVERY_RATE_FOR_LONG_POSITIONS": enum.MDEntryType_RECOVERY_RATE_FOR_LONG_POSITIONS,
 	"RECOVERY_RATE_FOR_SHORT":          enum.MDEntryType_RECOVERY_RATE_FOR_SHORT_POSITIONS,
+
+var SubscriptionRequestTypes = map[string]enum.SubscriptionRequestType{
+	"SNAPSHOT":              enum.SubscriptionRequestType_SNAPSHOT,
+	"SNAPSHOT_PLUS_UPDATES": enum.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES,
+	"DISABLE_PREVIOUS_SNAPSHOT_PLUS_UPDATE_REQUEST": enum.SubscriptionRequestType_DISABLE_PREVIOUS_SNAPSHOT_PLUS_UPDATE_REQUEST,
+}
+
+var MDUpdateTypes = map[string]enum.MDUpdateType{
+	"FULL_REFRESH":        enum.MDUpdateType_FULL_REFRESH,
+	"INCREMENTAL_REFRESH": enum.MDUpdateType_INCREMENTAL_REFRESH,
 }

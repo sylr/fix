@@ -14,3 +14,7 @@ func MDEntryTypes(cmd *cobra.Command, args []string, toComplete string) ([]strin
 func SubscriptionRequestTypes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return utils.PrettyOptionValues(dict.SubscriptionRequestTypes), cobra.ShellCompDirectiveNoFileComp
 }
+
+func MDUpdateTypes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return utils.PrettyOptionValues(dict.MDUpdateTypes), cobra.ShellCompDirectiveNoFileComp
+}
