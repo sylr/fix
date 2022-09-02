@@ -41,6 +41,8 @@ var MDEntryTypes = map[string]enum.MDEntryType{
 	"RECOVERY_RATE":                    enum.MDEntryType_RECOVERY_RATE,
 	"RECOVERY_RATE_FOR_LONG_POSITIONS": enum.MDEntryType_RECOVERY_RATE_FOR_LONG_POSITIONS,
 	"RECOVERY_RATE_FOR_SHORT":          enum.MDEntryType_RECOVERY_RATE_FOR_SHORT_POSITIONS,
+	"TRADE_HISTORY":                    "101",
+}
 
 var SubscriptionRequestTypes = map[string]enum.SubscriptionRequestType{
 	"SNAPSHOT":              enum.SubscriptionRequestType_SNAPSHOT,
