@@ -5,11 +5,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
+	"github.com/olekukonko/tablewriter"
 	qtag "github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
@@ -139,8 +140,12 @@ func (app *QuickFixAppMessageLogger) WriteField(w io.Writer, field quickfix.TagV
 func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quickfix.Message) {
 	bodyTags := message.Body.Tags()
 
-	tw := tabwriter.NewWriter(w, 10, 0, 2, ' ', 0)
-	tw.Write([]byte("TAG\tTYPE\tVALUE\n"))
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"TAG", "DESCRIPTION", "VALUES"})
+	table.SetBorders(tablewriter.Border{false, false, false, true})
+	table.SetColumnSeparator(" ")
+	table.SetCenterSeparator("-")
+	table.SetColumnAlignment([]int{tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
 
 	var line []string
 	for _, tag := range bodyTags {
@@ -172,8 +177,8 @@ func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, messag
 			valueString,
 		}
 
-		tw.Write([]byte(fmt.Sprintf("%s\t\n", strings.Join(line, "\t"))))
+		table.Append(line)
 	}
 
-	tw.Flush()
+	table.Render()
 }
