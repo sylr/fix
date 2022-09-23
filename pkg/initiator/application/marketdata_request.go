@@ -235,7 +235,7 @@ var (
 func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Message, dict *datadictionary.DataDictionary) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"SYMBOL", "ORDER ID", "TYPE", "PRICE", "SIZE", "TIME"})
-	table.SetBorder(false)
+	table.SetBorders(tablewriter.Border{false, false, false, true})
 	table.SetColumnSeparator(" ")
 	table.SetCenterSeparator("-")
 
@@ -311,13 +311,14 @@ func printFIX50NoMDEntriesFull(group *quickfix.RepeatingGroup, msg *quickfix.Mes
 	}
 
 	table.Render()
-	fmt.Println()
 }
 
 func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictionary.DataDictionary) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"SYMBOL", "ID", "ACTION", "TYPE", "PRICE", "SIZE", "TIME"})
-	table.SetBorder(false)
+	table.SetBorders(tablewriter.Border{false, false, false, true})
+	table.SetColMinWidth(2, 8)
+	table.SetColMinWidth(3, 14)
 	table.SetColumnSeparator(" ")
 	table.SetCenterSeparator("-")
 
@@ -396,5 +397,4 @@ func printFIX50NoMDEntriesInc(group *quickfix.RepeatingGroup, dict *datadictiona
 	}
 
 	table.Render()
-	fmt.Println()
 }
