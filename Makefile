@@ -11,7 +11,7 @@ GOOS                     ?= $(GOENV_GOOS)
 GOARCH                   ?= $(GOENV_GOARCH)
 GOARM                    ?= $(GOENV_GOARM)
 GO_BUILD_SRC             := $(shell find . -name \*.go -type f) go.mod go.sum cmd/init/config/templates/*
-GO_BUILD_EXTLDFLAGS      :=
+GO_BUILD_EXTLDFLAGS      ?=
 GO_BUILD_TAGS            ?=
 GO_BUILD_TARGET_DEPS     :=
 GO_BUILD_FLAGS           := -trimpath
@@ -76,6 +76,10 @@ DOCKER_BUILD_LABELS     += --label org.opencontainers.image.revision=$(GIT_REVIS
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.version=$(GIT_VERSION)
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.created=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 DOCKER_BUILD_BUILD_ARGS ?= --build-arg=GO_VERSION=$(DOCKER_BUILD_GO_VERSION)
+DOCKER_BUILD_BUILD_ARGS += --build-arg=GIT_REVISION=$(GIT_REVISION)
+DOCKER_BUILD_BUILD_ARGS += --build-arg=GIT_VERSION=$(GIT_VERSION)
+DOCKER_BUILD_BUILD_ARGS += --build-arg=GO_BUILD_EXTLDFLAGS=-static
+DOCKER_BUILD_BUILD_ARGS += --build-arg=GO_BUILD_LDFLAGS_OPTIMS="-linkmode external"
 DOCKER_BUILDX_PLATFORMS ?= linux/amd64,linux/arm64
 DOCKER_BUILDX_CACHE     ?= /tmp/.buildx-cache
 
@@ -179,12 +183,13 @@ $(GO_TOOLS_GOLANGCI_LINT):
 .PHONY: docker-buildx-build docker-buildx-push docker-buildx-inspect
 
 docker-buildx-build:
-	@docker buildx build . -f Dockerfile \
+	docker buildx build . -f Dockerfile \
 		-t $(DOCKER_BUILD_IMAGE):$(DOCKER_BUILD_VERSION) \
 		--cache-to=type=local,dest=$(DOCKER_BUILDX_CACHE) \
 		--platform=$(DOCKER_BUILDX_PLATFORMS) \
 		$(DOCKER_BUILD_BUILD_ARGS) \
-		$(DOCKER_BUILD_LABELS)
+		$(DOCKER_BUILD_LABELS) \
+		--load
 
 docker-buildx-push:
 	@docker buildx build . -f Dockerfile \
