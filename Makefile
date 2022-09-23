@@ -160,7 +160,7 @@ go-mod-tidy:
 # ------------------------------------------------------------------------------
 
 test:
-	$(GO) test ./...
+	$(GO) test -tags acceptor,validator ./...
 
 lint: $(GO_TOOLS_GOLANGCI_LINT)
 	$(GO_TOOLS_GOLANGCI_LINT) run
