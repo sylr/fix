@@ -28,12 +28,11 @@ import (
 )
 
 var (
-	optionTypes              []string
-	optionSymbols            []string
-	optionIncrementalRefresh bool
-	optionSubType            string
-	optionUpdateType         string
-	optionMDReqID            string
+	optionTypes      []string
+	optionSymbols    []string
+	optionSubType    string
+	optionUpdateType string
+	optionMDReqID    string
 
 	SubType      enum.SubscriptionRequestType
 	MDUpdateType enum.MDUpdateType
@@ -226,13 +225,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	subReqType := field.NewSubscriptionRequestType(dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)])
 	marketDepth := field.NewMarketDepth(0)
 
-	var updateType enum.MDUpdateType
-	if optionIncrementalRefresh {
-		updateType = enum.MDUpdateType_INCREMENTAL_REFRESH
-	} else {
-		updateType = enum.MDUpdateType_FULL_REFRESH
-	}
-
 	// Message
 	message := quickfix.NewMessage()
 	header := fixt11.NewHeader(&message.Header)
@@ -241,7 +233,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	message.Body.Set(mdReqID)
 	message.Body.Set(subReqType)
 	message.Body.Set(marketDepth)
-	message.Body.Set(field.NewMDUpdateType(updateType))
+	message.Body.Set(field.NewMDUpdateType(MDUpdateType))
 
 	entryTypes := quickfix.NewRepeatingGroup(
 		tag.NoMDEntryTypes,
