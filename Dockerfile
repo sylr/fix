@@ -2,7 +2,7 @@
 
 ARG GO_VERSION=1.18
 
-FROM --platform=$BUILDPLATFORM golang:$GO_VERSION AS go
+FROM --platform=$TARGETPLATFORM golang:$GO_VERSION AS go
 
 RUN apt-get update && apt-get dist-upgrade -y && apt-get install -y build-essential git
 
@@ -16,18 +16,18 @@ COPY . .
 
 # -----------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM go AS builder
+FROM --platform=$TARGETPLATFORM go AS builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
-ARG GO_BUILD_TAGS=acceptor,validator
 
 ARG GIT_REVISION
 ARG GIT_VERSION
 ARG GO_BUILD_EXTLDFLAGS
 ARG GO_BUILD_LDFLAGS_OPTIMS
+ARG GO_BUILD_TAGS=acceptor,validator
 
 # Switch shell to bash
 SHELL ["bash", "-c"]
@@ -40,11 +40,11 @@ RUN make build \
     GIT_VERSION=${GIT_VERSION} \
     GO_BUILD_EXTLDFLAGS="${GO_BUILD_EXTLDFLAGS}" \
     GO_BUILD_LDFLAGS_OPTIMS="${GO_BUILD_LDFLAGS_OPTIMS}" \
+    GO_BUILD_TARGET=dist/${TARGETPLATFORM}/fix \
+    GO_BUILD_TAGS=${GO_BUILD_TAGS} \
     GOOS=${TARGETOS} \
     GOARCH=${TARGETARCH} \
-    GOARM=${TARGETVARIANT/v/} \
-    GO_BUILD_TARGET=dist/${TARGETPLATFORM}/fix \
-    GO_BUILD_TAGS=${GO_BUILD_TAGS}
+    GOARM=${TARGETVARIANT/v/}
 
 RUN useradd fix --create-home
 
