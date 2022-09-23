@@ -32,9 +32,6 @@ ARG GO_BUILD_TAGS=acceptor,validator
 # Switch shell to bash
 SHELL ["bash", "-c"]
 
-# Run a git command otherwise git describe in the Makefile could report a dirty git dir
-RUN git diff --exit-code || true
-
 RUN make build \
     GIT_REVISION=${GIT_REVISION} \
     GIT_VERSION=${GIT_VERSION} \
