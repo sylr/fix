@@ -1,3 +1,6 @@
+//go:build validator
+// +build validator
+
 package marketdatavalidator
 
 import (
@@ -162,10 +165,10 @@ LOOP:
 		case signal := <-interrupt:
 			switch signal {
 			case syscall.SIGINT, syscall.SIGTERM:
-				logger.Debug().Msgf("Received signal: %w", signal)
+				logger.Debug().Msgf("Received signal: %v", signal)
 				break LOOP
 			default:
-				logger.Info().Msgf("Received unhandled signal: %w", signal)
+				logger.Info().Msgf("Received unhandled signal: %v", signal)
 			}
 		}
 	}

@@ -176,7 +176,7 @@ func (app *MarketDataValidator) onMarketDataSnapshotFullRefresh(msg marketdatasn
 
 		entryType, err := mdentry.GetMDEntryType()
 		if err != nil {
-			app.Logger.Error().Msgf("No entry type: %s", mdentry.FieldMap)
+			app.Logger.Error().Msgf("No entry type: %v", mdentry.FieldMap)
 			continue
 		}
 
@@ -184,13 +184,13 @@ func (app *MarketDataValidator) onMarketDataSnapshotFullRefresh(msg marketdatasn
 		case enum.MDEntryType_BID, enum.MDEntryType_OFFER:
 			orderID, err := mdentry.GetOrderID()
 			if err != nil {
-				app.Logger.Error().Msgf("No order ID found: %s", mdentry.FieldMap)
+				app.Logger.Error().Msgf("No order ID found: %v", mdentry.FieldMap)
 				continue
 			}
 
 			orderType, err := mdentry.GetOrdType()
 			if err != nil {
-				app.Logger.Error().Msgf("No order type found: %s", mdentry.FieldMap)
+				app.Logger.Error().Msgf("No order type found: %v", mdentry.FieldMap)
 				continue
 			}
 
@@ -237,13 +237,13 @@ func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdatainc
 		case enum.MDEntryType_BID, enum.MDEntryType_OFFER:
 			orderID, err := mdentry.GetOrderID()
 			if err != nil {
-				app.Logger.Error().Msgf("No order ID found: %s", mdentry.FieldMap)
+				app.Logger.Error().Msgf("No order ID found: %v", mdentry.FieldMap)
 				continue
 			}
 
 			orderType, err := mdentry.GetOrdType()
 			if err != nil {
-				app.Logger.Error().Msgf("No order type found: %s", mdentry.FieldMap)
+				app.Logger.Error().Msgf("No order type found: %v", mdentry.FieldMap)
 				continue
 			}
 
