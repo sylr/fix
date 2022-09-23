@@ -5,6 +5,7 @@ import (
 
 	markedatarequest "sylr.dev/fix/cmd/marketdata/request"
 	"sylr.dev/fix/pkg/initiator"
+	"sylr.dev/fix/pkg/utils"
 )
 
 // MarketDataCmd represents the buy command
@@ -14,18 +15,18 @@ var MarketDataCmd = &cobra.Command{
 	Long:  "Send a MarketData FIX message after initiating a sesion with a FIX acceptor.",
 	Args:  cobra.ExactValidArgs(1),
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := initiator.ValidateOptions(cmd, args)
-		if err != nil {
+		if err := utils.ValidateRequiredFlags(cmd); err != nil {
+			return err
+		}
+
+		if err := initiator.ValidateOptions(cmd, args); err != nil {
 			return err
 		}
 
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			if parent.PersistentPreRunE != nil {
-				err = parent.PersistentPreRunE(parent, args)
-				if err != nil {
-					return err
-				}
+				return parent.PersistentPreRunE(parent, args)
 			}
 		}
 

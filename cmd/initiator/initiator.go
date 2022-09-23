@@ -18,6 +18,7 @@ import (
 	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/initiator/application"
+	"sylr.dev/fix/pkg/utils"
 )
 
 var InitiatorCmd = &cobra.Command{
@@ -26,18 +27,18 @@ var InitiatorCmd = &cobra.Command{
 	Long:  "Launch a FIX initiator and wait for messages.",
 	RunE:  Execute,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := initiator.ValidateOptions(cmd, args)
-		if err != nil {
+		if err := utils.ValidateRequiredFlags(cmd); err != nil {
+			return err
+		}
+
+		if err := initiator.ValidateOptions(cmd, args); err != nil {
 			return err
 		}
 
 		if cmd.HasParent() {
 			parent := cmd.Parent()
 			if parent.PersistentPreRunE != nil {
-				err = parent.PersistentPreRunE(parent, args)
-				if err != nil {
-					return err
-				}
+				return parent.PersistentPreRunE(parent, args)
 			}
 		}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/database"
+	"sylr.dev/fix/pkg/utils"
 )
 
 var (
@@ -26,8 +27,11 @@ var InitDatabaseCmd = &cobra.Command{
 	RunE:              Execute,
 	ValidArgsFunction: cobra.NoFileCompletions,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := database.ValidateOptions(cmd, args)
-		if err != nil {
+		if err := utils.ValidateRequiredFlags(cmd); err != nil {
+			return err
+		}
+
+		if err := database.ValidateOptions(cmd, args); err != nil {
 			return err
 		}
 

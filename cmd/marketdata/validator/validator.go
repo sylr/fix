@@ -37,8 +37,11 @@ var MarketDataValidatorCmd = &cobra.Command{
 	Args:              cobra.ExactArgs(0),
 	ValidArgsFunction: cobra.NoFileCompletions,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := Validate(cmd, args)
-		if err != nil {
+		if err := utils.ValidateRequiredFlags(cmd); err != nil {
+			return err
+		}
+
+		if err := Validate(cmd, args); err != nil {
 			return err
 		}
 

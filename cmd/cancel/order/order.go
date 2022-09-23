@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/pkg/errors"
+	"sylr.dev/fix/pkg/utils"
 )
 
 var (
@@ -20,8 +21,11 @@ var CancelOrderCmd = &cobra.Command{
 	Args:              cobra.ExactArgs(0),
 	ValidArgsFunction: cobra.NoFileCompletions,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := Validate(cmd, args)
-		if err != nil {
+		if err := utils.ValidateRequiredFlags(cmd); err != nil {
+			return err
+		}
+
+		if err := Validate(cmd, args); err != nil {
 			return err
 		}
 
@@ -37,17 +41,7 @@ var CancelOrderCmd = &cobra.Command{
 }
 
 func init() {
-	CancelOrderCmd.Flags().StringVar(&optionSide, "side", "", "Order side (buy, sell ... etc)")
-	CancelOrderCmd.Flags().StringVar(&optionSymbol, "symbol", "", "Order symbol")
-	CancelOrderCmd.Flags().Int64Var(&optionQuantity, "quantity", 1, "Order quantity")
 	CancelOrderCmd.Flags().StringVar(&optionID, "id", "", "Order id")
-
-	//CancelOrderCmd.MarkFlagRequired("side")
-	//CancelOrderCmd.MarkFlagRequired("symbol")
-	//CancelOrderCmd.MarkFlagRequired("quantity")
-	//CancelOrderCmd.MarkFlagRequired("id")
-
-	//CancelOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
