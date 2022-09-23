@@ -110,11 +110,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer func() {
-		logger.Debug().Msgf("init.Stop() 1")
-		init.Stop()
-		logger.Debug().Msgf("init.Stop() 2")
-	}()
 	// Start session
 	err = init.Start()
 	if err != nil {
@@ -122,9 +117,8 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	defer func() {
-		logger.Debug().Msgf("app.Stop() 1")
+		init.Stop()
 		app.Stop()
-		logger.Debug().Msgf("app.Stop() 2")
 	}()
 
 	// Choose right timeout cli option > config > default value (5s)
@@ -160,14 +154,19 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 LOOP:
 	for {
 		select {
 		case signal := <-interrupt:
-			logger.Debug().Msgf("Received signal: %s", signal)
-			break LOOP
+			switch signal {
+			case syscall.SIGINT, syscall.SIGTERM:
+				logger.Debug().Msgf("Received signal: %w", signal)
+				break LOOP
+			default:
+				logger.Info().Msgf("Received unhandled signal: %w", signal)
+			}
 		}
 	}
 
