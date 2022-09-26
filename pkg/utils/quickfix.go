@@ -70,9 +70,9 @@ func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *qu
 		fm     quickfix.FieldMap
 		dict   *datadictionary.DataDictionary
 	}{
-		{"Headers ", loggedMessage.Header.FieldMap, app.TransportDataDictionary},
-		{"Body    ", loggedMessage.Body.FieldMap, app.AppDataDictionary},
-		{"Trailers", loggedMessage.Trailer.FieldMap, app.TransportDataDictionary},
+		{"Headers: ", loggedMessage.Header.FieldMap, app.TransportDataDictionary},
+		{"Body:    ", loggedMessage.Body.FieldMap, app.AppDataDictionary},
+		{"Trailers:", loggedMessage.Trailer.FieldMap, app.TransportDataDictionary},
 	}
 	for _, part := range parts {
 		if len(part.fm.Tags()) == 0 {
@@ -101,9 +101,9 @@ func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *qu
 
 		str, _ := io.ReadAll(br)
 
-		formatStr := "%s <- %s"
+		formatStr := "<- %s %s"
 		if sending {
-			formatStr = "%s -> %s"
+			formatStr = "-> %s %s"
 		}
 
 		app.Logger.WithLevel(level).Msgf(formatStr, part.prefix, str)
