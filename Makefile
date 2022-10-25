@@ -67,7 +67,7 @@ GO_TOOLS_GOLANGCI_LINT ?= $(shell $(GO) env GOPATH)/bin/golangci-lint
 
 DOCKER_BUILD_IMAGE      ?= ghcr.io/sylr/fix
 DOCKER_BUILD_VERSION    ?= $(GIT_VERSION)
-DOCKER_BUILD_GO_VERSION ?= 1.18
+DOCKER_BUILD_GO_VERSION ?= 1.19
 DOCKER_BUILD_LABELS      = --label org.opencontainers.image.title=fix
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.description="fix client"
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.url="https://github.com/sylr/fix"
