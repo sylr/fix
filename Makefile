@@ -180,9 +180,9 @@ $(GO_TOOLS_GOLANGCI_LINT):
 
 # -- docker --------------------------------------------------------------------
 
-.PHONY: docker-buildx-build docker-buildx-push docker-buildx-inspect
+.PHONY: docker-build docker-push docker-inspect
 
-docker-buildx-build:
+docker-build:
 	docker buildx build . -f Dockerfile \
 		-t $(DOCKER_BUILD_IMAGE):$(DOCKER_BUILD_VERSION) \
 		--cache-to=type=local,dest=$(DOCKER_BUILDX_CACHE) \
@@ -191,7 +191,7 @@ docker-buildx-build:
 		$(DOCKER_BUILD_LABELS) \
 		--load
 
-docker-buildx-push:
+docker-push:
 	@docker buildx build . -f Dockerfile \
 		-t $(DOCKER_BUILD_IMAGE):$(DOCKER_BUILD_VERSION) \
 		--cache-from=type=local,src=$(DOCKER_BUILDX_CACHE) \
@@ -200,5 +200,5 @@ docker-buildx-push:
 		$(DOCKER_BUILD_LABELS) \
 		--push
 
-docker-buildx-inspect:
+docker-inspect:
 	@docker buildx imagetools inspect $(DOCKER_BUILD_IMAGE):$(DOCKER_BUILD_VERSION)
