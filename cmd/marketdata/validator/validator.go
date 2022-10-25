@@ -101,7 +101,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	app := application.NewMarketDataValidator(logger)
+	app := application.NewMarketDataValidator(logger, optionSymbol)
 	app.Settings = settings
 	app.TransportDataDictionary = transportDict
 	app.AppDataDictionary = appDict

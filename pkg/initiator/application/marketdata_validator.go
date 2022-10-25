@@ -5,21 +5,80 @@ package application
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 	"github.com/sylr/quickfixgo-fix50sp2/marketdataincrementalrefresh"
 	"github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh"
 
+	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/utils"
 )
 
-func NewMarketDataValidator(logger *zerolog.Logger) *MarketDataValidator {
+var (
+	metricMarketDataValidatorIncrementalRefreshes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "fix",
+			Subsystem: "marketdata_validator",
+			Name:      "incremental_refreshes_total",
+			Help:      "Number of incremental refresh messages received",
+		},
+		[]string{"security"},
+	)
+	metricMarketDataValidatorOrderUpdates = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "fix",
+			Subsystem: "marketdata_validator",
+			Name:      "order_updates_total",
+			Help:      "Number of order updates",
+		},
+		[]string{"security", "type"},
+	)
+	metricMarketDataValidatorTradeUpdates = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "fix",
+			Subsystem: "marketdata_validator",
+			Name:      "trade_updates_total",
+			Help:      "Number of trade updates",
+		},
+		[]string{"security", "type"},
+	)
+	metricMarketDataValidatorErrors = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "fix",
+			Subsystem: "marketdata_validator",
+			Name:      "errors_total",
+			Help:      "Number validator errors",
+		},
+		[]string{"security", "error"},
+	)
+	metricMarketDataValidatorOrders = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "fix",
+			Subsystem: "marketdata_validator",
+			Name:      "orders",
+			Help:      "Current orders in the book",
+		},
+		[]string{"security", "type", "side"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(metricMarketDataValidatorIncrementalRefreshes)
+	prometheus.MustRegister(metricMarketDataValidatorOrderUpdates)
+	prometheus.MustRegister(metricMarketDataValidatorTradeUpdates)
+	prometheus.MustRegister(metricMarketDataValidatorErrors)
+	prometheus.MustRegister(metricMarketDataValidatorOrders)
+}
+
+func NewMarketDataValidator(logger *zerolog.Logger, security string) *MarketDataValidator {
 	mdr := MarketDataValidator{
 		Connected: make(chan interface{}),
 		Validator: &Validator{
@@ -28,7 +87,8 @@ func NewMarketDataValidator(logger *zerolog.Logger) *MarketDataValidator {
 				typesVolume: make(map[enum.OrdType]int64),
 				sidesVolume: make(map[enum.MDEntryType]int64),
 			},
-			logger: logger,
+			security: security,
+			logger:   logger,
 		},
 		router: quickfix.NewMessageRouter(),
 	}
@@ -204,8 +264,14 @@ func (app *MarketDataValidator) onMarketDataSnapshotFullRefresh(msg marketdatasn
 
 			if err := app.Validator.orders.AddOrder(&order); err != nil {
 				app.Logger.Error().Msgf("Error while adding order (%s): %s", order.Id, err)
+				metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
+			} else {
+				metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "new").Inc()
 			}
+
 		case enum.MDEntryType_TRADE:
+			metricMarketDataValidatorTradeUpdates.WithLabelValues(app.Validator.security, "new").Inc()
+
 		default:
 			app.Logger.Warn().Msgf("Entry type not implemented: %s", entryType)
 		}
@@ -217,6 +283,8 @@ func (app *MarketDataValidator) onMarketDataSnapshotFullRefresh(msg marketdatasn
 }
 
 func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdataincrementalrefresh.MarketDataIncrementalRefresh, sessionID quickfix.SessionID) quickfix.MessageRejectError {
+	metricMarketDataValidatorIncrementalRefreshes.WithLabelValues(app.Validator.security).Inc()
+
 	mdentries, err := msg.GetNoMDEntries()
 	if err != nil {
 		app.Logger.Error().Err(err).Msgf("Received incremental refresh without NoMDEntries")
@@ -257,7 +325,7 @@ func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdatainc
 
 			updateAction, err := mdentry.GetMDUpdateAction()
 			if err != nil {
-				app.Logger.Error().Err(err).Msgf("GetMDUpdateAction")
+				app.Logger.Error().Err(err).Msgf("Order GetMDUpdateAction")
 				continue
 			}
 
@@ -265,23 +333,53 @@ func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdatainc
 			case enum.MDUpdateAction_NEW:
 				if err := app.Validator.orders.AddOrder(&order); err != nil {
 					app.Logger.Error().Msgf("Error while adding order (%s): %s", order.Id, err)
+					metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
+				} else {
+					metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "new").Inc()
 				}
 			case enum.MDUpdateAction_CHANGE:
 				if err := app.Validator.orders.UpdateOrder(&order); err != nil {
 					app.Logger.Error().Msgf("Error while updating order (%s): %s", order.Id, err)
+					metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
+				} else {
+					metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "change").Inc()
 				}
 			case enum.MDUpdateAction_DELETE:
 				if err := app.Validator.orders.DeleteOrder(&order); err != nil {
 					app.Logger.Error().Msgf("Error while deleting order (%s): %s", order.Id, err)
+					metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
+				} else {
+					metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "delete").Inc()
 				}
 			}
+
 		case enum.MDEntryType_TRADE:
+			updateAction, err := mdentry.GetMDUpdateAction()
+			if err != nil {
+				app.Logger.Error().Err(err).Msgf("Trade GetMDUpdateAction")
+				continue
+			}
+
+			switch updateAction {
+			case enum.MDUpdateAction_NEW:
+				metricMarketDataValidatorTradeUpdates.WithLabelValues(app.Validator.security, "new").Inc()
+			}
+
 		default:
 			app.Logger.Warn().Msgf("Entry type not implemented: %s", entryType)
 		}
 	}
 
 	app.Logger.Info().Msgf("Order book: types=%#v sides=%#v", app.Validator.orders.typesVolume, app.Validator.orders.sidesVolume)
+
+	stats := app.Validator.orders.Stats()
+	for ty, sides := range stats {
+		tyStr := strings.ToLower(dict.OrderTypesReversed[ty])
+		for si, count := range sides {
+			siStr := strings.ToLower(dict.MDEntryTypesReversed[si])
+			metricMarketDataValidatorOrders.WithLabelValues(app.Validator.security, tyStr, siStr).Set(float64(count))
+		}
+	}
 
 	return nil
 }
@@ -304,6 +402,27 @@ type Orders struct {
 	typesVolume map[enum.OrdType]int64
 	sidesVolume map[enum.MDEntryType]int64
 	mux         sync.RWMutex
+}
+
+func (o *Orders) Stats() map[enum.OrdType]map[enum.MDEntryType]int64 {
+	stats := make(map[enum.OrdType]map[enum.MDEntryType]int64)
+
+	o.mux.RLock()
+	defer o.mux.RUnlock()
+
+	for _, o := range o.orders {
+		ty := o.Type
+		si := o.Side
+
+		if _, ok := stats[ty]; !ok {
+			stats[ty] = make(map[enum.MDEntryType]int64)
+			stats[ty][si] = 0
+		}
+
+		stats[ty][si] = stats[ty][si] + 1
+	}
+
+	return stats
 }
 
 func (o *Orders) Len() int {
@@ -400,6 +519,7 @@ type Trade struct {
 }
 
 type Validator struct {
-	orders Orders
-	logger *zerolog.Logger
+	security string
+	orders   Orders
+	logger   *zerolog.Logger
 }

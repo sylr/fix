@@ -81,6 +81,33 @@ var OrderTypes = map[string]enum.OrdType{
 	"COUNTER_ORDER_SELECTION":        enum.OrdType_COUNTER_ORDER_SELECTION,
 }
 
+var OrderTypesReversed = map[enum.OrdType]string{
+	enum.OrdType_MARKET:                         "MARKET",
+	enum.OrdType_LIMIT:                          "LIMIT",
+	enum.OrdType_STOP_STOP_LOSS:                 "STOP",
+	enum.OrdType_STOP_LIMIT:                     "STOP_LIMIT",
+	enum.OrdType_MARKET_ON_CLOSE:                "MARKET_ON_CLOSE",
+	enum.OrdType_WITH_OR_WITHOUT:                "WITH_OR_WITHOUT",
+	enum.OrdType_LIMIT_OR_BETTER:                "LIMIT_OR_BETTER",
+	enum.OrdType_LIMIT_WITH_OR_WITHOUT:          "LIMIT_WITH_OR_WITHOUT",
+	enum.OrdType_ON_BASIS:                       "ON_BASIS",
+	enum.OrdType_ON_CLOSE:                       "ON_CLOSE",
+	enum.OrdType_LIMIT_ON_CLOSE:                 "LIMIT_ON_CLOSE",
+	enum.OrdType_FOREX_MARKET:                   "FOREX_MARKET",
+	enum.OrdType_PREVIOUSLY_QUOTED:              "PREVIOUSLY_QUOTED",
+	enum.OrdType_PREVIOUSLY_INDICATED:           "PREVIOUSLY_INDICATED",
+	enum.OrdType_FOREX_LIMIT:                    "FOREX_LIMIT",
+	enum.OrdType_FOREX_SWAP:                     "FOREX_SWAP",
+	enum.OrdType_FOREX_PREVIOUSLY_QUOTED:        "FOREX_PREVIOUSLY_QUOTED",
+	enum.OrdType_FUNARI:                         "FUNARI",
+	enum.OrdType_MARKET_IF_TOUCHED:              "MARKET_IF_TOUCHED",
+	enum.OrdType_MARKET_WITH_LEFT_OVER_AS_LIMIT: "MARKET_WITH_LEFT_OVER_AS_LIMIT",
+	enum.OrdType_PREVIOUS_FUND_VALUATION_POINT:  "PREVIOUS_FUND_VALUATION_POINT",
+	enum.OrdType_NEXT_FUND_VALUATION_POINT:      "NEXT_FUND_VALUATION_POINT",
+	enum.OrdType_PEGGED:                         "PEGGED",
+	enum.OrdType_COUNTER_ORDER_SELECTION:        "COUNTER_ORDER_SELECTION",
+}
+
 func OrderTypeStringToEnum(order string) (enum.OrdType, error) {
 	order = strings.ToUpper(order)
 	if e, ok := OrderTypes[order]; ok {

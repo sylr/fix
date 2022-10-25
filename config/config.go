@@ -102,6 +102,9 @@ type cliOptions struct {
 	Interactive     bool
 	LogCaller       bool
 	QuickFixLogging bool
+	Metrics         bool
+	PProf           bool
+	HTTPPort        int
 }
 
 type fixConfig struct {

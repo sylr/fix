@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
@@ -26,6 +30,7 @@ var FixCmd = &cobra.Command{
 	SilenceUsage: true,
 	Version:      Version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		InitHTTP(cmd, args)
 		return InitLogger(cmd, args)
 	},
 }
@@ -49,6 +54,9 @@ func init() {
 	FixCmd.PersistentFlags().BoolVar(&options.Interactive, "interactive", true, "Enable interactive mode")
 	FixCmd.PersistentFlags().BoolP("help", "h", false, "Help for fix")
 	FixCmd.PersistentFlags().Bool("version", false, "Version for fix")
+	FixCmd.PersistentFlags().BoolVar(&options.Metrics, "metrics", false, "Enable metrics")
+	FixCmd.PersistentFlags().BoolVar(&options.PProf, "pprof", false, "Enable pprof")
+	FixCmd.PersistentFlags().IntVar(&options.HTTPPort, "port", 8080, "HTTP port")
 }
 
 func InitLogger(cmd *cobra.Command, args []string) error {
@@ -65,5 +73,30 @@ func InitLogger(cmd *cobra.Command, args []string) error {
 		logger = logger.With().Caller().Logger()
 	}
 	config.SetLogger(&logger)
+	return nil
+}
+
+func InitHTTP(cmd *cobra.Command, args []string) error {
+	options := config.GetOptions()
+
+	if !options.Metrics && !options.PProf {
+		return nil
+	}
+
+	mux := http.NewServeMux()
+
+	if options.Metrics {
+		mux.Handle("/metrics", promhttp.Handler())
+	}
+	if options.PProf {
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
+
+	go http.ListenAndServe(fmt.Sprintf(":%d", options.HTTPPort), mux)
+
 	return nil
 }
