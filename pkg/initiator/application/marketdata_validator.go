@@ -107,25 +107,14 @@ type MarketDataValidator struct {
 	Validator *Validator
 	Connected chan interface{}
 
-	router  *quickfix.MessageRouter
-	mux     sync.Mutex
-	stopped bool
+	router *quickfix.MessageRouter
 }
+
+var _ quickfix.Application = (*MarketDataValidator)(nil)
 
 // Stopped
 func (app *MarketDataValidator) Stop() {
-	app.mux.Lock()
-	defer app.mux.Unlock()
 
-	app.stopped = true
-}
-
-// IsStopped
-func (app *MarketDataValidator) IsStopped() bool {
-	app.mux.Lock()
-	defer app.mux.Unlock()
-
-	return app.stopped
 }
 
 // Notification of a session begin created.

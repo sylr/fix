@@ -173,6 +173,11 @@ LOOP:
 			default:
 				logger.Info().Msgf("Received unhandled signal: %v", signal)
 			}
+		case _, ok := <-app.Connected:
+			if !ok {
+				logger.Info().Msgf("Fix application not connected anymore")
+				break LOOP
+			}
 		}
 	}
 
