@@ -25,8 +25,8 @@ func NewMarketDataValidator(logger *zerolog.Logger) *MarketDataValidator {
 		Validator: &Validator{
 			orders: Orders{
 				orders:      make([]*Order, 0),
-				typesVolume: make(map[enum.OrdType]uint64),
-				sidesVolume: make(map[enum.MDEntryType]uint64),
+				typesVolume: make(map[enum.OrdType]int64),
+				sidesVolume: make(map[enum.MDEntryType]int64),
 			},
 			logger: logger,
 		},
@@ -281,7 +281,7 @@ func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdatainc
 		}
 	}
 
-	app.Logger.Info().Msgf("Order book: types=%+v sides=%+v", app.Validator.orders.typesVolume, app.Validator.orders.sidesVolume)
+	app.Logger.Info().Msgf("Order book: types=%#v sides=%#v", app.Validator.orders.typesVolume, app.Validator.orders.sidesVolume)
 
 	return nil
 }
@@ -301,8 +301,9 @@ type Order struct {
 
 type Orders struct {
 	orders      []*Order
-	typesVolume map[enum.OrdType]uint64
-	sidesVolume map[enum.MDEntryType]uint64
+	typesVolume map[enum.OrdType]int64
+	sidesVolume map[enum.MDEntryType]int64
+	mux         sync.RWMutex
 }
 
 func (o *Orders) Len() int {
@@ -310,6 +311,13 @@ func (o *Orders) Len() int {
 }
 
 func (o *Orders) GetOrder(id string) (*Order, int, error) {
+	o.mux.RLock()
+	defer o.mux.RUnlock()
+
+	return o.getOrder(id)
+}
+
+func (o *Orders) getOrder(id string) (*Order, int, error) {
 	for i, order := range o.orders {
 		if order.Id == id {
 			return order, i, nil
@@ -320,7 +328,10 @@ func (o *Orders) GetOrder(id string) (*Order, int, error) {
 }
 
 func (o *Orders) AddOrder(order *Order) error {
-	_, _, err := o.GetOrder(order.Id)
+	o.mux.Lock()
+	defer o.mux.Unlock()
+
+	_, _, err := o.getOrder(order.Id)
 	if err == nil {
 		return ErrOrderAlreadyExists
 	}
@@ -343,7 +354,10 @@ func (o *Orders) AddOrder(order *Order) error {
 }
 
 func (o *Orders) DeleteOrder(order *Order) error {
-	_, i, err := o.GetOrder(order.Id)
+	o.mux.Lock()
+	defer o.mux.Unlock()
+
+	_, i, err := o.getOrder(order.Id)
 	if err != nil {
 		return err
 	}
@@ -366,7 +380,10 @@ func (o *Orders) DeleteOrder(order *Order) error {
 }
 
 func (o *Orders) UpdateOrder(order *Order) error {
-	_, i, err := o.GetOrder(order.Id)
+	o.mux.Lock()
+	defer o.mux.Unlock()
+
+	_, i, err := o.getOrder(order.Id)
 	if err != nil {
 		return err
 	}
