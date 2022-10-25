@@ -3,7 +3,9 @@ package status_security
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +30,8 @@ var (
 	optionSecurityStatReqID string
 	optionSubType           string
 	optionSymbol            string
+
+	SubType enum.SubscriptionRequestType
 )
 
 var StatusSecurityCmd = &cobra.Command{
@@ -73,8 +77,9 @@ func Validate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%w: --security-status-request-id can not be empty", errors.Options)
 	}
 
-	if _, ok := dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]; !ok {
-		return fmt.Errorf("%w: unkonwn subscription type `%s`", errors.Options, optionSubType)
+	var ok bool
+	if SubType, ok = dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]; !ok {
+		return fmt.Errorf("%w: unknown subscription type `%s`", errors.Options, optionSubType)
 	}
 
 	return nil
@@ -166,24 +171,34 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Wait for the order response
-	var ok bool
-	var responseMessage *quickfix.Message
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	select {
-	case <-time.After(timeout):
-		return errors.ResponseTimeout
-	case responseMessage, ok = <-app.FromAdminChan:
-		if !ok {
-			return errors.FixLogout
-		}
-	case responseMessage, ok = <-app.FromAppChan:
-		if !ok {
-			return errors.FixLogout
+LOOP:
+	for {
+		select {
+		case signal := <-interrupt:
+			logger.Debug().Msgf("Received signal: %s", signal)
+
+			break LOOP
+		case responseMessage, ok := <-app.FromAdminChan:
+			if !ok {
+				return errors.FixLogout
+			}
+
+			app.WriteMessageBodyAsTable(os.Stdout, responseMessage)
+		case responseMessage, ok := <-app.FromAppChan:
+			if !ok {
+				break LOOP
+			}
+
+			app.WriteMessageBodyAsTable(os.Stdout, responseMessage)
+
+			if SubType != enum.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES {
+				break LOOP
+			}
 		}
 	}
-
-	app.WriteMessageBodyAsTable(os.Stdout, responseMessage)
 
 	return nil
 }
