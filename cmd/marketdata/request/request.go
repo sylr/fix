@@ -216,7 +216,6 @@ LOOP:
 			if !ok || SubType == enum.SubscriptionRequestType_SNAPSHOT {
 				break LOOP
 			}
-
 		}
 	}
 

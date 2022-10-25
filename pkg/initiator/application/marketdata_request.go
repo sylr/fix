@@ -47,7 +47,9 @@ type MarketDataRequest struct {
 	stopped bool
 }
 
-// Stopped
+var _ quickfix.Application = (*MarketDataRequest)(nil)
+
+// Stop
 func (app *MarketDataRequest) Stop() {
 	app.mux.Lock()
 	defer app.mux.Unlock()
