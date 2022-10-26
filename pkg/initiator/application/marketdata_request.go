@@ -21,11 +21,12 @@ import (
 
 const nilstr = "<nil>"
 
-func NewMarketDataRequest() *MarketDataRequest {
+func NewMarketDataRequest(printData bool) *MarketDataRequest {
 	mdr := MarketDataRequest{
 		Connected:   make(chan interface{}),
 		FromAppChan: make(chan quickfix.Messagable),
 		router:      quickfix.NewMessageRouter(),
+		printData:   printData,
 	}
 
 	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_INCREMENTAL_REFRESH), mdr.onMarketDataIncrementalRefresh)
@@ -43,8 +44,9 @@ type MarketDataRequest struct {
 	Connected   chan interface{}
 	FromAppChan chan quickfix.Messagable
 
-	mux     sync.Mutex
-	stopped bool
+	printData bool
+	mux       sync.Mutex
+	stopped   bool
 }
 
 var _ quickfix.Application = (*MarketDataRequest)(nil)
@@ -87,7 +89,7 @@ func (app *MarketDataRequest) OnLogout(sessionID quickfix.SessionID) {
 
 // Notification of admin message being sent to target.
 func (app *MarketDataRequest) ToAdmin(message *quickfix.Message, sessionID quickfix.SessionID) {
-	app.Logger.Debug().Msgf("-> Sending message to admin")
+	app.LogMessageType(message, sessionID, "-> Sending message to admin:    ")
 
 	typ, err := message.MsgType()
 	if err != nil {
@@ -120,7 +122,7 @@ func (app *MarketDataRequest) ToAdmin(message *quickfix.Message, sessionID quick
 
 // Notification of admin message being received from target.
 func (app *MarketDataRequest) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	app.Logger.Debug().Msgf("<- Message received from admin")
+	app.LogMessageType(message, sessionID, "<- Message received from admin: ")
 
 	typ, err := message.MsgType()
 	if err != nil {
@@ -139,7 +141,7 @@ func (app *MarketDataRequest) FromAdmin(message *quickfix.Message, sessionID qui
 
 // Notification of app message being sent to target.
 func (app *MarketDataRequest) ToApp(message *quickfix.Message, sessionID quickfix.SessionID) error {
-	app.Logger.Debug().Msgf("-> Sending message to app")
+	app.LogMessageType(message, sessionID, "-> Sending message to app:      ")
 
 	_, err := message.MsgType()
 	if err != nil {
@@ -153,7 +155,7 @@ func (app *MarketDataRequest) ToApp(message *quickfix.Message, sessionID quickfi
 
 // Notification of app message being received from target.
 func (app *MarketDataRequest) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
-	app.Logger.Debug().Msgf("<- Message received from app")
+	app.LogMessageType(message, sessionID, "<- Message received from app:   ")
 
 	_, err := message.MsgType()
 	if err != nil {
@@ -182,7 +184,9 @@ func (app *MarketDataRequest) onMarketDataSnapshotFullRefresh(msg *quickfix.Mess
 	)
 	msg.Body.GetGroup(group)
 
-	printFIX50NoMDEntriesFull(group, msg, app.AppDataDictionary)
+	if app.printData {
+		printFIX50NoMDEntriesFull(group, msg, app.AppDataDictionary)
+	}
 
 	if !app.IsStopped() {
 		app.FromAppChan <- msg
@@ -213,7 +217,9 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 	)
 	msg.Body.GetGroup(group)
 
-	printFIX50NoMDEntriesInc(group, app.AppDataDictionary)
+	if app.printData {
+		printFIX50NoMDEntriesInc(group, app.AppDataDictionary)
+	}
 
 	if !app.IsStopped() {
 		app.FromAppChan <- msg

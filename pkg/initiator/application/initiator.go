@@ -15,7 +15,7 @@ import (
 func NewInitiator() *Initiator {
 	sl := Initiator{
 		Connected: make(chan interface{}),
-		Messages:  make(chan *quickfix.Message),
+		Messages:  make(chan *quickfix.Message, 10),
 	}
 
 	return &sl
@@ -62,7 +62,7 @@ func (app *Initiator) ToAdmin(message *quickfix.Message, sessionID quickfix.Sess
 	app.mux.Lock()
 	defer app.mux.Unlock()
 
-	app.Logger.Debug().Msgf("-> Sending message to admin")
+	app.LogMessageType(message, sessionID, "-> Sending message to admin:    ")
 
 	typ, err := message.MsgType()
 	if err != nil {
@@ -98,7 +98,7 @@ func (app *Initiator) FromAdmin(message *quickfix.Message, sessionID quickfix.Se
 	app.mux.Lock()
 	defer app.mux.Unlock()
 
-	app.Logger.Debug().Msgf("<- Message received from admin")
+	app.LogMessageType(message, sessionID, "<- Message received from admin: ")
 
 	_, err := message.MsgType()
 	if err != nil {
@@ -115,7 +115,7 @@ func (app *Initiator) ToApp(message *quickfix.Message, sessionID quickfix.Sessio
 	app.mux.RLock()
 	defer app.mux.RUnlock()
 
-	app.Logger.Debug().Msgf("-> Sending message to app")
+	app.LogMessageType(message, sessionID, "-> Sending message to app:      ")
 
 	_, err := message.MsgType()
 	if err != nil {
@@ -134,7 +134,7 @@ func (app *Initiator) FromApp(message *quickfix.Message, sessionID quickfix.Sess
 	app.mux.RLock()
 	defer app.mux.RUnlock()
 
-	app.Logger.Debug().Msgf("<- Message received from app")
+	app.LogMessageType(message, sessionID, "<- Message received from app:   ")
 
 	_, err := message.MsgType()
 	if err != nil {

@@ -11,9 +11,11 @@ import (
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/quickfixgo/enum"
 	qtag "github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
+	"sylr.dev/fix/pkg/dict"
 
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/quickfix/datadictionary"
@@ -40,6 +42,20 @@ type QuickFixAppMessageLogger struct {
 	Logger                  *zerolog.Logger
 	TransportDataDictionary *datadictionary.DataDictionary
 	AppDataDictionary       *datadictionary.DataDictionary
+}
+
+func (app *QuickFixAppMessageLogger) LogMessageType(message *quickfix.Message, sessionID quickfix.SessionID, log string) {
+	msgType, err := message.MsgType()
+	if err != nil {
+		app.Logger.Debug().CallerSkipFrame(1).Msgf("%s %s", sessionID.String(), log)
+	} else {
+		desc := MapSearch(dict.MessageTypes, enum.MsgType(msgType))
+		if desc != nil {
+			app.Logger.Debug().CallerSkipFrame(1).Msgf("%s %s %s(%s)", sessionID.String(), log, msgType, *desc)
+		} else {
+			app.Logger.Debug().CallerSkipFrame(1).Msgf("%s %s %s", sessionID.String(), log, msgType)
+		}
+	}
 }
 
 func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *quickfix.Message, sessionID quickfix.SessionID, sending bool) {
@@ -181,4 +197,14 @@ func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, messag
 	}
 
 	table.Render()
+}
+
+func MapSearch[K comparable, V comparable](m map[K]V, search V) *K {
+	for k, v := range m {
+		if search == v {
+			return &k
+		}
+	}
+
+	return nil
 }
