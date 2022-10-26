@@ -97,6 +97,11 @@ func NewMarketDataValidator(logger *zerolog.Logger, security string) *MarketData
 	mdr.router.AddRoute(marketdataincrementalrefresh.Route(mdr.onMarketDataIncrementalRefresh))
 	mdr.router.AddRoute(marketdatasnapshotfullrefresh.Route(mdr.onMarketDataSnapshotFullRefresh))
 
+	// Initialize error vectors so that we we have pre-existing 0 values allowing
+	// to do operations such as delta() when first errors are reported
+	metricMarketDataValidatorErrors.WithLabelValues(security, ErrOrderNotFound.Error()).Add(0)
+	metricMarketDataValidatorErrors.WithLabelValues(security, ErrOrderAlreadyExists.Error()).Add(0)
+
 	return &mdr
 }
 
