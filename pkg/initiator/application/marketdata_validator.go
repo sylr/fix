@@ -39,7 +39,7 @@ var (
 			Name:      "order_updates_total",
 			Help:      "Number of order updates",
 		},
-		[]string{"security", "type"},
+		[]string{"security", "update", "type", "side"},
 	)
 	metricMarketDataValidatorTradeUpdates = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -259,8 +259,6 @@ func (app *MarketDataValidator) onMarketDataSnapshotFullRefresh(msg marketdatasn
 			if err := app.Validator.orders.AddOrder(&order); err != nil {
 				app.Logger.Error().Msgf("Error while adding order (%s): %s", order.Id, err)
 				metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
-			} else {
-				metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "new").Inc()
 			}
 
 		case enum.MDEntryType_TRADE:
@@ -323,30 +321,32 @@ func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdatainc
 				continue
 			}
 
+			typeStr := strings.ToLower(dict.OrderTypesReversed[orderType])
+			sideStr := strings.ToLower(dict.MDEntryTypesReversed[entryType])
+
 			switch updateAction {
 			case enum.MDUpdateAction_NEW:
+				metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "new", typeStr, sideStr).Inc()
+
 				if err := app.Validator.orders.AddOrder(&order); err != nil {
 					app.Logger.Error().Msgf("Error while adding order (%s): %s", order.Id, err)
 					metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
-				} else {
-					metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "new").Inc()
 				}
 			case enum.MDUpdateAction_CHANGE:
+				metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "change", typeStr, sideStr).Inc()
+
 				if err := app.Validator.orders.UpdateOrder(&order); err != nil {
 					app.Logger.Error().Msgf("Error while updating order (%s): %s", order.Id, err)
 					metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
-				} else {
-					metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "change").Inc()
 				}
 			case enum.MDUpdateAction_DELETE:
+				metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "delete", typeStr, sideStr).Inc()
+
 				if err := app.Validator.orders.DeleteOrder(&order); err != nil {
 					app.Logger.Error().Msgf("Error while deleting order (%s): %s", order.Id, err)
 					metricMarketDataValidatorErrors.WithLabelValues(app.Validator.security, err.Error()).Inc()
-				} else {
-					metricMarketDataValidatorOrderUpdates.WithLabelValues(app.Validator.security, "delete").Inc()
 				}
 			}
-
 		case enum.MDEntryType_TRADE:
 			updateAction, err := mdentry.GetMDUpdateAction()
 			if err != nil {
