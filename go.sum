@@ -272,8 +272,8 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
-github.com/sylr/quickfix-go v0.6.1-0.20220927111843-56beb0150c70 h1:TRBGCx6pYgQYv2STBHfayqlcofE9iMr5uABv99zXYPc=
-github.com/sylr/quickfix-go v0.6.1-0.20220927111843-56beb0150c70/go.mod h1:J3khYslvKpePqbuvwCW9I1MVP5RPb5Q1jV5X6tsJ7Gs=
+github.com/sylr/quickfix-go v0.6.1-0.20221026083513-35020cda277a h1:7VMXmpLKNMcp0ge/8O+WlPxmytfOHMV9JJ3p5QKAIrY=
+github.com/sylr/quickfix-go v0.6.1-0.20221026083513-35020cda277a/go.mod h1:J3khYslvKpePqbuvwCW9I1MVP5RPb5Q1jV5X6tsJ7Gs=
 github.com/sylr/quickfixgo-enum v0.0.0-20220401193143-29a559514373 h1:cUrp0Grf9eXAZ8T9JQ8c77fLoS9BI/MYfAZ0jgpR4kw=
 github.com/sylr/quickfixgo-enum v0.0.0-20220401193143-29a559514373/go.mod h1:z3G743D3iJFhOHUk0bo3O/O15Wknl4hy+y515r/aK4c=
 github.com/sylr/quickfixgo-field v0.0.0-20220401193046-ca4cd16301d2 h1:SfuE6i8w47Snyhaw42RUbMRUFsKGdvgvS3mtcc2ZNfU=
