@@ -33,7 +33,7 @@ require (
 replace (
 	github.com/quickfixgo/enum => github.com/sylr/quickfixgo-enum v0.0.0-20220401193143-29a559514373
 	github.com/quickfixgo/field => github.com/sylr/quickfixgo-field v0.0.0-20220401193046-ca4cd16301d2
-	github.com/quickfixgo/quickfix => github.com/sylr/quickfix-go v0.6.1-0.20221026083513-35020cda277a
+	github.com/quickfixgo/quickfix => github.com/sylr/quickfix-go v0.6.1-0.20221028155147-da1f7761ba49
 	github.com/quickfixgo/tag => github.com/sylr/quickfixgo-tag v0.0.0-20220401193001-96cf7367fdfa
 )
 
