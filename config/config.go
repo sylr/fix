@@ -178,7 +178,7 @@ type common struct {
 	SocketTimeout            time.Duration `yaml:"SocketTimeout"`
 	SQLStoreDriver           string        `yaml:"SQLStoreDriver"`
 	SQLStoreDataSourceName   string        `yaml:"SQLStoreDataSourceName"`
-	RejectInvalidMessage     bool          `yaml:"RejectInvalidMessage"`
+	RejectInvalidMessage     *bool         `yaml:"RejectInvalidMessage,omitempty"`
 }
 
 func (c *common) GetName() string {
@@ -196,7 +196,10 @@ func (c *common) GetSQLStoreDataSourceName() string {
 func (c *common) setQuickFixGlobalSettings(globalSettings *quickfix.SessionSettings, session *quickfix.SessionSettings) {
 	session.Set(qconfig.SocketUseSSL, FixBoolString(c.SocketUseSSL))
 	session.Set(qconfig.SocketInsecureSkipVerify, FixBoolString(c.SocketInsecureSkipVerify))
-	session.Set(qconfig.RejectInvalidMessage, FixBoolString(c.RejectInvalidMessage))
+
+	if c.RejectInvalidMessage != nil {
+		session.Set(qconfig.RejectInvalidMessage, FixBoolString(*c.RejectInvalidMessage))
+	}
 
 	if len(c.SQLStoreDriver) > 0 {
 		globalSettings.Set(qconfig.SQLStoreDriver, c.SQLStoreDriver)
@@ -373,6 +376,10 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 
 func setSessionSetting(session *quickfix.SessionSettings, key string, value interface{}) {
 	switch v := value.(type) {
+	case *bool:
+		if v != nil {
+			session.Set(key, FixBoolString(*v))
+		}
 	case bool:
 		session.Set(key, FixBoolString(v))
 	case time.Duration:
