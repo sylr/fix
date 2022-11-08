@@ -6,6 +6,11 @@ import (
 )
 
 var (
+	Is = errors.Is
+	As = errors.As
+)
+
+var (
 	Config                          = errors.New("configuration")
 	ConfigAcceptorNotFound          = fmt.Errorf("%w: acceptor not found", Config)
 	ConfigAlreadyExists             = fmt.Errorf("%w: already exists", Config)

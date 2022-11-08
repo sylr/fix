@@ -3,8 +3,10 @@ package neworder
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -43,6 +45,9 @@ var (
 	optionPartySubIDTypes            []string
 	optionPartyRoles                 []string
 	optionPartyRoleQualifiers        []string
+	optionExecReports                int
+	optionExecReportsTimeout         time.Duration
+	optionExecReportsTimeoutReset    bool
 )
 
 var NewOrderCmd = &cobra.Command{
@@ -89,6 +94,10 @@ func init() {
 	NewOrderCmd.Flags().StringSliceVar(&optionPartyRoleQualifiers, "party-role-qualifier", []string{}, "Order party role qualifiers")
 	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDs, "party-sub-ids", []string{}, "Order party sub ids (space separated)")
 	NewOrderCmd.Flags().StringSliceVar(&optionPartySubIDTypes, "party-sub-id-types", []string{}, "Order party sub id types (space separated)")
+
+	NewOrderCmd.Flags().IntVar(&optionExecReports, "exec-reports", 1, "Expect given number of execution reports before logging out (0 wait indefinitely)")
+	NewOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
+	NewOrderCmd.Flags().BoolVar(&optionExecReportsTimeoutReset, "exec-reports-timeout-reset", false, "Reset execution reports timeout each time an execution report is received")
 
 	NewOrderCmd.MarkFlagRequired("side")
 	NewOrderCmd.MarkFlagRequired("type")
@@ -315,50 +324,60 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Wait for the order response
-	var ok bool
-	var responseMessage *quickfix.Message
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	select {
-	case <-time.After(timeout):
-		return errors.ResponseTimeout
-	case responseMessage, ok = <-app.FromAdminChan:
-		if !ok {
-			return errors.FixLogout
+	execReports := 0
+	var waitTimeout <-chan time.Time
+	if optionExecReportsTimeout > 0 {
+		waitTimeout = time.After(optionExecReportsTimeout)
+	} else {
+		waitTimeout = make(<-chan time.Time)
+	}
+
+LOOP:
+	for {
+		select {
+		case signal := <-interrupt:
+			logger.Debug().Msgf("Received signal: %s", signal)
+			break LOOP
+
+		case <-waitTimeout:
+			logger.Warn().Msgf("Reached execution reports timeout")
+			break LOOP
+
+		case _, ok := <-app.FromAdminChan:
+			if !ok {
+				break LOOP
+			}
+
+		case msg, ok := <-app.FromAppChan:
+			if !ok {
+				break LOOP
+			}
+
+			if err := processReponse(app, msg); err != nil {
+				if errors.Is(err, quickfix.InvalidMessageType()) {
+					continue LOOP
+				}
+
+				return err
+			}
+
+			// Reset timeout
+			if optionExecReportsTimeoutReset && optionExecReportsTimeout > 0 {
+				waitTimeout = time.After(optionExecReportsTimeout)
+			}
+
+			execReports = execReports + 1
 		}
-	case responseMessage, ok = <-app.FromAppChan:
-		if !ok {
-			return errors.FixLogout
+
+		if optionExecReports != 0 && execReports >= optionExecReports {
+			break LOOP
 		}
 	}
 
-	// Extract fields from the response
-	msgType := field.MsgTypeField{}
-	ordStatus := field.OrdStatusField{}
-	text := field.TextField{}
-	responseMessage.Header.GetField(tag.MsgType, &msgType)
-	responseMessage.Body.GetField(tag.OrdStatus, &ordStatus)
-	responseMessage.Body.GetField(tag.Text, &text)
-
-	if msgType.Value() == enum.MsgType_REJECT {
-		return fmt.Errorf("%w: %s", errors.Fix, text.String())
-	}
-
-	switch ordStatus.Value() {
-	case enum.OrdStatus_NEW:
-		fmt.Printf("Order accepted\n")
-		app.WriteMessageBodyAsTable(os.Stdout, responseMessage)
-	case enum.OrdStatus_REJECTED:
-		if len(text.String()) > 0 {
-			err = fmt.Errorf("%w: %s", errors.FixOrderRejected, text.String())
-		}
-	default:
-		if len(text.String()) > 0 {
-			err = fmt.Errorf("%w: %s", errors.FixOrderStatusUnknown, text.String())
-		}
-	}
-
-	return err
+	return nil
 }
 
 func buildMessage(session config.Session) (quickfix.Messagable, error) {
@@ -512,4 +531,52 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	}
 
 	return message, nil
+}
+
+func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
+	msgType := field.MsgTypeField{}
+	ordStatus := field.OrdStatusField{}
+	text := field.TextField{}
+
+	// MsgType
+	err := msg.Header.GetField(tag.MsgType, &msgType)
+	if err != nil {
+		return err
+	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
+		return quickfix.InvalidMessageType()
+	}
+
+	if msgType.Value() == enum.MsgType_REJECT {
+		return fmt.Errorf("%w: %s", errors.FixOrderRejected, text.String())
+	}
+
+	// OrdStatus
+	msg.Body.GetField(tag.OrdStatus, &ordStatus)
+	if err != nil {
+		return err
+	}
+
+	// Text
+	msg.Body.GetField(tag.Text, &text)
+	if err != nil {
+		return err
+	}
+
+	switch ordStatus.Value() {
+	case enum.OrdStatus_NEW:
+		fmt.Printf("Order accepted\n")
+		app.WriteMessageBodyAsTable(os.Stdout, msg)
+
+	case enum.OrdStatus_REJECTED:
+		if len(text.String()) > 0 {
+			return fmt.Errorf("%w: %s", errors.FixOrderRejected, text.String())
+		}
+
+	default:
+		if len(text.String()) > 0 {
+			return fmt.Errorf("%w: %s", errors.FixOrderStatusUnknown, text.String())
+		}
+	}
+
+	return nil
 }
