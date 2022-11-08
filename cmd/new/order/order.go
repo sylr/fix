@@ -301,22 +301,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Defer stopping initiator
-	ch := make(chan struct{})
-	stopWrapper := func(ch chan struct{}, fn func()) {
-		fn()
-		ch <- struct{}{}
-	}
-
-	defer func(ch chan struct{}) {
-		go stopWrapper(ch, init.Stop)
-		select {
-		case <-time.After(timeout):
-			logger.Warn().Msgf("Timeout while stopping initiator")
-			return
-		case <-ch:
-			return
-		}
-	}(ch)
+	defer init.Stop()
 
 	// Wait for session connection
 	select {
@@ -361,11 +346,6 @@ LOOP:
 		case <-waitTimeout:
 			logger.Warn().Msgf("Timeout while expecting execution reports (%d/%d)", execReports, optionExecReports)
 			break LOOP
-
-		case _, ok := <-app.FromAdminChan:
-			if !ok {
-				break LOOP
-			}
 
 		case msg, ok := <-app.FromAppChan:
 			if !ok {

@@ -13,9 +13,8 @@ import (
 
 func NewNewOrder() *NewOrder {
 	sod := NewOrder{
-		Connected:     make(chan interface{}),
-		FromAdminChan: make(chan *quickfix.Message),
-		FromAppChan:   make(chan *quickfix.Message),
+		Connected:   make(chan interface{}),
+		FromAppChan: make(chan *quickfix.Message),
 	}
 
 	return &sod
@@ -28,8 +27,7 @@ type NewOrder struct {
 
 	Connected chan interface{}
 
-	FromAdminChan chan *quickfix.Message
-	FromAppChan   chan *quickfix.Message
+	FromAppChan chan *quickfix.Message
 }
 
 // Notification of a session begin created.
@@ -49,7 +47,6 @@ func (app *NewOrder) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
-	close(app.FromAdminChan)
 	close(app.FromAppChan)
 }
 
@@ -89,20 +86,7 @@ func (app *NewOrder) ToAdmin(message *quickfix.Message, sessionID quickfix.Sessi
 // Notification of admin message being received from target.
 func (app *NewOrder) FromAdmin(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from admin")
-
-	msgType, err := message.MsgType()
-	if err != nil {
-		app.Logger.Error().Msgf("Message type error: %s", err)
-	}
-
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
-
-	switch msgType {
-	case string(enum.MsgType_LOGON):
-	case string(enum.MsgType_LOGOUT):
-	default:
-		app.FromAdminChan <- message
-	}
 
 	return nil
 }
