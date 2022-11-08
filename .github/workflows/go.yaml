@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        go: ["1.18"]
+        go: ["1.19"]
     steps:
     - uses: actions/checkout@v3
       with:
@@ -37,6 +37,10 @@ jobs:
 
     - name: Test
       run: make test
+      env:
+        GO_BUILD_TAGS: acceptor,validator
 
     - name: Build
       run: make build
+      env:
+        GO_BUILD_TAGS: acceptor,validator
