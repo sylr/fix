@@ -279,6 +279,16 @@ func Execute(cmd *cobra.Command, args []string) error {
 		quickfixLogger = logger
 	}
 
+	// Choose right timeout cli option > config > default value (5s)
+	var timeout time.Duration
+	if options.Timeout != time.Duration(0) {
+		timeout = options.Timeout
+	} else if initiatior.SocketTimeout != time.Duration(0) {
+		timeout = initiatior.SocketTimeout
+	} else {
+		timeout = 5 * time.Second
+	}
+
 	init, err := initiator.Initiate(app, settings, quickfixLogger)
 	if err != nil {
 		return err
@@ -290,17 +300,23 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer init.Stop()
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if initiatior.SocketTimeout != time.Duration(0) {
-		timeout = initiatior.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
+	// Defer stopping initiator
+	ch := make(chan struct{})
+	stopWrapper := func(ch chan struct{}, fn func()) {
+		fn()
+		ch <- struct{}{}
 	}
+
+	defer func(ch chan struct{}) {
+		go stopWrapper(ch, init.Stop)
+		select {
+		case <-time.After(timeout):
+			logger.Warn().Msgf("Timeout while stopping initiator")
+			return
+		case <-ch:
+			return
+		}
+	}(ch)
 
 	// Wait for session connection
 	select {
@@ -343,7 +359,7 @@ LOOP:
 			break LOOP
 
 		case <-waitTimeout:
-			logger.Warn().Msgf("Reached execution reports timeout")
+			logger.Warn().Msgf("Timeout while expecting execution reports (%d/%d)", execReports, optionExecReports)
 			break LOOP
 
 		case _, ok := <-app.FromAdminChan:
