@@ -369,9 +369,12 @@ LOOP:
 		}
 
 		if optionExecReports != 0 && execReports >= optionExecReports {
+			logger.Debug().Msgf("Exiting response loop, execution reports: %d/%d", execReports, optionExecReports)
 			break LOOP
 		}
 	}
+
+	logger.Debug().Msg("Exited response loop")
 
 	return nil
 }
