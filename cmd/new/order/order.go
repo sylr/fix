@@ -552,21 +552,43 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 		return err
 	}
 
-	// Text
-	msg.Body.GetField(tag.Text, &text)
-	if err != nil {
-		return err
-	}
-
 	switch ordStatus.Value() {
 	case enum.OrdStatus_NEW:
-		fmt.Printf("Order accepted\n")
+		fallthrough
+	case enum.OrdStatus_PARTIALLY_FILLED:
+		fallthrough
+	case enum.OrdStatus_FILLED:
+		fallthrough
+	case enum.OrdStatus_DONE_FOR_DAY:
+		fallthrough
+	case enum.OrdStatus_CANCELED:
+		fallthrough
+	case enum.OrdStatus_REPLACED:
+		fallthrough
+	case enum.OrdStatus_PENDING_CANCEL:
+		fallthrough
+	case enum.OrdStatus_STOPPED:
+		fallthrough
+	case enum.OrdStatus_SUSPENDED:
+		fallthrough
+	case enum.OrdStatus_PENDING_NEW:
+		fallthrough
+	case enum.OrdStatus_CALCULATED:
+		fallthrough
+	case enum.OrdStatus_EXPIRED:
+		fallthrough
+	case enum.OrdStatus_ACCEPTED_FOR_BIDDING:
+		fallthrough
+	case enum.OrdStatus_PENDING_REPLACE:
 		app.WriteMessageBodyAsTable(os.Stdout, msg)
 
 	case enum.OrdStatus_REJECTED:
-		if len(text.String()) > 0 {
-			return fmt.Errorf("%w: %s", errors.FixOrderRejected, text.String())
+		msg.Body.GetField(tag.Text, &text)
+		if err != nil {
+			return errors.FixOrderRejected
 		}
+
+		return fmt.Errorf("%w: %s", errors.FixOrderRejected, text.String())
 
 	default:
 		if len(text.String()) > 0 {
