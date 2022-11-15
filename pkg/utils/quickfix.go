@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -156,7 +155,7 @@ func (app *QuickFixAppMessageLogger) WriteField(w io.Writer, field quickfix.TagV
 func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, message *quickfix.Message) {
 	bodyTags := message.Body.Tags()
 
-	table := tablewriter.NewWriter(os.Stdout)
+	table := tablewriter.NewWriter(w)
 	table.SetHeader([]string{"TAG", "DESCRIPTION", "VALUES"})
 	table.SetBorders(tablewriter.Border{false, false, false, true})
 	table.SetColumnSeparator(" ")
