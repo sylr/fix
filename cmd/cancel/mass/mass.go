@@ -1,10 +1,9 @@
-package cancelorder
+package cancelmassorder
 
 import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -15,7 +14,7 @@ import (
 	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"github.com/sylr/quickfixgo-fix50sp2/ordercancelrequest"
+	"github.com/sylr/quickfixgo-fix50sp2/ordermasscancelrequest"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
@@ -29,32 +28,45 @@ import (
 var (
 	optionOrderSide          string
 	optionOrderSymbol        string
-	optionOrderID            int
 	optionExecReportsTimeout time.Duration
 )
 
-var CancelOrderCmd = &cobra.Command{
-	Use:               "order",
-	Short:             "Cancel single order",
-	Long:              "Send a cancel order request after initiating a session with a FIX acceptor.",
+var MassCancelOrderCmd = &cobra.Command{
+	Use:               "mass",
+	Short:             "Cancel mass order",
+	Long:              "Send mass cancel order request after initiating a session with a FIX acceptor.",
 	Args:              cobra.ExactArgs(0),
 	ValidArgsFunction: cobra.NoFileCompletions,
-	PersistentPreRunE: utils.MakePersistentPreRunE(Validate),
-	RunE:              Execute,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if err := utils.ValidateRequiredFlags(cmd); err != nil {
+			return err
+		}
+
+		if err := Validate(cmd, args); err != nil {
+			return err
+		}
+
+		if cmd.HasParent() {
+			parent := cmd.Parent()
+			if parent.PersistentPreRunE != nil {
+				return parent.PersistentPreRunE(cmd, args)
+			}
+		}
+		return nil
+	},
+	RunE: Execute,
 }
 
 func init() {
-	CancelOrderCmd.Flags().StringVar(&optionOrderSide, "side", "", "Order side (buy, sell ... etc)")
-	CancelOrderCmd.Flags().StringVar(&optionOrderSymbol, "symbol", "", "Order symbol")
-	CancelOrderCmd.Flags().IntVar(&optionOrderID, "id", -1, "Order id (returned in ExecutionReport.OrderID)")
+	MassCancelOrderCmd.Flags().StringVar(&optionOrderSide, "side", "", "Order side (buy, sell ... etc)")
+	MassCancelOrderCmd.Flags().StringVar(&optionOrderSymbol, "symbol", "", "Order symbol")
 
-	CancelOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
+	MassCancelOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
 
-	CancelOrderCmd.MarkFlagRequired("side")
-	CancelOrderCmd.MarkFlagRequired("symbol")
-	CancelOrderCmd.MarkFlagRequired("id")
+	MassCancelOrderCmd.MarkFlagRequired("side")
+	MassCancelOrderCmd.MarkFlagRequired("symbol")
 
-	CancelOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
+	MassCancelOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
@@ -228,17 +240,13 @@ func processReponse(app *application.CancelOrder, msg *quickfix.Message) error {
 	if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
 		return makeError(errors.FixOrderRejected)
 	}
-	if msgType.Value() == enum.MsgType_ORDER_CANCEL_REJECT {
+	if msgType.Value() == enum.MsgType_ORDER_MASS_CANCEL_REPORT {
 		app.WriteMessageBodyAsTable(os.Stdout, msg)
-		return makeError(errors.FixOrderRejected)
-	}
-	if msgType.Value() == enum.MsgType_EXECUTION_REPORT {
-		app.WriteMessageBodyAsTable(os.Stdout, msg)
-		ordStatus := field.OrdStatusField{}
-		if err = msg.Body.GetField(tag.OrdStatus, &ordStatus); err != nil {
+		resp := field.MassCancelResponseField{}
+		if err = msg.Body.GetField(tag.MassCancelResponse, &resp); err != nil {
 			return err
 		}
-		if ordStatus.Value() == enum.OrdStatus_REJECTED {
+		if resp.Value() == enum.MassCancelResponse_CANCEL_REQUEST_REJECTED {
 			return makeError(errors.FixOrderRejected)
 		}
 	} else {
@@ -253,18 +261,15 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 		return nil, err
 	}
 
-	orderId := strconv.Itoa(optionOrderID)
-
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
 		case "FIX.5.0SP2":
-			message := ordercancelrequest.New(
-				field.NewClOrdID(orderId+"_CANCEL"),
-				field.NewSide(eside),
+			message := ordermasscancelrequest.New(
+				field.NewClOrdID(optionOrderSymbol+"_CANCELREQ"),
+				field.NewMassCancelRequestType(enum.MassCancelRequestType_CANCEL_ORDERS_FOR_A_SECURITY),
 				field.NewTransactTime(time.Now()))
-			message.Body.Set(field.NewOrderID(orderId))
-			message.Body.Set(field.NewOrigClOrdID(orderId))
+			message.Body.Set(field.NewSide(eside))
 			message.Body.Set(field.NewSymbol(optionOrderSymbol))
 			return message, nil
 		default:
