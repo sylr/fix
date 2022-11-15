@@ -24,6 +24,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/sylr/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20220401195242-281940b8a21e
 	github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20220401195242-281940b8a21e
+	github.com/sylr/quickfixgo-fix50sp2/ordercancelrequest v0.0.0-20220401195242-281940b8a21e
+	github.com/sylr/quickfixgo-fix50sp2/ordermasscancelrequest v0.0.0-20220401195242-281940b8a21e
 	golang.org/x/crypto v0.1.0
 	golang.org/x/term v0.2.0
 	sylr.dev/yaml/age/v3 v3.0.0-20220527135827-28ffff5246ba
