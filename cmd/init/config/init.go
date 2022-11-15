@@ -59,7 +59,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 		basenamebz2 := path.Base(dict)
 		filename := strings.TrimSuffix(basenamebz2, filepath.Ext(basenamebz2))
-		err = os.WriteFile(strings.Join([]string{configDir, filename}, string(os.PathSeparator)), b, 0600)
+		err = os.WriteFile(filepath.Join(configDir, filename), b, 0600)
 		if err != nil {
 			return err
 		}
