@@ -267,6 +267,7 @@ type Session struct {
 	EndTime                 string `yaml:"EndTime"`
 	StartDay                string `yaml:"StartDay"`
 	EndDay                  string `yaml:"EndDay"`
+	TimeZone                string `yaml:"TimeZone"`
 	TransportDataDictionary string `yaml:"TransportDataDictionary"`
 	AppDataDictionary       string `yaml:"AppDataDictionary"`
 	ResetOnLogon            bool   `yaml:"ResetOnLogon"`
@@ -353,6 +354,7 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(qfSession, qconfig.EndTime, session.EndTime)
 	setSessionSetting(qfSession, qconfig.StartDay, session.StartDay)
 	setSessionSetting(qfSession, qconfig.EndDay, session.EndDay)
+	setSessionSetting(qfSession, qconfig.TimeZone, session.TimeZone)
 	setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
 	setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
 	setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)
@@ -447,6 +449,7 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		setSessionSetting(qfSession, qconfig.EndTime, session.EndTime)
 		setSessionSetting(qfSession, qconfig.StartDay, session.StartDay)
 		setSessionSetting(qfSession, qconfig.EndDay, session.EndDay)
+		setSessionSetting(qfSession, qconfig.TimeZone, session.TimeZone)
 		setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
 		setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
 		setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)
