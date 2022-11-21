@@ -3,8 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/quickfixgo/quickfix"
@@ -263,6 +263,10 @@ type Session struct {
 	TargetSubID             string `yaml:"TargetSubID"`
 	Username                string `yaml:"Username"`
 	Password                string `yaml:"Password"`
+	StartTime               string `yaml:"StartTime"`
+	EndTime                 string `yaml:"EndTime"`
+	StartDay                string `yaml:"StartDay"`
+	EndDay                  string `yaml:"EndDay"`
 	TransportDataDictionary string `yaml:"TransportDataDictionary"`
 	AppDataDictionary       string `yaml:"AppDataDictionary"`
 	ResetOnLogon            bool   `yaml:"ResetOnLogon"`
@@ -322,7 +326,7 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	if len(initiator.SQLStoreDriver) > 0 {
 		if initiator.SQLStoreDriver == "sqlite3" {
 			if len(initiator.SQLStoreDataSourceName) == 0 {
-				initiator.SQLStoreDataSourceName = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "initiator.db"}, string(os.PathSeparator)))
+				initiator.SQLStoreDataSourceName = os.ExpandEnv(filepath.Join("$HOME", ".fix", "initiator.db"))
 			}
 		}
 	}
@@ -345,6 +349,10 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(qfSession, qconfig.BeginString, session.BeginString)
 	setSessionSetting(qfSession, "Username", session.Username)
 	setSessionSetting(qfSession, "Password", session.Password)
+	setSessionSetting(qfSession, qconfig.StartTime, session.StartTime)
+	setSessionSetting(qfSession, qconfig.EndTime, session.EndTime)
+	setSessionSetting(qfSession, qconfig.StartDay, session.StartDay)
+	setSessionSetting(qfSession, qconfig.EndDay, session.EndDay)
 	setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
 	setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
 	setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)
@@ -416,7 +424,7 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 	if len(acceptor.SQLStoreDriver) > 0 {
 		if acceptor.SQLStoreDriver == "sqlite3" {
 			if len(acceptor.SQLStoreDataSourceName) == 0 {
-				acceptor.SQLStoreDataSourceName = os.ExpandEnv(strings.Join([]string{"$HOME", ".fix", "acceptor.db"}, string(os.PathSeparator)))
+				acceptor.SQLStoreDataSourceName = os.ExpandEnv(filepath.Join("$HOME", ".fix", "acceptor.db"))
 			}
 		}
 	}
@@ -435,6 +443,10 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 		setSessionSetting(qfSession, qconfig.TargetCompID, session.TargetCompID)
 		setSessionSetting(qfSession, qconfig.TargetSubID, session.TargetSubID)
 		setSessionSetting(qfSession, qconfig.BeginString, session.BeginString)
+		setSessionSetting(qfSession, qconfig.StartTime, session.StartTime)
+		setSessionSetting(qfSession, qconfig.EndTime, session.EndTime)
+		setSessionSetting(qfSession, qconfig.StartDay, session.StartDay)
+		setSessionSetting(qfSession, qconfig.EndDay, session.EndDay)
 		setSessionSetting(qfSession, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
 		setSessionSetting(qfSession, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
 		setSessionSetting(qfSession, qconfig.ResetOnLogon, session.ResetOnLogon)

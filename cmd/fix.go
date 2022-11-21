@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -46,7 +46,7 @@ func init() {
 	FixCmd.AddCommand(new.NewCmd)
 	FixCmd.AddCommand(status.StatusCmd)
 
-	configPath := strings.Join([]string{"$HOME", ".fix", "config"}, string(os.PathSeparator))
+	configPath := filepath.Join("$HOME", ".fix", "config")
 
 	FixCmd.PersistentFlags().StringVar(&options.Config, "config", os.ExpandEnv(configPath), "Config file")
 	FixCmd.PersistentFlags().CountVarP(&options.Verbose, "verbose", "v", "Increase verbosity")
