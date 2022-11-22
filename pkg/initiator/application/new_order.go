@@ -1,6 +1,8 @@
 package application
 
 import (
+	"sync"
+
 	"github.com/rs/zerolog"
 
 	"github.com/quickfixgo/enum"
@@ -23,11 +25,11 @@ func NewNewOrder() *NewOrder {
 type NewOrder struct {
 	utils.QuickFixAppMessageLogger
 
-	Settings *quickfix.Settings
-
-	Connected chan interface{}
-
+	Settings    *quickfix.Settings
+	Connected   chan interface{}
 	FromAppChan chan *quickfix.Message
+	stopped     bool
+	mux         sync.RWMutex
 }
 
 // Notification of a session begin created.
@@ -48,6 +50,20 @@ func (app *NewOrder) OnLogout(sessionID quickfix.SessionID) {
 
 	close(app.Connected)
 	close(app.FromAppChan)
+}
+
+func (app *NewOrder) Stop() {
+	app.Logger.Debug().Msgf("Stopping NewOrder application")
+
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
+	app.stopped = true
+
+	// Empty the channel to avoid blocking
+	for len(app.FromAppChan) > 0 {
+		<-app.FromAppChan
+	}
 }
 
 // Notification of admin message being sent to target.
@@ -115,6 +131,13 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 	}
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
+
+	app.mux.RLock()
+	if app.stopped {
+		app.mux.RUnlock()
+		return nil
+	}
+	app.mux.RUnlock()
 
 	switch enum.MsgType(typ) {
 	case enum.MsgType_EXECUTION_REPORT:

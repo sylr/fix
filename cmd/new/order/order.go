@@ -374,7 +374,7 @@ LOOP:
 		}
 	}
 
-	logger.Debug().Msg("Exited response loop")
+	app.Stop()
 
 	return nil
 }
