@@ -290,10 +290,6 @@ github.com/sylr/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20220401
 github.com/sylr/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20220401195242-281940b8a21e/go.mod h1:Y+n22fYjye1/k2WZI2CvXkI/fctyK5n+W+JEO6Lm8Ww=
 github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20220401195242-281940b8a21e h1:8XKdB93K4wo67ii+24Q2TVBUR3ePE7vld4C6RaL+hx0=
 github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20220401195242-281940b8a21e/go.mod h1:1XIFhk2nD4JvmemzCJ6JF8J7AgMM59cvVaGySfFWR9w=
-github.com/sylr/quickfixgo-fix50sp2/ordercancelrequest v0.0.0-20220401195242-281940b8a21e h1:Njfrl0DtBxrETptx7tul9Xk2u8vVX1EyJd6IyxRUs40=
-github.com/sylr/quickfixgo-fix50sp2/ordercancelrequest v0.0.0-20220401195242-281940b8a21e/go.mod h1:jzMbDM9WeFDIwvZt9o/oKAeU1Ek3cXeL/g6crsmPFJI=
-github.com/sylr/quickfixgo-fix50sp2/ordermasscancelrequest v0.0.0-20220401195242-281940b8a21e h1:umMECa428yH+9TISu+SNO7Ck8oZgJCvST1TtTiTMWLo=
-github.com/sylr/quickfixgo-fix50sp2/ordermasscancelrequest v0.0.0-20220401195242-281940b8a21e/go.mod h1:TsGSYcjossjVxEzofRKw8j/8knjjQHWFvz2HdmoG83Y=
 github.com/sylr/quickfixgo-tag v0.0.0-20220401193001-96cf7367fdfa h1:rNZGd/w6irrFOt0is49fO3ncZFTSTpJoFPuv4VPwTrk=
 github.com/sylr/quickfixgo-tag v0.0.0-20220401193001-96cf7367fdfa/go.mod h1:W1mRUo/BCgwb8r/AMNRcjPccxah1VHLrku2lyEi6sa8=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

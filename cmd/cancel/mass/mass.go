@@ -14,7 +14,6 @@ import (
 	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"github.com/sylr/quickfixgo-fix50sp2/ordermasscancelrequest"
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
@@ -263,10 +262,11 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
 		case "FIX.5.0SP2":
-			message := ordermasscancelrequest.New(
-				field.NewClOrdID(optionOrderSymbol+"_CANCELREQ"),
-				field.NewMassCancelRequestType(enum.MassCancelRequestType_CANCEL_ORDERS_FOR_A_SECURITY),
-				field.NewTransactTime(time.Now()))
+			message := quickfix.NewMessage()
+			message.Header.Set(field.NewMsgType(enum.MsgType_ORDER_MASS_CANCEL_REQUEST))
+			message.Body.Set(field.NewClOrdID(optionOrderSymbol + "_CANCELREQ"))
+			message.Body.Set(field.NewMassCancelRequestType(enum.MassCancelRequestType_CANCEL_ORDERS_FOR_A_SECURITY))
+			message.Body.Set(field.NewTransactTime(time.Now()))
 			message.Body.Set(field.NewSide(eside))
 			message.Body.Set(field.NewSymbol(optionOrderSymbol))
 			return message, nil
