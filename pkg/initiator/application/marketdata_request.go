@@ -23,10 +23,10 @@ const nilstr = "<nil>"
 
 func NewMarketDataRequest(printData bool) *MarketDataRequest {
 	mdr := MarketDataRequest{
-		Connected:   make(chan interface{}),
-		FromAppChan: make(chan quickfix.Messagable),
-		router:      quickfix.NewMessageRouter(),
-		printData:   printData,
+		Connected:       make(chan interface{}),
+		FromAppMessages: make(chan quickfix.Messagable, 1),
+		router:          quickfix.NewMessageRouter(),
+		printData:       printData,
 	}
 
 	mdr.router.AddRoute(quickfix.ApplVerIDFIX50SP2, string(enum.MsgType_MARKET_DATA_INCREMENTAL_REFRESH), mdr.onMarketDataIncrementalRefresh)
@@ -38,33 +38,31 @@ func NewMarketDataRequest(printData bool) *MarketDataRequest {
 type MarketDataRequest struct {
 	utils.QuickFixAppMessageLogger
 
-	Settings *quickfix.Settings
-	router   *quickfix.MessageRouter
-
-	Connected   chan interface{}
-	FromAppChan chan quickfix.Messagable
-
-	printData bool
-	mux       sync.Mutex
-	stopped   bool
+	Settings        *quickfix.Settings
+	Connected       chan interface{}
+	FromAppMessages chan quickfix.Messagable
+	stopped         bool
+	mux             sync.RWMutex
+	router          *quickfix.MessageRouter
+	printData       bool
 }
 
 var _ quickfix.Application = (*MarketDataRequest)(nil)
 
-// Stop
+// Stop ensures the app chans are emptied so that quickfix can carry on with
+// the LOGOUT process correctly.
 func (app *MarketDataRequest) Stop() {
+	app.Logger.Debug().Msgf("Stopping MarketDataRequest application")
+
 	app.mux.Lock()
 	defer app.mux.Unlock()
 
 	app.stopped = true
-}
 
-// IsStopped
-func (app *MarketDataRequest) IsStopped() bool {
-	app.mux.Lock()
-	defer app.mux.Unlock()
-
-	return app.stopped
+	// Empty the channel to avoid blocking
+	for len(app.FromAppMessages) > 0 {
+		<-app.FromAppMessages
+	}
 }
 
 // Notification of a session begin created.
@@ -84,7 +82,7 @@ func (app *MarketDataRequest) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
-	close(app.FromAppChan)
+	close(app.FromAppMessages)
 }
 
 // Notification of admin message being sent to target.
@@ -133,7 +131,7 @@ func (app *MarketDataRequest) FromAdmin(message *quickfix.Message, sessionID qui
 
 	switch typ {
 	case string(enum.MsgType_REJECT):
-		app.FromAppChan <- message
+		app.FromAppMessages <- message
 	}
 
 	return nil
@@ -188,9 +186,14 @@ func (app *MarketDataRequest) onMarketDataSnapshotFullRefresh(msg *quickfix.Mess
 		printFIX50NoMDEntriesFull(group, msg, app.AppDataDictionary)
 	}
 
-	if !app.IsStopped() {
-		app.FromAppChan <- msg
+	app.mux.RLock()
+	if app.stopped {
+		app.mux.RUnlock()
+		return nil
 	}
+	app.mux.RUnlock()
+
+	app.FromAppMessages <- msg
 
 	return nil
 }
@@ -221,9 +224,14 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 		printFIX50NoMDEntriesInc(group, app.AppDataDictionary)
 	}
 
-	if !app.IsStopped() {
-		app.FromAppChan <- msg
+	app.mux.RLock()
+	if app.stopped {
+		app.mux.RUnlock()
+		return nil
 	}
+	app.mux.RUnlock()
+
+	app.FromAppMessages <- msg
 
 	return nil
 }

@@ -15,8 +15,8 @@ import (
 
 func NewNewOrder() *NewOrder {
 	sod := NewOrder{
-		Connected:   make(chan interface{}),
-		FromAppChan: make(chan *quickfix.Message),
+		Connected:       make(chan interface{}),
+		FromAppMessages: make(chan *quickfix.Message, 1),
 	}
 
 	return &sod
@@ -25,11 +25,27 @@ func NewNewOrder() *NewOrder {
 type NewOrder struct {
 	utils.QuickFixAppMessageLogger
 
-	Settings    *quickfix.Settings
-	Connected   chan interface{}
-	FromAppChan chan *quickfix.Message
-	stopped     bool
-	mux         sync.RWMutex
+	Settings        *quickfix.Settings
+	Connected       chan interface{}
+	FromAppMessages chan *quickfix.Message
+	stopped         bool
+	mux             sync.RWMutex
+}
+
+// Stop ensures the app chans are emptied so that quickfix can carry on with
+// the LOGOUT process correctly.
+func (app *NewOrder) Stop() {
+	app.Logger.Debug().Msgf("Stopping NewOrder application")
+
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
+	app.stopped = true
+
+	// Empty the channel to avoid blocking
+	for len(app.FromAppMessages) > 0 {
+		<-app.FromAppMessages
+	}
 }
 
 // Notification of a session begin created.
@@ -49,21 +65,7 @@ func (app *NewOrder) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
-	close(app.FromAppChan)
-}
-
-func (app *NewOrder) Stop() {
-	app.Logger.Debug().Msgf("Stopping NewOrder application")
-
-	app.mux.Lock()
-	defer app.mux.Unlock()
-
-	app.stopped = true
-
-	// Empty the channel to avoid blocking
-	for len(app.FromAppChan) > 0 {
-		<-app.FromAppChan
-	}
+	close(app.FromAppMessages)
 }
 
 // Notification of admin message being sent to target.
@@ -141,7 +143,7 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 
 	switch enum.MsgType(typ) {
 	case enum.MsgType_EXECUTION_REPORT:
-		app.FromAppChan <- message
+		app.FromAppMessages <- message
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
 		if err != nil {

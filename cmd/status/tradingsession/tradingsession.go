@@ -122,12 +122,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Start session
-	err = init.Start()
-	if err != nil {
+	if err = init.Start(); err != nil {
 		return err
 	}
 
-	defer init.Stop()
+	defer func() {
+		app.Stop()
+		init.Stop()
+	}()
 
 	// Choose right timeout cli option > config > default value (5s)
 	var timeout time.Duration
@@ -168,11 +170,8 @@ func Execute(cmd *cobra.Command, args []string) error {
 	select {
 	case <-time.After(timeout):
 		return errors.ResponseTimeout
-	case responseMessage, ok = <-app.FromAdminChan:
-		if !ok {
-			return errors.FixLogout
-		}
-	case responseMessage, ok = <-app.FromAppChan:
+
+	case responseMessage, ok = <-app.FromAppMessages:
 		if !ok {
 			return errors.FixLogout
 		}

@@ -1,6 +1,8 @@
 package application
 
 import (
+	"sync"
+
 	"github.com/rs/zerolog"
 
 	"github.com/quickfixgo/enum"
@@ -13,8 +15,8 @@ import (
 
 func NewSecurityList() *SecurityList {
 	sl := SecurityList{
-		Connected:   make(chan interface{}),
-		FromAppChan: make(chan *quickfix.Message),
+		Connected:       make(chan interface{}),
+		FromAppMessages: make(chan *quickfix.Message, 1),
 	}
 
 	return &sl
@@ -23,10 +25,27 @@ func NewSecurityList() *SecurityList {
 type SecurityList struct {
 	utils.QuickFixAppMessageLogger
 
-	Settings *quickfix.Settings
+	Settings        *quickfix.Settings
+	Connected       chan interface{}
+	FromAppMessages chan *quickfix.Message
+	stopped         bool
+	mux             sync.RWMutex
+}
 
-	Connected   chan interface{}
-	FromAppChan chan *quickfix.Message
+// Stop ensures the app chans are emptied so that quickfix can carry on with
+// the LOGOUT process correctly.
+func (app *SecurityList) Stop() {
+	app.Logger.Debug().Msgf("Stopping SecurityList application")
+
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
+	app.stopped = true
+
+	// Empty the channel to avoid blocking
+	for len(app.FromAppMessages) > 0 {
+		<-app.FromAppMessages
+	}
 }
 
 // Notification of a session begin created.
@@ -46,7 +65,7 @@ func (app *SecurityList) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
-	close(app.FromAppChan)
+	close(app.FromAppMessages)
 }
 
 // Notification of admin message being sent to target.
@@ -93,9 +112,16 @@ func (app *SecurityList) FromAdmin(message *quickfix.Message, sessionID quickfix
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
+	app.mux.RLock()
+	if app.stopped {
+		app.mux.RUnlock()
+		return nil
+	}
+	app.mux.RUnlock()
+
 	switch typ {
 	case string(enum.MsgType_REJECT):
-		app.FromAppChan <- message
+		app.FromAppMessages <- message
 	}
 
 	return nil
@@ -126,9 +152,16 @@ func (app *SecurityList) FromApp(message *quickfix.Message, sessionID quickfix.S
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
+	app.mux.RLock()
+	if app.stopped {
+		app.mux.RUnlock()
+		return nil
+	}
+	app.mux.RUnlock()
+
 	switch enum.MsgType(typ) {
 	case enum.MsgType_SECURITY_LIST:
-		app.FromAppChan <- message
+		app.FromAppMessages <- message
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
 		if err != nil {

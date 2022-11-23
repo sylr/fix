@@ -103,10 +103,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = acceptor.Start()
-	if err != nil {
+	// Start session
+	if err = acceptor.Start(); err != nil {
 		return err
 	}
+
+	defer func() {
+		acceptor.Stop()
+	}()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)

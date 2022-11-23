@@ -132,12 +132,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Start session
-	err = init.Start()
-	if err != nil {
+	if err = init.Start(); err != nil {
 		return err
 	}
 
-	defer init.Stop()
+	defer func() {
+		app.Stop()
+		init.Stop()
+	}()
 
 	// Choose right timeout cli option > config > default value (5s)
 	var timeout time.Duration
@@ -181,13 +183,8 @@ LOOP:
 			logger.Debug().Msgf("Received signal: %s", signal)
 
 			break LOOP
-		case responseMessage, ok := <-app.FromAdminChan:
-			if !ok {
-				return errors.FixLogout
-			}
 
-			app.WriteMessageBodyAsTable(os.Stdout, responseMessage)
-		case responseMessage, ok := <-app.FromAppChan:
+		case responseMessage, ok := <-app.FromAppMessages:
 			if !ok {
 				break LOOP
 			}
