@@ -144,7 +144,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Defer stopping initiator
 	defer func() {
 		app.Stop()
 		init.Stop()
@@ -211,8 +210,6 @@ LOOP:
 		}
 	}
 
-	app.Stop()
-
 	return nil
 }
 
@@ -260,6 +257,7 @@ func processReponse(app *application.CancelOrder, msg *quickfix.Message) error {
 	} else {
 		return quickfix.InvalidMessageType()
 	}
+
 	return nil
 }
 
@@ -283,9 +281,11 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(field.NewOrigClOrdID(orderId))
 			message.Body.Set(field.NewSymbol(optionOrderSymbol))
 			return message, nil
+
 		default:
 			return nil, errors.FixVersionNotImplemented
 		}
+
 	default:
 		return nil, errors.FixVersionNotImplemented
 	}
