@@ -140,7 +140,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Defer stopping initiator
 	defer func() {
 		app.Stop()
 		init.Stop()
@@ -203,11 +202,10 @@ LOOP:
 				}
 				return err
 			}
+
 			break LOOP
 		}
 	}
-
-	app.Stop()
 
 	return nil
 }
@@ -272,11 +270,12 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(field.NewSide(eside))
 			message.Body.Set(field.NewSymbol(optionOrderSymbol))
 			return message, nil
+
 		default:
 			return nil, errors.FixVersionNotImplemented
 		}
+
 	default:
 		return nil, errors.FixVersionNotImplemented
 	}
-
 }
