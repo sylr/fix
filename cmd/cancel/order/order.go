@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -28,7 +27,7 @@ import (
 var (
 	optionOrderSide          string
 	optionOrderSymbol        string
-	optionOrderID            int
+	optionOrderID            string
 	optionExecReportsTimeout time.Duration
 )
 
@@ -43,15 +42,15 @@ var CancelOrderCmd = &cobra.Command{
 }
 
 func init() {
+	CancelOrderCmd.Flags().StringVar(&optionOrderID, "id", "", "Order id")
 	CancelOrderCmd.Flags().StringVar(&optionOrderSide, "side", "", "Order side (buy, sell ... etc)")
 	CancelOrderCmd.Flags().StringVar(&optionOrderSymbol, "symbol", "", "Order symbol")
-	CancelOrderCmd.Flags().IntVar(&optionOrderID, "id", -1, "Order id (returned in ExecutionReport.OrderID)")
 
 	CancelOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
 
+	CancelOrderCmd.MarkFlagRequired("id")
 	CancelOrderCmd.MarkFlagRequired("side")
 	CancelOrderCmd.MarkFlagRequired("symbol")
-	CancelOrderCmd.MarkFlagRequired("id")
 
 	CancelOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
 }
@@ -179,7 +178,6 @@ LOOP:
 
 		case msg, ok := <-app.FromAppMessages:
 			if !ok {
-				logger.Error().Msg("Bad FIX application message received")
 				break LOOP
 			}
 
@@ -194,6 +192,37 @@ LOOP:
 	}
 
 	return nil
+}
+
+func buildMessage(session config.Session) (quickfix.Messagable, error) {
+	eside, err := dict.OrderSideStringToEnum(optionOrderSide)
+	if err != nil {
+		return nil, err
+	}
+
+	switch session.BeginString {
+	case quickfix.BeginStringFIXT11:
+		switch session.DefaultApplVerID {
+		case "FIX.5.0SP2":
+			message := quickfix.NewMessage()
+			message.Header.Set(field.NewMsgType(enum.MsgType_ORDER_CANCEL_REQUEST))
+			message.Body.Set(field.NewClOrdID(optionOrderID))
+			message.Body.Set(field.NewSide(eside))
+			message.Body.Set(field.NewTransactTime(time.Now()))
+			message.Body.Set(field.NewOrderID(optionOrderID))
+			message.Body.Set(field.NewOrigClOrdID(optionOrderID))
+			message.Body.Set(field.NewSymbol(optionOrderSymbol))
+
+			return message, nil
+
+		default:
+			return nil, errors.FixVersionNotImplemented
+		}
+
+	default:
+		return nil, errors.FixVersionNotImplemented
+	}
+
 }
 
 func processReponse(app *application.CancelOrder, msg *quickfix.Message) error {
@@ -224,10 +253,12 @@ func processReponse(app *application.CancelOrder, msg *quickfix.Message) error {
 	if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
 		return makeError(errors.FixOrderRejected)
 	}
+
 	if msgType.Value() == enum.MsgType_ORDER_CANCEL_REJECT {
 		app.WriteMessageBodyAsTable(os.Stdout, msg)
 		return makeError(errors.FixOrderRejected)
 	}
+
 	if msgType.Value() == enum.MsgType_EXECUTION_REPORT {
 		app.WriteMessageBodyAsTable(os.Stdout, msg)
 		ordStatus := field.OrdStatusField{}
@@ -242,36 +273,4 @@ func processReponse(app *application.CancelOrder, msg *quickfix.Message) error {
 	}
 
 	return nil
-}
-
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	eside, err := dict.OrderSideStringToEnum(optionOrderSide)
-	if err != nil {
-		return nil, err
-	}
-
-	orderId := strconv.Itoa(optionOrderID)
-
-	switch session.BeginString {
-	case quickfix.BeginStringFIXT11:
-		switch session.DefaultApplVerID {
-		case "FIX.5.0SP2":
-			message := quickfix.NewMessage()
-			message.Header.Set(field.NewMsgType(enum.MsgType_ORDER_CANCEL_REQUEST))
-			message.Body.Set(field.NewClOrdID(orderId + "_CANCEL"))
-			message.Body.Set(field.NewSide(eside))
-			message.Body.Set(field.NewTransactTime(time.Now()))
-			message.Body.Set(field.NewOrderID(orderId))
-			message.Body.Set(field.NewOrigClOrdID(orderId))
-			message.Body.Set(field.NewSymbol(optionOrderSymbol))
-			return message, nil
-
-		default:
-			return nil, errors.FixVersionNotImplemented
-		}
-
-	default:
-		return nil, errors.FixVersionNotImplemented
-	}
-
 }
