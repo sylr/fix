@@ -108,18 +108,32 @@ func NewMarketDataValidator(logger *zerolog.Logger, security string) *MarketData
 type MarketDataValidator struct {
 	utils.QuickFixAppMessageLogger
 
-	Settings  *quickfix.Settings
-	Validator *Validator
-	Connected chan interface{}
+	Settings        *quickfix.Settings
+	Connected       chan interface{}
+	FromAppMessages chan quickfix.Messagable
+	stopped         bool
+	mux             sync.RWMutex
+	router          *quickfix.MessageRouter
 
-	router *quickfix.MessageRouter
+	Validator *Validator
 }
 
 var _ quickfix.Application = (*MarketDataValidator)(nil)
 
-// Stopped
+// Stop ensures the app chans are emptied so that quickfix can carry on with
+// the LOGOUT process correctly.
 func (app *MarketDataValidator) Stop() {
+	app.Logger.Debug().Msgf("Stopping MarketDataValidator application")
 
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
+	app.stopped = true
+
+	// Empty the channel to avoid blocking
+	for len(app.FromAppMessages) > 0 {
+		<-app.FromAppMessages
+	}
 }
 
 // Notification of a session begin created.

@@ -162,15 +162,16 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	defer init.Stop()
-
 	// Start session
 	err = init.Start()
 	if err != nil {
 		return err
 	}
 
-	defer app.Stop()
+	defer func() {
+		app.Stop()
+		init.Stop()
+	}()
 
 	// Choose right timeout cli option > config > default value (5s)
 	var timeout time.Duration
@@ -214,7 +215,7 @@ LOOP:
 			logger.Debug().Msgf("Received signal: %s", signal)
 
 			break LOOP
-		case _, ok := <-app.FromAppChan:
+		case _, ok := <-app.FromAppMessages:
 			if !ok || SubType == enum.SubscriptionRequestType_SNAPSHOT {
 				break LOOP
 			}

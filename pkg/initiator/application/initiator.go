@@ -14,8 +14,9 @@ import (
 
 func NewInitiator() *Initiator {
 	sl := Initiator{
-		Connected: make(chan interface{}),
-		Messages:  make(chan *quickfix.Message, 10),
+		Connected:       make(chan interface{}),
+		FromAppMessages: make(chan *quickfix.Message, 1),
+		ToAppMessages:   make(chan *quickfix.Message, 1),
 	}
 
 	return &sl
@@ -24,13 +25,33 @@ func NewInitiator() *Initiator {
 type Initiator struct {
 	utils.QuickFixAppMessageLogger
 
-	Settings  *quickfix.Settings
 	SessionID quickfix.SessionID
 
-	Connected chan interface{}
-	Messages  chan *quickfix.Message
+	Settings        *quickfix.Settings
+	Connected       chan interface{}
+	FromAppMessages chan *quickfix.Message
+	ToAppMessages   chan *quickfix.Message
+	stopped         bool
+	mux             sync.RWMutex
+}
 
-	mux sync.RWMutex
+// Stop ensures the app chans are emptied so that quickfix can carry on with
+// the LOGOUT process correctly.
+func (app *Initiator) Stop() {
+	app.Logger.Debug().Msgf("Stopping Initiator application")
+
+	app.mux.Lock()
+	defer app.mux.Unlock()
+
+	app.stopped = true
+
+	// Empty the channels to avoid blocking
+	for len(app.FromAppMessages) > 0 {
+		<-app.FromAppMessages
+	}
+	for len(app.ToAppMessages) > 0 {
+		<-app.ToAppMessages
+	}
 }
 
 // Notification of a session begin created.
@@ -54,7 +75,8 @@ func (app *Initiator) OnLogout(sessionID quickfix.SessionID) {
 	app.Logger.Debug().Msgf("Logout: %s", sessionID)
 
 	close(app.Connected)
-	close(app.Messages)
+	close(app.FromAppMessages)
+	close(app.ToAppMessages)
 }
 
 // Notification of admin message being sent to target.
@@ -124,7 +146,14 @@ func (app *Initiator) ToApp(message *quickfix.Message, sessionID quickfix.Sessio
 
 	app.LogMessage(zerolog.InfoLevel, message, sessionID, true)
 
-	app.Messages <- message
+	app.mux.RLock()
+	if app.stopped {
+		app.mux.RUnlock()
+		return nil
+	}
+	app.mux.RUnlock()
+
+	app.ToAppMessages <- message
 
 	return nil
 }
@@ -143,7 +172,14 @@ func (app *Initiator) FromApp(message *quickfix.Message, sessionID quickfix.Sess
 
 	app.LogMessage(zerolog.InfoLevel, message, sessionID, false)
 
-	app.Messages <- message
+	app.mux.RLock()
+	if app.stopped {
+		app.mux.RUnlock()
+		return nil
+	}
+	app.mux.RUnlock()
+
+	app.FromAppMessages <- message
 
 	return nil
 }

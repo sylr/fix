@@ -123,8 +123,8 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	defer func() {
-		init.Stop()
 		app.Stop()
+		init.Stop()
 	}()
 
 	// Choose right timeout cli option > config > default value (5s)
@@ -173,6 +173,7 @@ LOOP:
 			default:
 				logger.Info().Msgf("Received unhandled signal: %v", signal)
 			}
+
 		case _, ok := <-app.Connected:
 			if !ok {
 				logger.Info().Msgf("Fix application not connected anymore")

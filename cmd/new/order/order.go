@@ -295,13 +295,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Start session
-	err = init.Start()
-	if err != nil {
+	if err = init.Start(); err != nil {
 		return err
 	}
 
-	// Defer stopping initiator
-	defer init.Stop()
+	defer func() {
+		app.Stop()
+		init.Stop()
+	}()
 
 	// Wait for session connection
 	select {
@@ -347,7 +348,7 @@ LOOP:
 			logger.Warn().Msgf("Timeout while expecting execution reports (%d/%d)", execReports, optionExecReports)
 			break LOOP
 
-		case msg, ok := <-app.FromAppChan:
+		case msg, ok := <-app.FromAppMessages:
 			if !ok {
 				break LOOP
 			}
@@ -373,8 +374,6 @@ LOOP:
 			break LOOP
 		}
 	}
-
-	app.Stop()
 
 	return nil
 }
