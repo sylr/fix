@@ -21,28 +21,11 @@ var (
 )
 
 var AcceptorCmd = &cobra.Command{
-	Use:   "acceptor",
-	Short: "Launch a FIX acceptor",
-	Long:  "Launch a FIX acceptor.",
-	RunE:  Execute,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := utils.ValidateRequiredFlags(cmd); err != nil {
-			return err
-		}
-
-		if err := acceptor.ValidateOptions(cmd, args); err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				return parent.PersistentPreRunE(parent, args)
-			}
-		}
-
-		return nil
-	},
+	Use:               "acceptor",
+	Short:             "Launch a FIX acceptor",
+	Long:              "Launch a FIX acceptor.",
+	RunE:              Execute,
+	PersistentPreRunE: utils.MakePersistentPreRunE(acceptor.ValidateOptions),
 }
 
 func init() {

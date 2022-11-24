@@ -8,7 +8,29 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// ValidateRequiredFlags is a public version of cobra's Command.validateRequiredFlags()
+// MakePersistentPreRunE returns a PersistentPreRunE function.
+func MakePersistentPreRunE(validator func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := ValidateRequiredFlags(cmd); err != nil {
+			return err
+		}
+
+		if err := validator(cmd, args); err != nil {
+			return err
+		}
+
+		if cmd.HasParent() {
+			parent := cmd.Parent()
+			if parent.PersistentPreRunE != nil {
+				return parent.PersistentPreRunE(parent, args)
+			}
+		}
+
+		return nil
+	}
+}
+
+// ValidateRequiredFlags is a public version of cobra's Command.validateRequiredFlags().
 func ValidateRequiredFlags(c *cobra.Command) error {
 	if c.DisableFlagParsing {
 		return nil
