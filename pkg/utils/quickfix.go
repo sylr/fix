@@ -25,6 +25,14 @@ type QuickFixMessagePartSetter interface {
 	Set(field quickfix.FieldWriter) *quickfix.FieldMap
 }
 
+func QuickFixCopyMessage(message *quickfix.Message) *quickfix.Message {
+	new := quickfix.NewMessage()
+	message.CopyInto(new)
+	new.Cook()
+
+	return new
+}
+
 func QuickFixMessagePartSetString[T quickfix.FieldWriter, T2 ~string](setter QuickFixMessagePartSetter, value T2, f func(T2) T) {
 	if len(value) > 0 {
 		setter.Set(f(value))

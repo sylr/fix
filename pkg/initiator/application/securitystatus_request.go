@@ -114,7 +114,7 @@ func (app *SecurityStatusRequest) FromAdmin(message *quickfix.Message, sessionID
 
 	switch typ {
 	case string(enum.MsgType_REJECT):
-		app.FromAppMessages <- message
+		app.FromAppMessages <- utils.QuickFixCopyMessage(message)
 	}
 
 	return nil
