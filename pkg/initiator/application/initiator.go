@@ -179,7 +179,7 @@ func (app *Initiator) FromApp(message *quickfix.Message, sessionID quickfix.Sess
 	}
 	app.mux.RUnlock()
 
-	app.FromAppMessages <- message
+	app.FromAppMessages <- utils.CopyMessage(message)
 
 	return nil
 }

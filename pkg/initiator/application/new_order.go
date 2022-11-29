@@ -143,7 +143,7 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 
 	switch enum.MsgType(typ) {
 	case enum.MsgType_EXECUTION_REPORT:
-		app.FromAppMessages <- message
+		app.FromAppMessages <- utils.CopyMessage(message)
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
 		if err != nil {

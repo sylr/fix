@@ -114,7 +114,7 @@ func (app *TradingSessionStatusRequest) FromAdmin(message *quickfix.Message, ses
 
 	switch typ {
 	case string(enum.MsgType_REJECT):
-		app.FromAppMessages <- message
+		app.FromAppMessages <- utils.CopyMessage(message)
 	}
 
 	return nil
@@ -154,7 +154,7 @@ func (app *TradingSessionStatusRequest) FromApp(message *quickfix.Message, sessi
 
 	switch enum.MsgType(typ) {
 	case enum.MsgType_TRADING_SESSION_STATUS:
-		app.FromAppMessages <- message
+		app.FromAppMessages <- utils.CopyMessage(message)
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
 		if err != nil {

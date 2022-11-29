@@ -131,7 +131,7 @@ func (app *MarketDataRequest) FromAdmin(message *quickfix.Message, sessionID qui
 
 	switch typ {
 	case string(enum.MsgType_REJECT):
-		app.FromAppMessages <- message
+		app.FromAppMessages <- utils.CopyMessage(message)
 	}
 
 	return nil
@@ -193,7 +193,7 @@ func (app *MarketDataRequest) onMarketDataSnapshotFullRefresh(msg *quickfix.Mess
 	}
 	app.mux.RUnlock()
 
-	app.FromAppMessages <- msg
+	app.FromAppMessages <- utils.CopyMessage(msg)
 
 	return nil
 }
@@ -231,7 +231,7 @@ func (app *MarketDataRequest) onMarketDataIncrementalRefresh(msg *quickfix.Messa
 	}
 	app.mux.RUnlock()
 
-	app.FromAppMessages <- msg
+	app.FromAppMessages <- utils.CopyMessage(msg)
 
 	return nil
 }

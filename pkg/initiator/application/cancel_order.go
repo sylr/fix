@@ -110,7 +110,7 @@ func (app *CancelOrder) FromAdmin(message *quickfix.Message, sessionID quickfix.
 
 	app.treatMessageByType(message, func(msgType enum.MsgType, m *quickfix.Message) {
 		if msgType == enum.MsgType_REJECT {
-			app.FromAppMessages <- message
+			app.FromAppMessages <- utils.CopyMessage(message)
 		}
 	})
 
@@ -151,7 +151,7 @@ func (app *CancelOrder) FromApp(message *quickfix.Message, sessionID quickfix.Se
 		case enum.MsgType_ORDER_CANCEL_REJECT:
 			fallthrough
 		case enum.MsgType_ORDER_MASS_CANCEL_REPORT:
-			app.FromAppMessages <- message
+			app.FromAppMessages <- utils.CopyMessage(message)
 		default:
 			typeName, err := dict.SearchValue(dict.MessageTypes, msgType)
 			if err != nil {

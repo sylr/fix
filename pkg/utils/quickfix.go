@@ -207,3 +207,9 @@ func MapSearch[K comparable, V comparable](m map[K]V, search V) *K {
 
 	return nil
 }
+
+func CopyMessage(message *quickfix.Message) *quickfix.Message {
+	messageCopy := quickfix.NewMessage()
+	message.CopyInto(messageCopy)
+	return messageCopy
+}

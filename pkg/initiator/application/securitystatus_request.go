@@ -114,7 +114,7 @@ func (app *SecurityStatusRequest) FromAdmin(message *quickfix.Message, sessionID
 
 	switch typ {
 	case string(enum.MsgType_REJECT):
-		app.FromAppMessages <- message
+		app.FromAppMessages <- utils.CopyMessage(message)
 	}
 
 	return nil
@@ -154,7 +154,7 @@ func (app *SecurityStatusRequest) FromApp(message *quickfix.Message, sessionID q
 
 	switch enum.MsgType(typ) {
 	case enum.MsgType_SECURITY_STATUS:
-		app.FromAppMessages <- message
+		app.FromAppMessages <- utils.CopyMessage(message)
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
 		if err != nil {
