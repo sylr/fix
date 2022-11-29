@@ -308,7 +308,6 @@ func (c Context) GetSessions() ([]*Session, error) {
 
 func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	settings := quickfix.NewSettings()
-	qfSession := quickfix.NewSessionSettings()
 	globalSettings := settings.GlobalSettings()
 
 	initiator, err := GetInitiator(c.Initiator)
@@ -335,6 +334,7 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	// Session settings
 	session := sessions[0]
 
+	qfSession := quickfix.NewSessionSettings()
 	initiator.setQuickFixGlobalSettings(globalSettings, qfSession)
 
 	setSessionSetting(qfSession, qconfig.SocketConnectHost, initiator.SocketConnectHost)
@@ -409,7 +409,6 @@ func setSessionSetting(session *quickfix.SessionSettings, key string, value inte
 
 func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 	settings := quickfix.NewSettings()
-	qfSession := quickfix.NewSessionSettings()
 	globalSettings := settings.GlobalSettings()
 
 	acceptor, err := GetAcceptor(c.Acceptor)
@@ -432,6 +431,7 @@ func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
 	}
 
 	for _, session := range sessions {
+		qfSession := quickfix.NewSessionSettings()
 		acceptor.setQuickFixGlobalSettings(globalSettings, qfSession)
 
 		qfSession.Set(qconfig.SocketAcceptHost, acceptor.SocketAcceptHost)
