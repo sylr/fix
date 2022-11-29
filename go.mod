@@ -26,7 +26,7 @@ require (
 	github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20220401195242-281940b8a21e
 	golang.org/x/crypto v0.1.0
 	golang.org/x/term v0.2.0
-	sylr.dev/yaml/age/v3 v3.0.0-20220527135827-28ffff5246ba
+	sylr.dev/yaml/age/v3 v3.0.0-20221125145750-fe88e6b7b91a
 	sylr.dev/yaml/v3 v3.0.0-20220527135632-500fddf2b049
 )
 

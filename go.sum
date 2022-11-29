@@ -602,7 +602,7 @@ honnef.co/go/tools v0.0.1-2020.1.4/go.mod h1:X/FiERA/W4tHapMX5mGpAtMSVEeEUOyHaw9
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sylr.dev/yaml/age/v3 v3.0.0-20220527135827-28ffff5246ba h1:7sMW5ELDAd8j3VGYbJNtn+utzprB7AbMTr8wdTdhaos=
-sylr.dev/yaml/age/v3 v3.0.0-20220527135827-28ffff5246ba/go.mod h1:Jbdwot9BbvKZb+6UfGGluTaxGG/4F3n6Oma4bKVsSM8=
+sylr.dev/yaml/age/v3 v3.0.0-20221125145750-fe88e6b7b91a h1:rj511kKcJpeR6OZ63NaD8lJdiUwyYtDP5SxaLjfuCCU=
+sylr.dev/yaml/age/v3 v3.0.0-20221125145750-fe88e6b7b91a/go.mod h1:Jbdwot9BbvKZb+6UfGGluTaxGG/4F3n6Oma4bKVsSM8=
 sylr.dev/yaml/v3 v3.0.0-20220527135632-500fddf2b049 h1:YPPgk82gEmgUGbtTpTokBrnWnpCbHGqzwggHNrOlw40=
 sylr.dev/yaml/v3 v3.0.0-20220527135632-500fddf2b049/go.mod h1:4Zku0VUqOuAOvzh8sDnNBOWxgBFIbfHfWtGZI+Qjwx4=
