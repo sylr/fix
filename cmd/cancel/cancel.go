@@ -11,28 +11,11 @@ import (
 
 // CancelCmd represents the buy command
 var CancelCmd = &cobra.Command{
-	Use:   "cancel",
-	Short: "Send a cancel FIX message",
-	Long:  "Send a cancel FIX message after initiating a sesion with a FIX acceptor.",
-	RunE:  Execute,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := utils.ValidateRequiredFlags(cmd); err != nil {
-			return err
-		}
-
-		if err := initiator.ValidateOptions(cmd, args); err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				return parent.PersistentPreRunE(parent, args)
-			}
-		}
-
-		return nil
-	},
+	Use:               "cancel",
+	Short:             "Send a cancel FIX message",
+	Long:              "Send a cancel FIX message after initiating a sesion with a FIX acceptor.",
+	RunE:              Execute,
+	PersistentPreRunE: utils.MakePersistentPreRunE(initiator.ValidateOptions),
 }
 
 func init() {

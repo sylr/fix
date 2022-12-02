@@ -38,24 +38,8 @@ var MassCancelOrderCmd = &cobra.Command{
 	Long:              "Send mass cancel order request after initiating a session with a FIX acceptor.",
 	Args:              cobra.ExactArgs(0),
 	ValidArgsFunction: cobra.NoFileCompletions,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := utils.ValidateRequiredFlags(cmd); err != nil {
-			return err
-		}
-
-		if err := Validate(cmd, args); err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				return parent.PersistentPreRunE(cmd, args)
-			}
-		}
-		return nil
-	},
-	RunE: Execute,
+	PersistentPreRunE: utils.MakePersistentPreRunE(Validate),
+	RunE:              Execute,
 }
 
 func init() {
