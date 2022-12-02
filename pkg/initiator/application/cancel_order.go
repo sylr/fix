@@ -100,6 +100,7 @@ func (app *CancelOrder) treatMessageByType(message *quickfix.Message, f func(enu
 	if err != nil {
 		app.Logger.Error().Msgf("Message type error: %s", err)
 	}
+
 	f(enum.MsgType(msgType), message)
 }
 
@@ -108,7 +109,7 @@ func (app *CancelOrder) FromAdmin(message *quickfix.Message, sessionID quickfix.
 	app.Logger.Debug().Msgf("<- Message received from admin")
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 
-	app.treatMessageByType(message, func(msgType enum.MsgType, m *quickfix.Message) {
+	app.treatMessageByType(message, func(msgType enum.MsgType, _ *quickfix.Message) {
 		if msgType == enum.MsgType_REJECT {
 			app.FromAppMessages <- message
 		}
@@ -144,7 +145,7 @@ func (app *CancelOrder) FromApp(message *quickfix.Message, sessionID quickfix.Se
 	}
 	app.mux.RUnlock()
 
-	app.treatMessageByType(message, func(msgType enum.MsgType, m *quickfix.Message) {
+	app.treatMessageByType(message, func(msgType enum.MsgType, _ *quickfix.Message) {
 		switch msgType {
 		case enum.MsgType_EXECUTION_REPORT:
 			fallthrough
