@@ -15,7 +15,7 @@ GO_BUILD_EXTLDFLAGS      ?=
 GO_BUILD_TAGS            ?=
 GO_BUILD_TARGET_DEPS     :=
 GO_BUILD_FLAGS           := -trimpath
-GO_BUILD_LDFLAGS_OPTIMS  :=
+GO_BUILD_LDFLAGS_OPTIMS  ?= -s -w
 
 ifeq ($(GOOS)/$(GOARCH),$(GOENV_GOOS)/$(GOENV_GOARCH))
 GO_BUILD_TARGET          ?= dist/fix
@@ -32,8 +32,7 @@ endif # ($(GOOS)/$(GOARCH),$(GOENV_GOOS)/$(GOENV_GOARCH))
 
 ifneq ($(DEBUG),)
 GO_BUILD_FLAGS            = -gcflags="all=-N -l"
-else
-GO_BUILD_LDFLAGS_OPTIMS  += -s -w
+GO_BUILD_LDFLAGS_OPTIMS   =
 endif # $(DEBUG)
 
 GO_BUILD_FLAGS_TARGET   := .go-build-flags
