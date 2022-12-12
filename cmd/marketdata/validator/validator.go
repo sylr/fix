@@ -162,6 +162,9 @@ LOOP:
 			if !ok {
 				logger.Info().Msgf("Fix application not connected anymore")
 				break LOOP
+			} else {
+				logger.Info().Msgf("Fix application wrote on Connected chan, wants to exit")
+				break LOOP
 			}
 		}
 	}

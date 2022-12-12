@@ -220,9 +220,17 @@ func (app *MarketDataValidator) ToApp(message *quickfix.Message, sessionID quick
 func (app *MarketDataValidator) FromApp(message *quickfix.Message, sessionID quickfix.SessionID) quickfix.MessageRejectError {
 	app.Logger.Debug().Msgf("<- Message received from app")
 
-	_, err := message.MsgType()
+	msgType, err := message.MsgType()
 	if err != nil {
 		app.Logger.Error().Msgf("Message type error: %s", err)
+		return err
+	}
+
+	switch msgType {
+	case string(enum.MsgType_BUSINESS_MESSAGE_REJECT):
+		app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
+		app.Connected <- struct{}{}
+		return nil
 	}
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
