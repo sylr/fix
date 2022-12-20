@@ -14,13 +14,13 @@ type quickFixLog struct {
 
 func (l quickFixLog) OnIncoming(s []byte) {
 	if l.logger != nil {
-		l.logger.Debug().Msgf("quickfix(%s, incoming): %s", l.prefix, s)
+		l.logger.Trace().Msgf("quickfix(%s, incoming): %s", l.prefix, s)
 	}
 }
 
 func (l quickFixLog) OnOutgoing(s []byte) {
 	if l.logger != nil {
-		l.logger.Debug().Msgf("quickfix(%s, outgoing): %s", l.prefix, s)
+		l.logger.Trace().Msgf("quickfix(%s, outgoing): %s", l.prefix, s)
 	}
 }
 
@@ -48,7 +48,7 @@ func (q quickfixLogFactory) CreateSessionLog(sessionID quickfix.SessionID) (quic
 	return log, nil
 }
 
-//NewQuickFixLogFactory creates an instance of LogFactory that writes messages and events to stdout.
+// NewQuickFixLogFactory creates an instance of LogFactory that writes messages and events to stdout.
 func NewQuickFixLogFactory(logger *zerolog.Logger) quickfix.LogFactory {
 	return quickfixLogFactory{logger: logger}
 }
