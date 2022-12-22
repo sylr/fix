@@ -18,6 +18,7 @@ import (
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
+	"sylr.dev/fix/pkg/cli/options"
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
@@ -30,6 +31,7 @@ var (
 	optionOrderSide          string
 	optionOrderSymbol        string
 	optionExecReportsTimeout time.Duration
+	partyIdOptions           *options.PartyIdOptions
 )
 
 var MassCancelOrderCmd = &cobra.Command{
@@ -49,6 +51,8 @@ func init() {
 
 	MassCancelOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
 
+	partyIdOptions = options.NewPartyIdOptions(MassCancelOrderCmd)
+
 	MassCancelOrderCmd.MarkFlagRequired("side")
 	MassCancelOrderCmd.MarkFlagRequired("symbol")
 
@@ -67,7 +71,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 		optionOrderID = uid.String()
 	}
 
-	return nil
+	return partyIdOptions.Validate()
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
@@ -148,14 +152,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Prepare order
-	order, err := buildMessage(*session)
+	// Prepare mass cancel message
+	cancelMsg, err := buildMessage(*session)
 	if err != nil {
 		return err
 	}
 
-	// Send the order
-	err = quickfix.SendToTarget(order, sessionId)
+	// Send the mass cancel message
+	err = quickfix.SendToTarget(cancelMsg, sessionId)
 	if err != nil {
 		return err
 	}
@@ -217,6 +221,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(field.NewTransactTime(time.Now()))
 			message.Body.Set(field.NewSide(eside))
 			message.Body.Set(field.NewSymbol(optionOrderSymbol))
+			partyIdOptions.EnrichMessageBody(&message.Body, session)
 
 			return message, nil
 
