@@ -9,6 +9,7 @@ import (
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 	"github.com/spf13/cobra"
+
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/errors"
@@ -18,6 +19,18 @@ import (
 type AttributeOptions struct {
 	types  []string
 	values []string
+}
+
+func NewAttributeOptions(command *cobra.Command) *AttributeOptions {
+	opt := &AttributeOptions{}
+
+	command.Flags().StringSliceVar(&opt.types, "attribute-type", []string{}, "Order attribute types")
+	command.Flags().StringSliceVar(&opt.values, "attribute-value", []string{}, "Order attribute value")
+
+	command.RegisterFlagCompletionFunc("attribute-type", complete.OrderAttributeType)
+	command.RegisterFlagCompletionFunc("attribute-value", cobra.NoFileCompletions)
+
+	return opt
 }
 
 func (o AttributeOptions) Validate() error {
@@ -33,6 +46,7 @@ func (o AttributeOptions) Validate() error {
 			return fmt.Errorf("%w: `%s`", errors.OptionOrderAttributeTypeUnkonwn, o.types[k])
 		}
 	}
+
 	return nil
 }
 
@@ -58,14 +72,4 @@ func (o AttributeOptions) EnrichMessageBody(messageBody *quickfix.Body) {
 	}
 
 	messageBody.SetGroup(attributes)
-}
-
-func NewAttributeOptions(command *cobra.Command) *AttributeOptions {
-	opt := &AttributeOptions{}
-	command.Flags().StringSliceVar(&opt.types, "attribute-type", []string{}, "Order attribute types")
-	command.Flags().StringSliceVar(&opt.values, "attribute-value", []string{}, "Order attribute value")
-
-	command.RegisterFlagCompletionFunc("attribute-type", complete.OrderAttributeType)
-	command.RegisterFlagCompletionFunc("attribute-value", cobra.NoFileCompletions)
-	return opt
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 	"github.com/spf13/cobra"
+
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/dict"
@@ -28,11 +29,30 @@ type PartyIdOptions struct {
 	copyPartyIDFromConfig bool
 }
 
+func NewPartyIdOptions(command *cobra.Command) *PartyIdOptions {
+	opt := &PartyIdOptions{}
+
+	command.Flags().StringSliceVar(&opt.partyIDs, "party-id", []string{}, "Order party ids")
+	command.Flags().StringSliceVar(&opt.partyIDSources, "party-id-source", []string{}, "Order party id sources")
+	command.Flags().StringSliceVar(&opt.partyRoles, "party-role", []string{}, "Order party roles")
+	command.Flags().StringSliceVar(&opt.partyRoleQualifiers, "party-role-qualifier", []string{}, "Order party role qualifiers")
+	command.Flags().StringSliceVar(&opt.partySubIDs, "party-sub-ids", []string{}, "Order party sub ids (space separated)")
+	command.Flags().StringSliceVar(&opt.partySubIDTypes, "party-sub-id-types", []string{}, "Order party sub id types (space separated)")
+	command.Flags().BoolVar(&opt.copyPartyIDFromConfig, "copy-credentials-fom-config", false, "Copy credentials from config in party id fields")
+
+	command.RegisterFlagCompletionFunc("party-id", cobra.NoFileCompletions)
+	command.RegisterFlagCompletionFunc("party-id-source", complete.OrderPartyIDSource)
+	command.RegisterFlagCompletionFunc("party-sub-ids", cobra.NoFileCompletions)
+	command.RegisterFlagCompletionFunc("party-sub-id-types", complete.OrderPartySubIDTypes)
+	command.RegisterFlagCompletionFunc("party-role", complete.OrderPartyIDRole)
+	command.RegisterFlagCompletionFunc("party-role-qualifier", complete.OrderPartyRoleQualifier)
+
+	return opt
+}
+
 func (o PartyIdOptions) Validate() error {
 	// Parties
-	if len(o.partyIDs) != len(o.partyIDSources) ||
-		len(o.partyIDs) != len(o.partyRoles) ||
-		len(o.partyIDSources) != len(o.partyRoles) {
+	if len(o.partyIDs) != len(o.partyIDSources) || len(o.partyIDs) != len(o.partyRoles) || len(o.partyIDSources) != len(o.partyRoles) {
 		return fmt.Errorf("%v: you must provide the same number of --party-id, --party-id-source, --party-sub-id and --party-role", errors.OptionsInconsistentValues)
 	}
 
@@ -94,11 +114,11 @@ func (o PartyIdOptions) Validate() error {
 			}
 		}
 	}
+
 	return nil
 }
 
 func (o PartyIdOptions) EnrichMessageBody(messageBody *quickfix.Body, session config.Session) {
-
 	NewNoPartySubIDsRepeatingGroup := func() *quickfix.RepeatingGroup {
 		return quickfix.NewRepeatingGroup(
 			tag.NoPartySubIDs,
@@ -130,8 +150,7 @@ func (o PartyIdOptions) EnrichMessageBody(messageBody *quickfix.Body, session co
 			party.Set(field.NewPartyRoleQualifier(utils.Must(strconv.Atoi(string(dict.PartyRoleQualifiers[strings.ToUpper(o.partyRoleQualifiers[i])])))))
 		}
 
-		if len(o.partySubIDs) == len(o.partyIDs) ||
-			len(o.partySubIDTypes) == len(o.partyIDs) {
+		if len(o.partySubIDs) == len(o.partyIDs) || len(o.partySubIDTypes) == len(o.partyIDs) {
 			var partySubIDs, partySubIDTypes []string
 
 			if len(o.partySubIDs) > 0 {
@@ -160,32 +179,14 @@ func (o PartyIdOptions) EnrichMessageBody(messageBody *quickfix.Body, session co
 					}
 				}
 			}
-
 		}
 	}
+
 	if o.copyPartyIDFromConfig {
 		party := parties.Add()
 		party.Set(field.NewPartyID(session.Username))
 		party.Set(field.NewPartyRole(enum.PartyRole_CUSTOMER_ACCOUNT))
 	}
+
 	messageBody.SetGroup(parties)
-}
-
-func NewPartyIdOptions(command *cobra.Command) *PartyIdOptions {
-	opt := &PartyIdOptions{}
-	command.Flags().StringSliceVar(&opt.partyIDs, "party-id", []string{}, "Order party ids")
-	command.Flags().StringSliceVar(&opt.partyIDSources, "party-id-source", []string{}, "Order party id sources")
-	command.Flags().StringSliceVar(&opt.partyRoles, "party-role", []string{}, "Order party roles")
-	command.Flags().StringSliceVar(&opt.partyRoleQualifiers, "party-role-qualifier", []string{}, "Order party role qualifiers")
-	command.Flags().StringSliceVar(&opt.partySubIDs, "party-sub-ids", []string{}, "Order party sub ids (space separated)")
-	command.Flags().StringSliceVar(&opt.partySubIDTypes, "party-sub-id-types", []string{}, "Order party sub id types (space separated)")
-	command.Flags().BoolVar(&opt.copyPartyIDFromConfig, "copy-credentials-fom-config", false, "Copy credentials from config in party id fields")
-
-	command.RegisterFlagCompletionFunc("party-id", cobra.NoFileCompletions)
-	command.RegisterFlagCompletionFunc("party-id-source", complete.OrderPartyIDSource)
-	command.RegisterFlagCompletionFunc("party-sub-ids", cobra.NoFileCompletions)
-	command.RegisterFlagCompletionFunc("party-sub-id-types", complete.OrderPartySubIDTypes)
-	command.RegisterFlagCompletionFunc("party-role", complete.OrderPartyIDRole)
-	command.RegisterFlagCompletionFunc("party-role-qualifier", complete.OrderPartyRoleQualifier)
-	return opt
 }

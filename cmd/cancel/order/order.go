@@ -47,7 +47,6 @@ func init() {
 	CancelOrderCmd.Flags().StringVar(&optionOrderID, "id", "", "Order id")
 	CancelOrderCmd.Flags().StringVar(&optionOrderSide, "side", "", "Order side (buy, sell ... etc)")
 	CancelOrderCmd.Flags().StringVar(&optionOrderSymbol, "symbol", "", "Order symbol")
-
 	CancelOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
 
 	partyIdOptions = options.NewPartyIdOptions(CancelOrderCmd)
