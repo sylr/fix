@@ -35,7 +35,7 @@ type CancelOrder struct {
 // Stop ensures the app chans are emptied so that quickfix can carry on with
 // the LOGOUT process correctly.
 func (app *CancelOrder) Stop() {
-	app.Logger.Debug().Msgf("Stopping NewOrder application")
+	app.Logger.Debug().Msgf("Stopping CancelOrder application")
 
 	app.mux.Lock()
 	defer app.mux.Unlock()

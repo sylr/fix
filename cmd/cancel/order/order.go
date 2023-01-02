@@ -17,6 +17,7 @@ import (
 
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
+	"sylr.dev/fix/pkg/cli/options"
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
@@ -29,6 +30,7 @@ var (
 	optionOrderSymbol        string
 	optionOrderID            string
 	optionExecReportsTimeout time.Duration
+	partyIdOptions           *options.PartyIdOptions
 )
 
 var CancelOrderCmd = &cobra.Command{
@@ -45,8 +47,9 @@ func init() {
 	CancelOrderCmd.Flags().StringVar(&optionOrderID, "id", "", "Order id")
 	CancelOrderCmd.Flags().StringVar(&optionOrderSide, "side", "", "Order side (buy, sell ... etc)")
 	CancelOrderCmd.Flags().StringVar(&optionOrderSymbol, "symbol", "", "Order symbol")
-
 	CancelOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
+
+	partyIdOptions = options.NewPartyIdOptions(CancelOrderCmd)
 
 	CancelOrderCmd.MarkFlagRequired("id")
 	CancelOrderCmd.MarkFlagRequired("side")
@@ -62,7 +65,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 		return errors.OptionOrderSideUnknown
 	}
 
-	return nil
+	return partyIdOptions.Validate()
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
@@ -143,14 +146,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Prepare order
-	order, err := buildMessage(*session)
+	// Prepare cancel message
+	cancelMsg, err := buildMessage(*session)
 	if err != nil {
 		return err
 	}
 
-	// Send the order
-	err = quickfix.SendToTarget(order, sessionId)
+	// Send the cancel message
+	err = quickfix.SendToTarget(cancelMsg, sessionId)
 	if err != nil {
 		return err
 	}
@@ -212,6 +215,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(field.NewOrderID(optionOrderID))
 			message.Body.Set(field.NewOrigClOrdID(optionOrderID))
 			message.Body.Set(field.NewSymbol(optionOrderSymbol))
+			partyIdOptions.EnrichMessageBody(&message.Body, session)
 
 			return message, nil
 
