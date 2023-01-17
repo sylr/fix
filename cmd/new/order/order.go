@@ -244,6 +244,10 @@ LOOP:
 				return err
 			}
 
+			if isFinalStatus(msg) {
+				break LOOP
+			}
+
 			// Reset timeout
 			if optionExecReportsTimeoutReset && optionExecReportsTimeout > 0 {
 				waitTimeout = time.After(optionExecReportsTimeout)
@@ -332,10 +336,27 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 	ordStatus := field.OrdStatusField{}
 	text := field.TextField{}
 
+	// Text
+	if msg.Body.Has(tag.Text) {
+		if err := msg.Body.GetField(tag.Text, &text); err != nil {
+			return err
+		}
+	}
+
+	makeError := func(errType error) error {
+		if len(text.String()) > 0 {
+			return fmt.Errorf("%w: %s", errType, text.String())
+		} else {
+			return errType
+		}
+	}
+
 	// MsgType
 	err := msg.Header.GetField(tag.MsgType, &msgType)
 	if err != nil {
 		return err
+	} else if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
+		return makeError(errors.FixOrderRejected)
 	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
 		return quickfix.InvalidMessageType()
 	}
@@ -345,54 +366,73 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 	}
 
 	// OrdStatus
-	msg.Body.GetField(tag.OrdStatus, &ordStatus)
+	err = msg.Body.GetField(tag.OrdStatus, &ordStatus)
 	if err != nil {
 		return err
 	}
 
+	app.WriteMessageBodyAsTable(os.Stdout, msg)
 	switch ordStatus.Value() {
 	case enum.OrdStatus_NEW:
-		fallthrough
+		break
 	case enum.OrdStatus_PARTIALLY_FILLED:
-		fallthrough
+		break
 	case enum.OrdStatus_FILLED:
-		fallthrough
+		break
 	case enum.OrdStatus_DONE_FOR_DAY:
-		fallthrough
-	case enum.OrdStatus_CANCELED:
-		fallthrough
+		break
 	case enum.OrdStatus_REPLACED:
-		fallthrough
+		break
 	case enum.OrdStatus_PENDING_CANCEL:
-		fallthrough
+		break
 	case enum.OrdStatus_STOPPED:
-		fallthrough
+		break
 	case enum.OrdStatus_SUSPENDED:
-		fallthrough
+		break
 	case enum.OrdStatus_PENDING_NEW:
-		fallthrough
+		break
 	case enum.OrdStatus_CALCULATED:
-		fallthrough
+		break
 	case enum.OrdStatus_EXPIRED:
-		fallthrough
+		break
 	case enum.OrdStatus_ACCEPTED_FOR_BIDDING:
-		fallthrough
+		break
 	case enum.OrdStatus_PENDING_REPLACE:
-		app.WriteMessageBodyAsTable(os.Stdout, msg)
+		break
+
+	case enum.OrdStatus_CANCELED:
+		return makeError(errors.FixOrderCancelled)
 
 	case enum.OrdStatus_REJECTED:
-		msg.Body.GetField(tag.Text, &text)
-		if err != nil {
-			return errors.FixOrderRejected
-		}
-
-		return fmt.Errorf("%w: %s", errors.FixOrderRejected, text.String())
+		return makeError(errors.FixOrderRejected)
 
 	default:
-		if len(text.String()) > 0 {
-			return fmt.Errorf("%w: %s", errors.FixOrderStatusUnknown, text.String())
-		}
+		return makeError(errors.FixOrderStatusUnknown)
 	}
 
 	return nil
+}
+
+func isFinalStatus(msg *quickfix.Message) bool {
+	ordStatus := field.OrdStatusField{}
+	err := msg.Body.GetField(tag.OrdStatus, &ordStatus)
+	if err != nil {
+		return false
+	}
+	switch ordStatus.Value() {
+	case enum.OrdStatus_FILLED:
+		return true
+	case enum.OrdStatus_DONE_FOR_DAY:
+		return true
+	case enum.OrdStatus_STOPPED:
+		return true
+	case enum.OrdStatus_EXPIRED:
+		return true
+	case enum.OrdStatus_CANCELED:
+		return true
+	case enum.OrdStatus_REJECTED:
+		return true // because there is no modification in our use case
+	default:
+		return false
+	}
 }
