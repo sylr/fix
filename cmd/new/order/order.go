@@ -42,6 +42,9 @@ var (
 	optionExecReportsTimeout         time.Duration
 	optionExecReportsTimeoutReset    bool
 	optionStopOnFinalState           bool
+	optionUpdatePeriod               time.Duration
+	optionUpdateOrderQuantity        float64
+	optionUpdateOrderPrice           float64
 )
 
 var NewOrderCmd = &cobra.Command{
@@ -72,6 +75,10 @@ func init() {
 	NewOrderCmd.Flags().BoolVar(&optionExecReportsTimeoutReset, "exec-reports-timeout-reset", false, "Reset execution reports timeout each time an execution report is received")
 
 	NewOrderCmd.Flags().BoolVar(&optionStopOnFinalState, "stop-on-final-state", false, "Stop application when receiving an order with a final state")
+
+	NewOrderCmd.Flags().DurationVar(&optionUpdatePeriod, "update-period", 0*time.Second, "Period for recurring update order price/quantity")
+	NewOrderCmd.Flags().Float64Var(&optionUpdateOrderQuantity, "update-order-quantity", 0.0, "Update order quantity after each period")
+	NewOrderCmd.Flags().Float64Var(&optionUpdateOrderPrice, "update-order-price", 0.0, "Update order price after each period")
 
 	NewOrderCmd.MarkFlagRequired("side")
 	NewOrderCmd.MarkFlagRequired("type")
@@ -223,6 +230,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 		waitTimeout = make(<-chan time.Time)
 	}
 
+	var updatePeriod <-chan time.Time
+	if optionUpdatePeriod > 0 {
+		updatePeriod = make(<-chan time.Time)
+	}
+
+	var lastExecutionReport *quickfix.Message
 LOOP:
 	for {
 		select {
@@ -233,6 +246,19 @@ LOOP:
 		case <-waitTimeout:
 			logger.Warn().Msgf("Timeout while expecting execution reports (%d/%d)", execReports, optionExecReports)
 			break LOOP
+
+		case <-updatePeriod:
+			// Prepare order
+			orderUpdateMsg, err := buildCancelReplaceMessage(*session, lastExecutionReport)
+			if err != nil {
+				return err
+			}
+
+			// Send the order
+			err = quickfix.Send(orderUpdateMsg)
+			if err != nil {
+				return err
+			}
 
 		case msg, ok := <-app.FromAppMessages:
 			if !ok {
@@ -245,6 +271,10 @@ LOOP:
 				}
 
 				return err
+			}
+
+			if msgType, err := msg.Header.GetString(tag.MsgType); err == nil && msgType == "8" {
+				lastExecutionReport = msg
 			}
 
 			if optionStopOnFinalState && isFinalStatus(msg) {
@@ -262,6 +292,10 @@ LOOP:
 		if optionExecReports != 0 && execReports >= optionExecReports {
 			logger.Debug().Msgf("Exiting response loop, execution reports: %d/%d", execReports, optionExecReports)
 			break LOOP
+		}
+
+		if optionUpdatePeriod > 0 {
+			updatePeriod = time.After(optionUpdatePeriod)
 		}
 	}
 
@@ -330,6 +364,80 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	if len(optionOrderOrigination) > 0 {
 		message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginations[strings.ToUpper(optionOrderOrigination)])))
 	}
+
+	return message, nil
+}
+
+func buildCancelReplaceMessage(session config.Session, executionReport *quickfix.Message) (quickfix.Messagable, error) {
+	if executionReport == nil {
+		return nil, fmt.Errorf("missing execution report")
+	}
+
+	// Prepare order
+	orderId := field.OrderIDField{}
+	if err := executionReport.Body.GetField(tag.OrderID, &orderId); err != nil {
+		return nil, err
+	}
+	clOrdId := field.NewClOrdID(uuid.New().String())
+	oldClOrdId := field.ClOrdIDField{}
+	if err := executionReport.Body.GetField(tag.ClOrdID, &oldClOrdId); err != nil {
+		return nil, err
+	}
+	origClOrdId := field.NewOrigClOrdID(oldClOrdId.String())
+	ordType := field.OrdTypeField{}
+	if err := executionReport.Body.GetField(tag.OrdType, &ordType); err != nil {
+		return nil, err
+	}
+	transactime := field.NewTransactTime(time.Now())
+	ordSide := field.SideField{}
+	if err := executionReport.Body.GetField(tag.Side, &ordSide); err != nil {
+		return nil, err
+	}
+	eExpiry, err := dict.OrderTimeInForceStringToEnum(optionOrderExpiry)
+	if err != nil {
+		return nil, err
+	}
+	totalQty := field.OrderQtyField{}
+	if err := executionReport.Body.GetField(tag.OrderQty, &totalQty); err != nil {
+		return nil, err
+	}
+	price := field.PriceField{}
+	if err := executionReport.Body.GetField(tag.Price, &price); err != nil {
+		return nil, err
+	}
+
+	// Message
+	message := quickfix.NewMessage()
+	header := fixt11.NewHeader(&message.Header)
+
+	switch session.BeginString {
+	case quickfix.BeginStringFIXT11:
+		switch session.DefaultApplVerID {
+		case "FIX.5.0SP2":
+			header.Set(field.NewMsgType(enum.MsgType_ORDER_CANCEL_REPLACE_REQUEST))
+			message.Body.Set(orderId)
+			message.Body.Set(clOrdId)
+			message.Body.Set(origClOrdId)
+			message.Body.Set(ordSide)
+			message.Body.Set(transactime)
+			message.Body.Set(ordType)
+			message.Body.Set(field.NewTimeInForce(eExpiry))
+			message.Body.Set(field.NewSymbol(optionOrderSymbol))
+			message.Body.Set(field.NewOrderQty(totalQty.Value().Add(decimal.NewFromFloat(optionUpdateOrderQuantity)), 2))
+			message.Body.Set(field.NewPrice(price.Value().Add(decimal.NewFromFloat(optionUpdateOrderPrice)), 2))
+			partyIdOptions.EnrichMessageBody(&message.Body, session)
+
+		default:
+			return nil, errors.FixVersionNotImplemented
+		}
+	default:
+		return nil, errors.FixVersionNotImplemented
+	}
+
+	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
 	return message, nil
 }
