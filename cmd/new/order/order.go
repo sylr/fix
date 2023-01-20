@@ -41,6 +41,7 @@ var (
 	optionExecReports                int
 	optionExecReportsTimeout         time.Duration
 	optionExecReportsTimeoutReset    bool
+	optionStopOnFinalState           bool
 )
 
 var NewOrderCmd = &cobra.Command{
@@ -69,6 +70,8 @@ func init() {
 	NewOrderCmd.Flags().IntVar(&optionExecReports, "exec-reports", 1, "Expect given number of execution reports before logging out (0 wait indefinitely)")
 	NewOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
 	NewOrderCmd.Flags().BoolVar(&optionExecReportsTimeoutReset, "exec-reports-timeout-reset", false, "Reset execution reports timeout each time an execution report is received")
+
+	NewOrderCmd.Flags().BoolVar(&optionStopOnFinalState, "stop-on-final-state", false, "Stop application when receiving an order with a final state")
 
 	NewOrderCmd.MarkFlagRequired("side")
 	NewOrderCmd.MarkFlagRequired("type")
@@ -244,7 +247,7 @@ LOOP:
 				return err
 			}
 
-			if isFinalStatus(msg) {
+			if optionStopOnFinalState && isFinalStatus(msg) {
 				break LOOP
 			}
 
