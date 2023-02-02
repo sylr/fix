@@ -163,26 +163,37 @@ func (app *QuickFixAppMessageLogger) WriteMessageBodyAsTable(w io.Writer, messag
 	table.SetColumnAlignment([]int{tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
 
 	var line []string
+
+	tagValues := message.GetFields()
+
 	for _, tag := range bodyTags {
 		var tagDescription = "<unknown>"
 		var valueString = ""
 		var valueDescription = ""
 
-		values, _ := message.Body.GetStrings(tag)
+		values := make([]string, 0)
 
-		for i := range values {
+		for _, tagValue := range tagValues {
+			if tagValue.Tag() != tag {
+				continue
+			}
+
+			value := tagValue.Value()
+
 			if app.AppDataDictionary != nil {
 				tagField, tok := app.AppDataDictionary.FieldTypeByTag[int(tag)]
 				if tok {
 					tagDescription = tagField.Name()
 				}
 				if len(tagField.Enums) > 0 {
-					if en, ok := tagField.Enums[values[i]]; ok {
+					if en, ok := tagField.Enums[tagValue.Value()]; ok {
 						valueDescription = en.Description
-						values[i] += fmt.Sprintf(" (%s)", valueDescription)
+						value += fmt.Sprintf(" (%s)", valueDescription)
 					}
 				}
 			}
+
+			values = append(values, value)
 		}
 
 		valueString = strings.Join(values, ", ")
