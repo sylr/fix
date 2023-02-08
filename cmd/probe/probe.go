@@ -17,6 +17,66 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
+var (
+	optionProbeInterval time.Duration
+
+	status = make(chan result)
+)
+
+// ConfigCmd represents the buy command
+var ProbeCmd = &cobra.Command{
+	Use:               "probe",
+	Short:             "Test fix session",
+	Long:              "Test fix session.",
+	RunE:              Execute,
+	PersistentPreRunE: utils.MakePersistentPreRunE(Validate),
+}
+
+func init() {
+	ProbeCmd.Flags().DurationVar(&optionProbeInterval, "probe-interval", 10*time.Second, "Interval between each probing")
+
+	prometheus.MustRegister(metricFixSessionFailuresTotal)
+	prometheus.MustRegister(metricFixSessionSuccessesTotal)
+	prometheus.MustRegister(metricFixSessionStatus)
+}
+
+func Validate(_ *cobra.Command, _ []string) error {
+	return nil
+}
+
+func Execute(_ *cobra.Command, _ []string) error {
+	logger := config.GetLogger()
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
+	time.Sleep(time.Until(time.Now().Truncate(optionProbeInterval).Add(optionProbeInterval)))
+	ticker := time.NewTicker(optionProbeInterval)
+
+LOOP:
+	for {
+		select {
+		case signal := <-interrupt:
+			logger.Debug().Msgf("Received signal: %s", signal)
+			break LOOP
+
+		case <-ticker.C:
+			go probe()
+
+		case result := <-status:
+			if result.connected {
+				metricFixSessionSuccessesTotal.WithLabelValues(result.context, result.session).Inc()
+				metricFixSessionStatus.WithLabelValues(result.context, result.session).Set(1.0)
+			} else {
+				metricFixSessionFailuresTotal.WithLabelValues(result.context, result.session).Inc()
+				metricFixSessionStatus.WithLabelValues(result.context, result.session).Set(0.0)
+			}
+		}
+	}
+
+	return nil
+}
+
 // Metrics
 var (
 	metricFixSessionFailuresTotal = prometheus.NewCounterVec(
@@ -48,47 +108,11 @@ var (
 	)
 )
 
-// ConfigCmd represents the buy command
-var ProbeCmd = &cobra.Command{
-	Use:   "probe",
-	Short: "Test fix session",
-	Long:  "Test fix session.",
-	RunE:  Execute,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := utils.ValidateRequiredFlags(cmd); err != nil {
-			return err
-		}
-
-		if err := initiator.ValidateOptions(cmd, args); err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				return parent.PersistentPreRunE(parent, args)
-			}
-		}
-
-		return nil
-	},
-}
-
-func init() {
-	prometheus.MustRegister(metricFixSessionFailuresTotal)
-	prometheus.MustRegister(metricFixSessionSuccessesTotal)
-	prometheus.MustRegister(metricFixSessionStatus)
-}
-
 type result struct {
 	context   string
 	session   string
 	connected bool
 }
-
-var (
-	status = make(chan result)
-)
 
 func probe() {
 	options := config.GetOptions()
@@ -172,37 +196,4 @@ func probe() {
 			}(contexts[i], j, session)
 		}
 	}
-}
-
-func Execute(_ *cobra.Command, _ []string) error {
-	logger := config.GetLogger()
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-	time.Sleep(time.Until(time.Now().Truncate(10 * time.Second).Add(10 * time.Second)))
-	ticker := time.NewTicker(10 * time.Second)
-
-LOOP:
-	for {
-		select {
-		case signal := <-interrupt:
-			logger.Debug().Msgf("Received signal: %s", signal)
-			break LOOP
-
-		case <-ticker.C:
-			go probe()
-
-		case result := <-status:
-			if result.connected {
-				metricFixSessionSuccessesTotal.WithLabelValues(result.context, result.session).Inc()
-				metricFixSessionStatus.WithLabelValues(result.context, result.session).Set(1.0)
-			} else {
-				metricFixSessionFailuresTotal.WithLabelValues(result.context, result.session).Inc()
-				metricFixSessionStatus.WithLabelValues(result.context, result.session).Set(0.0)
-			}
-		}
-	}
-
-	return nil
 }
