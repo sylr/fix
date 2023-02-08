@@ -17,6 +17,37 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
+// Metrics
+var (
+	metricFixSessionFailuresTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "fix",
+			Subsystem: "session",
+			Name:      "failures_total",
+			Help:      "Total number of session errors",
+		},
+		[]string{"context", "session"},
+	)
+	metricFixSessionSuccessesTotal = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "fix",
+			Subsystem: "session",
+			Name:      "successes_total",
+			Help:      "Total number of session successes",
+		},
+		[]string{"context", "session"},
+	)
+	metricFixSessionStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "fix",
+			Subsystem: "session",
+			Name:      "status",
+			Help:      "Status of the fix session",
+		},
+		[]string{"context", "session"},
+	)
+)
+
 // ConfigCmd represents the buy command
 var ProbeCmd = &cobra.Command{
 	Use:   "probe",
@@ -43,101 +74,102 @@ var ProbeCmd = &cobra.Command{
 	},
 }
 
-var (
-	metricFixSessionErrors = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "fix",
-			Subsystem: "session",
-			Name:      "errors_total",
-			Help:      "Number fix session errors",
-		},
-		[]string{},
-	)
-	metricFixSessionStatus = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "fix",
-			Subsystem: "session",
-			Name:      "status",
-			Help:      "Status of the fix session ",
-		},
-		[]string{},
-	)
-)
-
-var (
-	status = make(chan bool)
-)
-
 func init() {
-	prometheus.MustRegister(metricFixSessionErrors)
+	prometheus.MustRegister(metricFixSessionFailuresTotal)
+	prometheus.MustRegister(metricFixSessionSuccessesTotal)
 	prometheus.MustRegister(metricFixSessionStatus)
-
-	metricFixSessionErrors.WithLabelValues().Add(0)
 }
 
-func connect() {
+type result struct {
+	context   string
+	session   string
+	connected bool
+}
+
+var (
+	status = make(chan result)
+)
+
+func probe() {
 	options := config.GetOptions()
 	logger := config.GetLogger()
 
-	context, err := config.GetCurrentContext()
-	if err != nil {
-		status <- false
-		return
-	}
+	logger.Info().Msgf("Start probing")
 
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		status <- false
-		return
-	}
+	contexts := config.GetContexts()
 
-	app := application.NewInitiator()
-	app.Settings = settings
-	app.Logger = logger
+	for i, context := range contexts {
+		if len(context.Initiator) == 0 {
+			continue
+		}
 
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
+		for j, session := range context.Sessions {
+			go func(context *config.Context, i int, session string) {
+				logger.Debug().Str("context", context.GetName()).Str("session", session).Msgf("Start probing session")
 
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		status <- false
-		return
-	}
+				// Make a copy of the context which has only one session.
+				contextSingleSession := *context
+				contextSingleSession.Sessions = nil
+				contextSingleSession.Sessions = context.Sessions[i : i+1]
 
-	// Start session
-	if err = init.Start(); err != nil {
-		status <- false
-		return
-	}
+				logger.Debug().Str("context", context.GetName()).Str("session", session).Strs("sessions", contextSingleSession.Sessions).Msgf("Copied context")
 
-	defer func() {
-		app.Stop()
-		init.Stop()
-	}()
+				settings, err := contextSingleSession.ToQuickFixInitiatorSettings()
+				if err != nil {
+					panic(err)
+				}
 
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else {
-		timeout = 5 * time.Second
-	}
+				app := application.NewInitiator()
+				app.Settings = settings
+				app.Logger = logger
 
-	// Wait for session connection
-	select {
-	case <-time.After(timeout):
-		quickfix.UnregisterSession(app.SessionID)
-		status <- false
+				var quickfixLogger *zerolog.Logger
+				if options.QuickFixLogging {
+					quickfixLogger = logger
+				}
 
-	case _, ok := <-app.Connected:
-		if !ok {
-			status <- false
-		} else {
-			logger.Debug().Msgf("connected")
-			quickfix.UnregisterSession(app.SessionID)
-			status <- true
+				init, err := initiator.Initiate(app, settings, quickfixLogger)
+				if err != nil {
+					logger.Error().Err(err).Str("context", context.GetName()).Str("session", session).Msg("Unable to initiate initiator")
+					status <- result{context: context.GetName(), session: session, connected: false}
+					return
+				}
+
+				// Start session
+				if err = init.Start(); err != nil {
+					logger.Error().Err(err).Str("context", context.GetName()).Str("session", session).Msg("Unable to start initiator")
+					status <- result{context: context.GetName(), session: session, connected: false}
+					return
+				}
+
+				defer func() {
+					app.Stop()
+					init.Stop()
+					_ = quickfix.UnregisterSession(app.SessionID)
+				}()
+
+				// Choose right timeout cli option > config > default value (5s)
+				var timeout time.Duration
+				if options.Timeout != time.Duration(0) {
+					timeout = options.Timeout
+				} else {
+					timeout = 5 * time.Second
+				}
+
+				// Wait for session connection
+				select {
+				case <-time.After(timeout):
+					status <- result{context: context.GetName(), session: session, connected: false}
+
+				case _, ok := <-app.Connected:
+					if !ok {
+						status <- result{context: context.GetName(), session: session, connected: false}
+					} else {
+						logger.Debug().Msgf("connected")
+						status <- result{context: context.GetName(), session: session, connected: true}
+					}
+				}
+			}(contexts[i], j, session)
 		}
 	}
 }
@@ -148,7 +180,8 @@ func Execute(_ *cobra.Command, _ []string) error {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	go connect()
+	time.Sleep(time.Until(time.Now().Truncate(10 * time.Second).Add(10 * time.Second)))
+	ticker := time.NewTicker(10 * time.Second)
 
 LOOP:
 	for {
@@ -157,15 +190,16 @@ LOOP:
 			logger.Debug().Msgf("Received signal: %s", signal)
 			break LOOP
 
-		case <-time.After(30 * time.Second):
-			go connect()
+		case <-ticker.C:
+			go probe()
 
-		case ok := <-status:
-			if ok {
-				metricFixSessionStatus.WithLabelValues().Set(1.0)
+		case result := <-status:
+			if result.connected {
+				metricFixSessionSuccessesTotal.WithLabelValues(result.context, result.session).Inc()
+				metricFixSessionStatus.WithLabelValues(result.context, result.session).Set(1.0)
 			} else {
-				metricFixSessionErrors.WithLabelValues().Inc()
-				metricFixSessionStatus.WithLabelValues().Set(0.0)
+				metricFixSessionFailuresTotal.WithLabelValues(result.context, result.session).Inc()
+				metricFixSessionStatus.WithLabelValues(result.context, result.session).Set(0.0)
 			}
 		}
 	}
