@@ -402,13 +402,10 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 		break
 	case enum.OrdStatus_PENDING_REPLACE:
 		break
-
 	case enum.OrdStatus_CANCELED:
-		return makeError(errors.FixOrderCancelled)
-
+		return makeError(errors.FixOrderCanceled)
 	case enum.OrdStatus_REJECTED:
 		return makeError(errors.FixOrderRejected)
-
 	default:
 		return makeError(errors.FixOrderStatusUnknown)
 	}
@@ -418,10 +415,11 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 
 func isFinalStatus(msg *quickfix.Message) bool {
 	ordStatus := field.OrdStatusField{}
-	err := msg.Body.GetField(tag.OrdStatus, &ordStatus)
-	if err != nil {
+
+	if err := msg.Body.GetField(tag.OrdStatus, &ordStatus); err != nil {
 		return false
 	}
+
 	switch ordStatus.Value() {
 	case enum.OrdStatus_FILLED:
 		return true
@@ -434,7 +432,7 @@ func isFinalStatus(msg *quickfix.Message) bool {
 	case enum.OrdStatus_CANCELED:
 		return true
 	case enum.OrdStatus_REJECTED:
-		return true // because there is no modification in our use case
+		return true
 	default:
 		return false
 	}

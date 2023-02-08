@@ -27,7 +27,7 @@ var (
 	ConnectionTimeout               = errors.New("connection timeout")
 	Fix                             = errors.New("FIX")
 	FixLogout                       = fmt.Errorf("%w: logout received", Fix)
-	FixOrderCancelled               = fmt.Errorf("%w: cancelled order", Fix)
+	FixOrderCanceled                = fmt.Errorf("%w: canceled order", Fix)
 	FixOrderRejected                = fmt.Errorf("%w: rejected order", Fix)
 	FixVersionNotImplemented        = fmt.Errorf("%w: version not implemented", Fix)
 	FixOrderStatusUnknown           = fmt.Errorf("%w: unknown order status", Fix)
