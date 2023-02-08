@@ -62,6 +62,9 @@ var (
 		},
 		[]string{},
 	)
+)
+
+var (
 	status = make(chan bool)
 )
 
@@ -73,7 +76,6 @@ func init() {
 }
 
 func connect() {
-
 	options := config.GetOptions()
 	logger := config.GetLogger()
 
@@ -103,6 +105,7 @@ func connect() {
 		status <- false
 		return
 	}
+
 	// Start session
 	if err = init.Start(); err != nil {
 		status <- false
@@ -121,26 +124,25 @@ func connect() {
 	} else {
 		timeout = 5 * time.Second
 	}
+
 	// Wait for session connection
 	select {
 	case <-time.After(timeout):
 		quickfix.UnregisterSession(app.SessionID)
 		status <- false
+
 	case _, ok := <-app.Connected:
 		if !ok {
 			status <- false
 		} else {
 			logger.Debug().Msgf("connected")
-			init.Stop()
 			quickfix.UnregisterSession(app.SessionID)
 			status <- true
 		}
-
 	}
 }
 
-func Execute(cmd *cobra.Command, args []string) error {
-
+func Execute(_ *cobra.Command, _ []string) error {
 	logger := config.GetLogger()
 
 	interrupt := make(chan os.Signal, 1)
@@ -154,6 +156,10 @@ LOOP:
 		case signal := <-interrupt:
 			logger.Debug().Msgf("Received signal: %s", signal)
 			break LOOP
+
+		case <-time.After(30 * time.Second):
+			go connect()
+
 		case ok := <-status:
 			if ok {
 				metricFixSessionStatus.WithLabelValues().Set(1.0)
@@ -161,8 +167,6 @@ LOOP:
 				metricFixSessionErrors.WithLabelValues().Inc()
 				metricFixSessionStatus.WithLabelValues().Set(0.0)
 			}
-			time.Sleep(30 * time.Second)
-			go connect()
 		}
 	}
 
