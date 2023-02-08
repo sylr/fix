@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	neworder "sylr.dev/fix/cmd/new/order"
+	newquote "sylr.dev/fix/cmd/new/quote"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/utils"
 )
@@ -37,6 +38,8 @@ func init() {
 	initiator.AddPersistentFlags(NewCmd)
 	initiator.AddPersistentFlagCompletions(NewCmd)
 	initiator.AddPersistentFlagCompletions(neworder.NewOrderCmd)
+	initiator.AddPersistentFlagCompletions(newquote.NewQuoteCmd)
 
 	NewCmd.AddCommand(neworder.NewOrderCmd)
+	NewCmd.AddCommand(newquote.NewQuoteCmd)
 }
