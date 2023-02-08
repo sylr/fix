@@ -259,8 +259,11 @@ type Session struct {
 	HeartBtInt              int    `yaml:"HeartBtInt"`
 	SenderCompID            string `yaml:"SenderCompID"`
 	SenderSubID             string `yaml:"SenderSubID"`
+	SenderLocationID        string `yaml:"SenderLocationID"`
 	TargetCompID            string `yaml:"TargetCompID"`
 	TargetSubID             string `yaml:"TargetSubID"`
+	TargetLocationID        string `yaml:"TargetLocationID"`
+	SessionQualifier        string `yaml:"SessionQualifier"`
 	Username                string `yaml:"Username"`
 	Password                string `yaml:"Password"`
 	StartTime               string `yaml:"StartTime"`
@@ -345,8 +348,11 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(sessionSettings, qconfig.DefaultApplVerID, session.DefaultApplVerID)
 	setSessionSetting(sessionSettings, qconfig.SenderCompID, session.SenderCompID)
 	setSessionSetting(sessionSettings, qconfig.SenderSubID, session.SenderSubID)
+	setSessionSetting(sessionSettings, qconfig.SenderLocationID, session.SenderLocationID)
 	setSessionSetting(sessionSettings, qconfig.TargetCompID, session.TargetCompID)
 	setSessionSetting(sessionSettings, qconfig.TargetSubID, session.TargetSubID)
+	setSessionSetting(sessionSettings, qconfig.TargetLocationID, session.TargetLocationID)
+	setSessionSetting(sessionSettings, qconfig.SessionQualifier, session.SessionQualifier)
 	setSessionSetting(sessionSettings, qconfig.BeginString, session.BeginString)
 	setSessionSetting(sessionSettings, "Username", session.Username)
 	setSessionSetting(sessionSettings, "Password", session.Password)

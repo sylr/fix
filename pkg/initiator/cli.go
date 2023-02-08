@@ -73,7 +73,9 @@ func ValidateOptions(cmd *cobra.Command, args []string) error {
 		case 1:
 			// OK
 		default:
-			return errors.ConfigContextMultipleSessions
+			if cmd.Name() != "probe" {
+				return errors.ConfigContextMultipleSessions
+			}
 		}
 	}
 
