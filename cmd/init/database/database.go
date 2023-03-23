@@ -77,8 +77,10 @@ func createDatabase[T config.SQLStoreConfig](values []T, defaultDBName string) e
 		case "sqlite3":
 			file = value.GetSQLStoreDataSourceName()
 			if len(file) == 0 {
-				file = os.ExpandEnv(filepath.Join("$HOME", ".fix", defaultDBName))
+				file = filepath.Join("$HOME", ".fix", defaultDBName)
 			}
+
+			file = os.ExpandEnv(file)
 
 			databaseDir := path.Dir(file)
 			err := os.MkdirAll(databaseDir, 0700)
