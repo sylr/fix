@@ -276,6 +276,7 @@ type Session struct {
 	ResetOnLogon            bool   `yaml:"ResetOnLogon"`
 	ResetOnLogout           bool   `yaml:"ResetOnLogout"`
 	ResetOnDisconnect       bool   `yaml:"ResetOnDisconnect"`
+	ReconnectInterval       int    `yaml:"ReconnectInterval"`
 }
 
 func (s *Session) GetName() string {
@@ -344,6 +345,7 @@ func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
 	setSessionSetting(sessionSettings, qconfig.SocketConnectPort, initiator.SocketConnectPort)
 	setSessionSetting(sessionSettings, qconfig.SocketServerName, initiator.SocketServerName)
 	setSessionSetting(sessionSettings, qconfig.HeartBtInt, session.HeartBtInt)
+	setSessionSetting(sessionSettings, qconfig.ReconnectInterval, session.ReconnectInterval)
 	setSessionSetting(sessionSettings, qconfig.BeginString, session.BeginString)
 	setSessionSetting(sessionSettings, qconfig.DefaultApplVerID, session.DefaultApplVerID)
 	setSessionSetting(sessionSettings, qconfig.SenderCompID, session.SenderCompID)
