@@ -146,6 +146,8 @@ func (app *NewOrder) FromApp(message *quickfix.Message, sessionID quickfix.Sessi
 		app.FromAppMessages <- message
 	case enum.MsgType_QUOTE_STATUS_REPORT:
 		app.FromAppMessages <- message
+	case enum.MsgType_ORDER_CANCEL_REJECT:
+		app.FromAppMessages <- message
 	default:
 		typName, err := dict.SearchValue(dict.MessageTypes, enum.MsgType(typ))
 		if err != nil {

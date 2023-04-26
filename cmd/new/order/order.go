@@ -468,7 +468,9 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 	err := msg.Header.GetField(tag.MsgType, &msgType)
 	if err != nil {
 		return err
-	} else if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
+	} else if msgType.Value() == enum.MsgType_REJECT ||
+		msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT ||
+		msgType.Value() == enum.MsgType_ORDER_CANCEL_REJECT {
 		return makeError(errors.FixOrderRejected)
 	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
 		return quickfix.InvalidMessageType()
