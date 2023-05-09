@@ -1,6 +1,8 @@
 package initiator
 
 import (
+	"fmt"
+
 	"github.com/rs/zerolog"
 
 	"github.com/quickfixgo/quickfix"
@@ -17,9 +19,10 @@ func Initiate(app quickfix.Application, settings *quickfix.Settings, logger *zer
 			return nil, err
 		}
 		switch driver {
-		case "sqlite3":
-		case "postgres":
+		case "sqlite3", "postgres":
 			msgStoreFactory = quickfix.NewSQLStoreFactory(settings)
+		default:
+			return nil, fmt.Errorf("Unsupported SQLStoreDriver: %s", driver)
 		}
 	}
 
