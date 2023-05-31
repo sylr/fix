@@ -624,7 +624,7 @@ func (o *Orders) fillBestOrder(order *Order) {
 			o.bestBuyOrder = order
 		}
 	} else {
-		if o.bestSellOrder == nil || order.Price.GreaterThan(o.bestSellOrder.Price) {
+		if o.bestSellOrder == nil || order.Price.LessThan(o.bestSellOrder.Price) {
 			o.bestSellOrder = order
 		}
 	}
@@ -674,7 +674,7 @@ func (o *Orders) isOrderBookCrossed(security string) bool {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 
-	if o.bestBuyOrder != nil && o.bestSellOrder != nil && o.bestBuyOrder.Price.GreaterThan(o.bestSellOrder.Price) {
+	if o.bestBuyOrder != nil && o.bestSellOrder != nil && o.bestBuyOrder.Price.GreaterThanOrEqual(o.bestSellOrder.Price) {
 		// Book is crossed
 		if !o.isCrossed {
 			metricBookCrossed.WithLabelValues(security).Set(float64(1))
