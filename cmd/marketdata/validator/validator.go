@@ -4,6 +4,7 @@
 package marketdatavalidator
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,7 +28,7 @@ import (
 )
 
 var (
-	optionSymbol string
+	optionSymbol []string
 )
 
 var MarketDataValidatorCmd = &cobra.Command{
@@ -41,7 +42,7 @@ var MarketDataValidatorCmd = &cobra.Command{
 }
 
 func init() {
-	MarketDataValidatorCmd.Flags().StringVar(&optionSymbol, "symbol", "", "Symbol")
+	MarketDataValidatorCmd.Flags().StringSliceVar(&optionSymbol, "symbol", []string{""}, "Symbol")
 
 	MarketDataValidatorCmd.RegisterFlagCompletionFunc("symbol", cobra.NoFileCompletions)
 }
@@ -58,6 +59,10 @@ func Validate(cmd *cobra.Command, args []string) error {
 func Execute(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
 	logger := config.GetLogger()
+
+	if len(optionSymbol) == 0 {
+		return fmt.Errorf("symbol list is empty")
+	}
 
 	context, err := config.GetCurrentContext()
 	if err != nil {
@@ -131,16 +136,18 @@ func Execute(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Prepare market data request
-	marketDataRequest, err := buildMessage(*session, optionSymbol)
-	if err != nil {
-		return err
-	}
+	for _, symbol := range optionSymbol {
+		// Prepare market data request
+		marketDataRequest, err := buildMessage(*session, symbol)
+		if err != nil {
+			return err
+		}
 
-	// Send the order
-	err = quickfix.Send(marketDataRequest)
-	if err != nil {
-		panic(err)
+		// Send the order
+		err = quickfix.Send(marketDataRequest)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	interrupt := make(chan os.Signal, 1)
