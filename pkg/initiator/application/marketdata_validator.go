@@ -68,6 +68,15 @@ var (
 		},
 		[]string{"security", "type", "side"},
 	)
+	metricMarketDataValidatorCrossedUpdates = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "fix",
+			Subsystem: "marketdata_validator",
+			Name:      "crossed_updates_totals",
+			Help:      "Number of updates that resulted in a crossed book",
+		},
+		[]string{"security"},
+	)
 	metricMarketDataValidatorBookCrossed = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "fix",
@@ -86,10 +95,10 @@ func init() {
 	prometheus.MustRegister(metricMarketDataValidatorErrors)
 	prometheus.MustRegister(metricMarketDataValidatorOrders)
 	prometheus.MustRegister(metricMarketDataValidatorBookCrossed)
+	prometheus.MustRegister(metricMarketDataValidatorCrossedUpdates)
 }
 
 func NewMarketDataValidator(logger *zerolog.Logger, securities []string) *MarketDataValidator {
-
 	secs := make(map[string]*Orders, len(securities))
 	for _, security := range securities {
 		secs[security] = &Orders{
@@ -119,6 +128,7 @@ func NewMarketDataValidator(logger *zerolog.Logger, securities []string) *Market
 	for _, security := range securities {
 		metricMarketDataValidatorErrors.WithLabelValues(security, ErrOrderNotFound.Error()).Add(0)
 		metricMarketDataValidatorErrors.WithLabelValues(security, ErrOrderAlreadyExists.Error()).Add(0)
+		metricMarketDataValidatorCrossedUpdates.WithLabelValues(security).Add(0)
 	}
 
 	return &mdr
@@ -682,14 +692,15 @@ func (o *Orders) isOrderBookCrossed(security string) bool {
 	if o.bestBuyOrder != nil && o.bestSellOrder != nil && o.bestBuyOrder.Price.GreaterThanOrEqual(o.bestSellOrder.Price) {
 		// Book is crossed
 		if !o.isCrossed {
-			metricMarketDataValidatorBookCrossed.WithLabelValues(security).Set(float64(1))
+			metricMarketDataValidatorCrossedUpdates.WithLabelValues(security).Add(1)
+			metricMarketDataValidatorBookCrossed.WithLabelValues(security).Set(1)
 			o.isCrossed = true
 		}
 		return true
 	}
 
 	if o.isCrossed {
-		metricMarketDataValidatorBookCrossed.WithLabelValues(security).Set(float64(0))
+		metricMarketDataValidatorBookCrossed.WithLabelValues(security).Set(0)
 		o.isCrossed = false
 	}
 
