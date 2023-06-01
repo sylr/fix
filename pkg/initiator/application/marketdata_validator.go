@@ -353,7 +353,7 @@ func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdatainc
 	}
 
 	if mdentries.Len() == 0 {
-		reason := "MDEntries seems emtpty"
+		reason := "MDEntries seems empty"
 		app.Logger.Error().Err(err).Msgf(reason)
 		return quickfix.NewMessageRejectError(reason, 0, nil)
 	}
@@ -465,7 +465,7 @@ func (app *MarketDataValidator) onMarketDataIncrementalRefresh(msg marketdatainc
 			app.Logger.Warn().Msgf("Entry type not implemented: %s", entryType)
 		}
 	}
-	app.Logger.Info().Str("security", security).Any("types", orders.typesVolume).Any("sides", orders.sidesVolume).Msgf("Order book:")
+	app.Logger.Info().Str("security", security).Any("types", orders.typesVolume).Any("sides", orders.sidesVolume).Msg("Order book")
 
 	stats := orders.Stats()
 	for ty, sides := range stats {
