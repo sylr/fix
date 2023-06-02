@@ -42,6 +42,7 @@ var (
 	optionStopOnFinalState                    bool
 	optionUpdateQuotePeriod                   time.Duration
 	optionCancelAfterUpdates                  bool
+	optionCancelAfterXUpdates                 int
 
 	priceIteration int = 0
 )
@@ -77,6 +78,7 @@ func init() {
 
 	NewQuoteCmd.Flags().DurationVar(&optionUpdateQuotePeriod, "update-period", 10*time.Second, "Period for recurring update quote")
 	NewQuoteCmd.Flags().BoolVar(&optionCancelAfterUpdates, "cancel-quote-after-updates", false, "Cancel quote when all updates are done")
+	NewQuoteCmd.Flags().IntVar(&optionCancelAfterXUpdates, "cancel-quote-after-x-updates", -1, "Cancel quote after X updates")
 
 	NewQuoteCmd.MarkFlagRequired("symbol")
 
@@ -244,6 +246,20 @@ LOOP:
 				continue LOOP
 			}
 
+			if optionCancelAfterXUpdates > 0 && priceIteration%optionCancelAfterXUpdates == 0 {
+				// Prepare quote cancel
+				quoteMsg, err := buildCancelMessage(*session)
+				if err != nil {
+					return err
+				}
+
+				// Send the cancellation
+				err = quickfix.Send(quoteMsg)
+				if err != nil {
+					return err
+				}
+			}
+
 			// Prepare quote
 			quoteMsg, err := buildMessage(*session)
 			if err != nil {
@@ -311,8 +327,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(field.NewQuoteID(quoteId))
 			message.Body.Set(field.NewTransactTime(time.Now()))
 			partyIdOptions.EnrichMessageBody(&message.Body, session)
-			// FIXME never set order attributes
-			// attributeOptions.EnrichMessageBody(&message.Body)
 
 		default:
 			return nil, errors.FixVersionNotImplemented
@@ -347,11 +361,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			message.Body.Set(field.NewOfferPx(decimal.NewFromFloat(optionSellPrices[priceIteration]), 2))
 		}
 	}
-
-	// FIXME never set the field
-	// if len(optionOrderOrigination) > 0 {
-	//	message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginations[strings.ToUpper(optionOrderOrigination)])))
-	// }
 
 	priceIteration++
 
@@ -400,7 +409,6 @@ func buildCancelMessage(session config.Session) (quickfix.Messagable, error) {
 
 func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 	msgType := field.MsgTypeField{}
-	ordStatus := field.OrdStatusField{}
 	text := field.TextField{}
 
 	// Text
@@ -425,14 +433,22 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 	} else if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
 		return makeError(errors.FixOrderRejected)
 	} else if msgType.Value() == enum.MsgType_QUOTE_STATUS_REPORT {
-		// FIXME alexppxela decode quote status report
 		app.WriteMessageBodyAsTable(os.Stdout, msg)
+		quoteStatus := field.QuoteStatusField{}
+		err = msg.Body.GetField(tag.QuoteStatus, &quoteStatus)
+		if err != nil {
+			return err
+		}
+		if quoteStatus.Value() == enum.QuoteStatus_REJECTED {
+			return makeError(errors.FixOrderRejected)
+		}
 		return nil
 	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
 		return quickfix.InvalidMessageType()
 	}
 
 	// OrdStatus
+	ordStatus := field.OrdStatusField{}
 	err = msg.Body.GetField(tag.OrdStatus, &ordStatus)
 	if err != nil {
 		return err
