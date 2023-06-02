@@ -353,7 +353,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
-	message.Body.Set(field.NewHandlInst(enum.HandlInst_AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION))
 	message.Body.Set(field.NewSymbol(optionOrderSymbol))
 	message.Body.Set(field.NewOrderQty(decimal.NewFromInt(optionOrderQuantity), 2))
 	message.Body.Set(field.NewTimeInForce(eExpiry))

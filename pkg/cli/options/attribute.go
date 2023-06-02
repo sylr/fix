@@ -51,6 +51,10 @@ func (o AttributeOptions) Validate() error {
 }
 
 func (o AttributeOptions) EnrichMessageBody(messageBody *quickfix.Body) {
+	if len(o.types) == 0 {
+		return
+	}
+
 	// Attributes
 	attributes := quickfix.NewRepeatingGroup(
 		tag.NoOrderAttributes,
