@@ -106,8 +106,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(optionOrderID) == 0 {
-		uid := uuid.New()
-		optionOrderID = uid.String()
+		optionOrderID = uuid.NewString()
 	}
 
 	if len(optionOrderOrigination) > 0 {
@@ -266,7 +265,7 @@ LOOP:
 				break LOOP
 			}
 
-			if err := processReponse(app, msg); err != nil {
+			if err := processResponse(app, msg); err != nil {
 				if errors.Is(err, quickfix.InvalidMessageType()) {
 					continue LOOP
 				}
@@ -403,7 +402,7 @@ func buildCancelReplaceMessage(session config.Session, executionReport *quickfix
 		return nil, err
 	}
 
-	clOrdId := field.NewClOrdID(uuid.New().String())
+	clOrdId := field.NewClOrdID(uuid.NewString())
 	transactTime := field.NewTransactTime(time.Now())
 	origClOrdId := field.NewOrigClOrdID(oldClOrdId.String())
 
@@ -443,7 +442,7 @@ func buildCancelReplaceMessage(session config.Session, executionReport *quickfix
 	return message, nil
 }
 
-func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
+func processResponse(app *application.NewOrder, msg *quickfix.Message) error {
 	msgType := field.MsgTypeField{}
 	ordStatus := field.OrdStatusField{}
 	text := field.TextField{}

@@ -174,8 +174,7 @@ LOOP:
 }
 
 func buildMessage(session config.Session, symbol string) (quickfix.Messagable, error) {
-	uid := uuid.New()
-	mdReqID := field.NewMDReqID(uid.String())
+	mdReqID := field.NewMDReqID(uuid.NewString())
 	subReqType := field.NewSubscriptionRequestType(enum.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES)
 	marketDepth := field.NewMarketDepth(0)
 

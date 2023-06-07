@@ -277,7 +277,7 @@ LOOP:
 				break LOOP
 			}
 
-			if err := processReponse(app, msg); err != nil {
+			if err := processResponse(app, msg); err != nil {
 				if errors.Is(err, quickfix.InvalidMessageType()) {
 					continue LOOP
 				}
@@ -316,7 +316,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 
 	quoteId := optionQuoteID
 	if len(quoteId) == 0 {
-		quoteId = uuid.New().String()
+		quoteId = uuid.NewString()
 	}
 
 	switch session.BeginString {
@@ -374,7 +374,7 @@ func buildCancelMessage(session config.Session) (quickfix.Messagable, error) {
 
 	quoteId := optionQuoteID
 	if len(quoteId) == 0 {
-		quoteId = uuid.New().String()
+		quoteId = uuid.NewString()
 	}
 
 	switch session.BeginString {
@@ -407,7 +407,7 @@ func buildCancelMessage(session config.Session) (quickfix.Messagable, error) {
 	return message, nil
 }
 
-func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
+func processResponse(app *application.NewOrder, msg *quickfix.Message) error {
 	msgType := field.MsgTypeField{}
 	text := field.TextField{}
 

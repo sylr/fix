@@ -93,8 +93,7 @@ func Validate(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(optionMDReqID) == 0 {
-		uid := uuid.New()
-		optionMDReqID = uid.String()
+		optionMDReqID = uuid.NewString()
 	}
 
 	return nil

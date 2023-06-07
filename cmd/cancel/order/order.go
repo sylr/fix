@@ -188,7 +188,7 @@ LOOP:
 				break LOOP
 			}
 
-			if err := processReponse(app, msg); err != nil {
+			if err := processResponse(app, msg); err != nil {
 				if errors.Is(err, quickfix.InvalidMessageType()) {
 					continue LOOP
 				}
@@ -239,7 +239,7 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 
 }
 
-func processReponse(app *application.CancelOrder, msg *quickfix.Message) error {
+func processResponse(app *application.CancelOrder, msg *quickfix.Message) error {
 	msgType := field.MsgTypeField{}
 	text := field.TextField{}
 
