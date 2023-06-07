@@ -58,7 +58,6 @@ func init() {
 
 	CancelOrderCmd.MarkFlagRequired("clordid")
 	CancelOrderCmd.MarkFlagRequired("side")
-	CancelOrderCmd.MarkFlagRequired("symbol")
 
 	CancelOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
 }
@@ -223,7 +222,9 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 			if len(optionOrigClientOrderID) > 0 {
 				message.Body.Set(field.NewOrigClOrdID(optionOrigClientOrderID))
 			}
-			message.Body.Set(field.NewSymbol(optionOrderSymbol))
+			if len(optionOrderSymbol) > 0 {
+				message.Body.Set(field.NewSymbol(optionOrderSymbol))
+			}
 			partyIdOptions.EnrichMessageBody(&message.Body, session)
 
 			return message, nil
