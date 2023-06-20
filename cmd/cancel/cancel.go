@@ -14,7 +14,7 @@ import (
 var CancelCmd = &cobra.Command{
 	Use:               "cancel",
 	Short:             "Send a cancel FIX message",
-	Long:              "Send a cancel FIX message after initiating a sesion with a FIX acceptor.",
+	Long:              "Send a cancel FIX message after initiating a session with a FIX acceptor.",
 	RunE:              Execute,
 	PersistentPreRunE: utils.MakePersistentPreRunE(initiator.ValidateOptions),
 }

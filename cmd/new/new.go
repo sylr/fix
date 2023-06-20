@@ -3,8 +3,8 @@ package new
 import (
 	"github.com/spf13/cobra"
 
-	neworder "sylr.dev/fix/cmd/new/order"
-	newquote "sylr.dev/fix/cmd/new/quote"
+	"sylr.dev/fix/cmd/new/order"
+	"sylr.dev/fix/cmd/new/quote"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/utils"
 )
@@ -13,7 +13,7 @@ import (
 var NewCmd = &cobra.Command{
 	Use:   "new",
 	Short: "Send a new FIX message",
-	Long:  "Send a new FIX message after initiating a sesion with a FIX acceptor.",
+	Long:  "Send a new FIX message after initiating a session with a FIX acceptor.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := utils.ValidateRequiredFlags(cmd); err != nil {
 			return err

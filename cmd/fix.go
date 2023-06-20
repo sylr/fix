@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
+	"sylr.dev/fix/cmd/amend"
 	"sylr.dev/fix/cmd/cancel"
 	initcmd "sylr.dev/fix/cmd/init"
 	"sylr.dev/fix/cmd/initiator"
@@ -39,6 +40,7 @@ var FixCmd = &cobra.Command{
 func init() {
 	options := config.GetOptions()
 
+	FixCmd.AddCommand(amend.AmendCmd)
 	FixCmd.AddCommand(cancel.CancelCmd)
 	FixCmd.AddCommand(initcmd.InitCmd)
 	FixCmd.AddCommand(initiator.InitiatorCmd)
