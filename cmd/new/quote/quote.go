@@ -32,6 +32,7 @@ var (
 	optionSymbol, optionQuoteID               string
 	optionBuyQuantities, optionSellQuantities []int64
 	optionBuyPrices, optionSellPrices         []float64
+	optionAutoPriceUpdate                     bool
 	optionOrderOrigination                    string
 	partyIdOptions                            *options.PartyIdOptions
 	attributeOptions                          *options.AttributeOptions
@@ -41,6 +42,7 @@ var (
 	optionStopOnFinalState                    bool
 	optionUpdateQuotePeriod                   time.Duration
 	optionCancelAfterUpdates                  bool
+	optionCancelAfterXUpdates                 int
 
 	priceIteration int = 0
 )
@@ -62,6 +64,7 @@ func init() {
 	NewQuoteCmd.Flags().Int64SliceVar(&optionSellQuantities, "sell-quantities", []int64{}, "Quote sell quantities")
 	NewQuoteCmd.Flags().Float64SliceVar(&optionBuyPrices, "buy-prices", []float64{}, "Quote buy prices")
 	NewQuoteCmd.Flags().Float64SliceVar(&optionSellPrices, "sell-prices", []float64{}, "Quote sell prices")
+	NewQuoteCmd.Flags().BoolVar(&optionAutoPriceUpdate, "auto-price-update", false, "Generate price oscilation to send an infinity of quote updates")
 	NewQuoteCmd.Flags().StringVar(&optionOrderOrigination, "origination", "", "Order origination")
 
 	partyIdOptions = options.NewPartyIdOptions(NewQuoteCmd)
@@ -75,6 +78,7 @@ func init() {
 
 	NewQuoteCmd.Flags().DurationVar(&optionUpdateQuotePeriod, "update-period", 10*time.Second, "Period for recurring update quote")
 	NewQuoteCmd.Flags().BoolVar(&optionCancelAfterUpdates, "cancel-quote-after-updates", false, "Cancel quote when all updates are done")
+	NewQuoteCmd.Flags().IntVar(&optionCancelAfterXUpdates, "cancel-quote-after-x-updates", -1, "Cancel quote after X updates")
 
 	NewQuoteCmd.MarkFlagRequired("symbol")
 
@@ -83,17 +87,16 @@ func init() {
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
-	if len(optionQuoteID) == 0 {
-		uid := uuid.New()
-		optionQuoteID = uid.String()
-	}
-
 	if len(optionBuyPrices) != len(optionBuyQuantities) {
 		return fmt.Errorf("number of buy prices (%d) must be equal to buy quantities (%d)", len(optionBuyPrices), len(optionBuyQuantities))
 	}
 
 	if len(optionSellPrices) != len(optionSellQuantities) {
 		return fmt.Errorf("number of sell prices (%d) must be equal to sell quantities (%d)", len(optionSellPrices), len(optionSellQuantities))
+	}
+
+	if optionAutoPriceUpdate && (len(optionBuyPrices) > 1 || len(optionSellPrices) > 1) {
+		return fmt.Errorf("auto-price-update option works with only 1 price per side")
 	}
 
 	if len(optionOrderOrigination) > 0 {
@@ -227,7 +230,7 @@ LOOP:
 			break LOOP
 
 		case <-updatePeriod:
-			if priceIteration >= len(optionBuyPrices) && priceIteration >= len(optionSellPrices) {
+			if !optionAutoPriceUpdate && priceIteration >= len(optionBuyPrices) && priceIteration >= len(optionSellPrices) {
 				optionUpdateQuotePeriod = 0
 
 				if optionCancelAfterUpdates {
@@ -241,6 +244,20 @@ LOOP:
 					}
 				}
 				continue LOOP
+			}
+
+			if optionCancelAfterXUpdates > 0 && priceIteration%optionCancelAfterXUpdates == 0 {
+				// Prepare quote cancel
+				quoteMsg, err := buildCancelMessage(*session)
+				if err != nil {
+					return err
+				}
+
+				// Send the cancellation
+				err = quickfix.Send(quoteMsg)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Prepare quote
@@ -260,7 +277,7 @@ LOOP:
 				break LOOP
 			}
 
-			if err := processReponse(app, msg); err != nil {
+			if err := processResponse(app, msg); err != nil {
 				if errors.Is(err, quickfix.InvalidMessageType()) {
 					continue LOOP
 				}
@@ -297,16 +314,19 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	message := quickfix.NewMessage()
 	header := fixt11.NewHeader(&message.Header)
 
+	quoteId := optionQuoteID
+	if len(quoteId) == 0 {
+		quoteId = uuid.NewString()
+	}
+
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
 		case "FIX.5.0SP2":
 			header.Set(field.NewMsgType(enum.MsgType_QUOTE))
-			message.Body.Set(field.NewQuoteID(optionQuoteID))
+			message.Body.Set(field.NewQuoteID(quoteId))
 			message.Body.Set(field.NewTransactTime(time.Now()))
 			partyIdOptions.EnrichMessageBody(&message.Body, session)
-			// FIXME never set order attributes
-			// attributeOptions.EnrichMessageBody(&message.Body)
 
 		default:
 			return nil, errors.FixVersionNotImplemented
@@ -321,19 +341,26 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
 	message.Body.Set(field.NewSymbol(optionSymbol))
-	if priceIteration < len(optionBuyPrices) {
-		message.Body.Set(field.NewBidSize(decimal.NewFromInt(optionBuyQuantities[priceIteration]), 2))
-		message.Body.Set(field.NewBidPx(decimal.NewFromFloat(optionBuyPrices[priceIteration]), 2))
+	if optionAutoPriceUpdate {
+		priceAdjustment := 0.01 * float64(priceIteration%100)
+		if len(optionBuyPrices) == 1 {
+			message.Body.Set(field.NewBidSize(decimal.NewFromInt(optionBuyQuantities[0]), 2))
+			message.Body.Set(field.NewBidPx(decimal.NewFromFloat(optionBuyPrices[0]-priceAdjustment), 2))
+		}
+		if len(optionSellPrices) == 1 {
+			message.Body.Set(field.NewOfferSize(decimal.NewFromInt(optionSellQuantities[0]), 2))
+			message.Body.Set(field.NewOfferPx(decimal.NewFromFloat(optionSellPrices[0]+priceAdjustment), 2))
+		}
+	} else {
+		if priceIteration < len(optionBuyPrices) {
+			message.Body.Set(field.NewBidSize(decimal.NewFromInt(optionBuyQuantities[priceIteration]), 2))
+			message.Body.Set(field.NewBidPx(decimal.NewFromFloat(optionBuyPrices[priceIteration]), 2))
+		}
+		if priceIteration < len(optionSellPrices) {
+			message.Body.Set(field.NewOfferSize(decimal.NewFromInt(optionSellQuantities[priceIteration]), 2))
+			message.Body.Set(field.NewOfferPx(decimal.NewFromFloat(optionSellPrices[priceIteration]), 2))
+		}
 	}
-	if priceIteration < len(optionSellPrices) {
-		message.Body.Set(field.NewOfferSize(decimal.NewFromInt(optionSellQuantities[priceIteration]), 2))
-		message.Body.Set(field.NewOfferPx(decimal.NewFromFloat(optionSellPrices[priceIteration]), 2))
-	}
-
-	// FIXME never set the field
-	// if len(optionOrderOrigination) > 0 {
-	//	message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginations[strings.ToUpper(optionOrderOrigination)])))
-	// }
 
 	priceIteration++
 
@@ -345,13 +372,18 @@ func buildCancelMessage(session config.Session) (quickfix.Messagable, error) {
 	message := quickfix.NewMessage()
 	header := fixt11.NewHeader(&message.Header)
 
+	quoteId := optionQuoteID
+	if len(quoteId) == 0 {
+		quoteId = uuid.NewString()
+	}
+
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
 		case "FIX.5.0SP2":
 			header.Set(field.NewMsgType(enum.MsgType_QUOTE_CANCEL))
-			message.Body.Set(field.NewQuoteID(optionQuoteID))
-			message.Body.Set(field.NewQuoteMsgID("msg_" + optionQuoteID))
+			message.Body.Set(field.NewQuoteID(quoteId))
+			message.Body.Set(field.NewQuoteMsgID("msg_" + quoteId))
 			partyIdOptions.EnrichMessageBody(&message.Body, session)
 
 		default:
@@ -375,9 +407,8 @@ func buildCancelMessage(session config.Session) (quickfix.Messagable, error) {
 	return message, nil
 }
 
-func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
+func processResponse(app *application.NewOrder, msg *quickfix.Message) error {
 	msgType := field.MsgTypeField{}
-	ordStatus := field.OrdStatusField{}
 	text := field.TextField{}
 
 	// Text
@@ -402,14 +433,22 @@ func processReponse(app *application.NewOrder, msg *quickfix.Message) error {
 	} else if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
 		return makeError(errors.FixOrderRejected)
 	} else if msgType.Value() == enum.MsgType_QUOTE_STATUS_REPORT {
-		// FIXME alexppxela decode quote status report
 		app.WriteMessageBodyAsTable(os.Stdout, msg)
+		quoteStatus := field.QuoteStatusField{}
+		err = msg.Body.GetField(tag.QuoteStatus, &quoteStatus)
+		if err != nil {
+			return err
+		}
+		if quoteStatus.Value() == enum.QuoteStatus_REJECTED {
+			return makeError(errors.FixOrderRejected)
+		}
 		return nil
 	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
 		return quickfix.InvalidMessageType()
 	}
 
 	// OrdStatus
+	ordStatus := field.OrdStatusField{}
 	err = msg.Body.GetField(tag.OrdStatus, &ordStatus)
 	if err != nil {
 		return err

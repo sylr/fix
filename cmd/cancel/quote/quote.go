@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/field"
+	"github.com/quickfixgo/fixt11"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
@@ -18,7 +19,6 @@ import (
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/cli/complete"
 	"sylr.dev/fix/pkg/cli/options"
-	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
 	"sylr.dev/fix/pkg/initiator/application"
@@ -26,19 +26,16 @@ import (
 )
 
 var (
-	optionOrderSide          string
-	optionOrderSymbol        string
-	optionOrderID            string
-	optionClientOrderID      string
-	optionOrigClientOrderID  string
+	optionOrderSymbols       []string
+	optionQuoteID            string
 	optionExecReportsTimeout time.Duration
 	partyIdOptions           *options.PartyIdOptions
 )
 
-var CancelOrderCmd = &cobra.Command{
-	Use:               "order",
-	Short:             "Cancel single order",
-	Long:              "Send a cancel order request after initiating a session with a FIX acceptor.",
+var CancelQuoteCmd = &cobra.Command{
+	Use:               "quote",
+	Short:             "Cancel quote",
+	Long:              "Send a cancel quote request after initiating a session with a FIX acceptor.",
 	Args:              cobra.ExactArgs(0),
 	ValidArgsFunction: cobra.NoFileCompletions,
 	PersistentPreRunE: utils.MakePersistentPreRunE(Validate),
@@ -46,29 +43,23 @@ var CancelOrderCmd = &cobra.Command{
 }
 
 func init() {
-	CancelOrderCmd.Flags().StringVar(&optionOrderID, "id", "", "Order id")
-	CancelOrderCmd.Flags().StringVar(&optionClientOrderID, "clordid", "", "Client order id")
-	CancelOrderCmd.Flags().StringVar(&optionOrigClientOrderID, "origclordid", "", "Orig client order id")
+	CancelQuoteCmd.Flags().StringVar(&optionQuoteID, "id", "", "Quote id")
 
-	CancelOrderCmd.Flags().StringVar(&optionOrderSide, "side", "", "Order side (buy, sell ... etc)")
-	CancelOrderCmd.Flags().StringVar(&optionOrderSymbol, "symbol", "", "Order symbol")
-	CancelOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
+	CancelQuoteCmd.Flags().StringSliceVar(&optionOrderSymbols, "symbols", []string{}, "Order symbol")
+	CancelQuoteCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
 
-	partyIdOptions = options.NewPartyIdOptions(CancelOrderCmd)
+	partyIdOptions = options.NewPartyIdOptions(CancelQuoteCmd)
 
-	CancelOrderCmd.MarkFlagRequired("clordid")
-	CancelOrderCmd.MarkFlagRequired("side")
-
-	CancelOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
+	CancelQuoteCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
-	sides := utils.PrettyOptionValues(dict.OrderSides)
-	search := utils.Search(sides, strings.ToLower(optionOrderSide))
-	if search < 0 {
-		return errors.OptionOrderSideUnknown
+	if len(optionQuoteID) == 0 {
+		optionQuoteID = uuid.NewString()
 	}
-
+	if len(optionOrderSymbols) == 0 {
+		return errors.OptionsNoSymbolGiven
+	}
 	return partyIdOptions.Validate()
 }
 
@@ -202,41 +193,45 @@ LOOP:
 }
 
 func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	eside, err := dict.OrderSideStringToEnum(optionOrderSide)
-	if err != nil {
-		return nil, err
+	// Message
+	message := quickfix.NewMessage()
+	header := fixt11.NewHeader(&message.Header)
+
+	quoteId := optionQuoteID
+	if len(quoteId) == 0 {
+		quoteId = uuid.NewString()
 	}
 
 	switch session.BeginString {
 	case quickfix.BeginStringFIXT11:
 		switch session.DefaultApplVerID {
 		case "FIX.5.0SP2":
-			message := quickfix.NewMessage()
-			message.Header.Set(field.NewMsgType(enum.MsgType_ORDER_CANCEL_REQUEST))
-			message.Body.Set(field.NewClOrdID(optionClientOrderID))
-			message.Body.Set(field.NewSide(eside))
-			message.Body.Set(field.NewTransactTime(time.Now()))
-			if len(optionOrderID) > 0 {
-				message.Body.Set(field.NewOrderID(optionOrderID))
-			}
-			if len(optionOrigClientOrderID) > 0 {
-				message.Body.Set(field.NewOrigClOrdID(optionOrigClientOrderID))
-			}
-			if len(optionOrderSymbol) > 0 {
-				message.Body.Set(field.NewSymbol(optionOrderSymbol))
-			}
+			header.Set(field.NewMsgType(enum.MsgType_QUOTE_CANCEL))
+			message.Body.Set(field.NewQuoteID(quoteId))
+			message.Body.Set(field.NewQuoteMsgID("msg_" + quoteId))
 			partyIdOptions.EnrichMessageBody(&message.Body, session)
-
-			return message, nil
 
 		default:
 			return nil, errors.FixVersionNotImplemented
 		}
-
 	default:
 		return nil, errors.FixVersionNotImplemented
 	}
 
+	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
+	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
+
+	message.Body.Set(field.NewQuoteCancelType(enum.QuoteCancelType_CANCEL_FOR_ONE_OR_MORE_SECURITIES))
+	instruments := quickfix.NewRepeatingGroup(tag.NoQuoteEntries, nil)
+	for _, symbol := range optionOrderSymbols {
+		inst := instruments.Add()
+		inst.Set(field.NewSymbol(symbol))
+	}
+	message.Body.SetGroup(instruments)
+
+	return message, nil
 }
 
 func processResponse(app *application.CancelOrder, msg *quickfix.Message) error {

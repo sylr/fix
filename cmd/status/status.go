@@ -11,7 +11,7 @@ import (
 var StatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Send a TradingSessionStatus FIX message",
-	Long:  "Send a TradingSessionStatus FIX message after initiating a sesion with a FIX acceptor.",
+	Long:  "Send a TradingSessionStatus FIX message after initiating a session with a FIX acceptor.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		err := initiator.ValidateOptions(cmd, args)
 		if err != nil {

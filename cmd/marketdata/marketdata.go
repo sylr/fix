@@ -12,7 +12,7 @@ import (
 var MarketDataCmd = &cobra.Command{
 	Use:   "marketdata",
 	Short: "Send a MarketData FIX message",
-	Long:  "Send a MarketData FIX message after initiating a sesion with a FIX acceptor.",
+	Long:  "Send a MarketData FIX message after initiating a session with a FIX acceptor.",
 	Args:  cobra.ExactValidArgs(1),
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := utils.ValidateRequiredFlags(cmd); err != nil {
