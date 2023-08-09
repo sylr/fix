@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
@@ -25,8 +24,7 @@ import (
 )
 
 var (
-	optionTradingSessionID string
-	optionSubType          string
+	optionSubType string
 )
 
 var StatusTradingSessionCmd = &cobra.Command{
@@ -57,17 +55,12 @@ var StatusTradingSessionCmd = &cobra.Command{
 }
 
 func init() {
-	StatusTradingSessionCmd.Flags().StringVar(&optionTradingSessionID, "trading-session-id", uuid.NewString(), "Trading session ID")
 	StatusTradingSessionCmd.Flags().StringVar(&optionSubType, "subscription-type", "snapshot", "Subscription type")
 
 	StatusTradingSessionCmd.RegisterFlagCompletionFunc("subscription-type", complete.SubscriptionRequestTypes)
 }
 
 func Validate(cmd *cobra.Command, args []string) error {
-	if len(optionTradingSessionID) == 0 {
-		return fmt.Errorf("%w: --trading-session-id can not be empty", errors.Options)
-	}
-
 	if _, ok := dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]; !ok {
 		return fmt.Errorf("%w: unkonwn subscription type `%s`", errors.Options, optionSubType)
 	}
@@ -193,7 +186,6 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
-	utils.QuickFixMessagePartSetString(&message.Body, optionTradingSessionID, field.NewTradSesReqID)
 	utils.QuickFixMessagePartSetString(&message.Body, dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)], field.NewSubscriptionRequestType)
 
 	return message, nil

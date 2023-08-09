@@ -181,17 +181,17 @@ func (app *Acceptor) onNewOrderSingle(order *quickfix.Message, sessionID quickfi
 
 	err := app.NatsOrderSubject.Execute(buf, subj)
 	if err != nil {
-		return quickfix.NewMessageRejectError(err.Error(), int(tag.ApplResponseError), nil)
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.BusinessRejectReason), nil)
 	}
 
 	err = app.natsConn.Publish(buf.String(), []byte(order.ToMessage().String()))
 	if err != nil {
-		return quickfix.NewMessageRejectError(err.Error(), int(tag.ApplResponseError), nil)
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.BusinessRejectReason), nil)
 	}
 
 	err = app.sendExecutionReport(order, enum.OrdStatus(enum.OrdStatus_NEW))
 	if err != nil {
-		return quickfix.NewMessageRejectError(err.Error(), int(tag.ApplResponseError), nil)
+		return quickfix.NewMessageRejectError(err.Error(), int(tag.BusinessRejectReason), nil)
 	}
 
 	return nil

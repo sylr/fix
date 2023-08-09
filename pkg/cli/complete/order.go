@@ -38,7 +38,3 @@ func OrderPartyRoleQualifier(cmd *cobra.Command, args []string, toComplete strin
 func OrderOriginationRole(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return utils.PrettyOptionValues(dict.OrderOriginations), cobra.ShellCompDirectiveNoFileComp
 }
-
-func OrderAttributeType(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	return utils.PrettyOptionValues(dict.OrderAttributeTypes), cobra.ShellCompDirectiveNoFileComp
-}

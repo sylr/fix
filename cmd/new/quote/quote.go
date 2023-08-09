@@ -35,7 +35,6 @@ var (
 	optionAutoPriceUpdate                     bool
 	optionOrderOrigination                    string
 	partyIdOptions                            *options.PartyIdOptions
-	attributeOptions                          *options.AttributeOptions
 	optionExecReports                         int
 	optionExecReportsTimeout                  time.Duration
 	optionExecReportsTimeoutReset             bool
@@ -68,7 +67,6 @@ func init() {
 	NewQuoteCmd.Flags().StringVar(&optionOrderOrigination, "origination", "", "Order origination")
 
 	partyIdOptions = options.NewPartyIdOptions(NewQuoteCmd)
-	attributeOptions = options.NewAttributeOptions(NewQuoteCmd)
 
 	NewQuoteCmd.Flags().IntVar(&optionExecReports, "exec-reports", 1, "Expect given number of execution reports before logging out (0 wait indefinitely)")
 	NewQuoteCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
@@ -105,10 +103,6 @@ func Validate(cmd *cobra.Command, args []string) error {
 		if search < 0 {
 			return errors.OptionOrderOriginationUnknown
 		}
-	}
-
-	if err := attributeOptions.Validate(); err != nil {
-		return err
 	}
 
 	return partyIdOptions.Validate()

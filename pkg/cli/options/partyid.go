@@ -2,7 +2,6 @@ package options
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -147,7 +146,7 @@ func (o PartyIdOptions) EnrichMessageBody(messageBody *quickfix.Body, session co
 
 		// Role Qualifier
 		if len(o.partyRoleQualifiers) > 0 && len(o.partyRoleQualifiers[i]) > 0 {
-			party.Set(field.NewPartyRoleQualifier(utils.Must(strconv.Atoi(string(dict.PartyRoleQualifiers[strings.ToUpper(o.partyRoleQualifiers[i])])))))
+			party.Set(field.NewPartyRoleQualifier(dict.PartyRoleQualifiers[strings.ToUpper(o.partyRoleQualifiers[i])]))
 		}
 
 		if len(o.partySubIDs) == len(o.partyIDs) || len(o.partySubIDTypes) == len(o.partyIDs) {

@@ -38,7 +38,6 @@ var (
 	optionOrderQuantity              int64
 	optionOrderPrice                 float64
 	partyIdOptions                   *options.PartyIdOptions
-	attributeOptions                 *options.AttributeOptions
 	optionExecReports                int
 	optionExecReportsTimeout         time.Duration
 	optionExecReportsTimeoutReset    bool
@@ -67,7 +66,6 @@ func init() {
 	AmendOrderCmd.Flags().Float64Var(&optionOrderPrice, "price", 0.0, "Order price")
 
 	partyIdOptions = options.NewPartyIdOptions(AmendOrderCmd)
-	attributeOptions = options.NewAttributeOptions(AmendOrderCmd)
 
 	AmendOrderCmd.Flags().IntVar(&optionExecReports, "exec-reports", 1, "Expect given number of execution reports before logging out (0 wait indefinitely)")
 	AmendOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
@@ -111,10 +109,6 @@ func Validate(cmd *cobra.Command, args []string) error {
 		return errors.OptionsInvalidMarketPrice
 	} else if strings.ToLower(optionOrderType) != "market" && optionOrderPrice == 0 {
 		return errors.OptionsNoPriceGiven
-	}
-
-	if err := attributeOptions.Validate(); err != nil {
-		return err
 	}
 
 	return partyIdOptions.Validate()
