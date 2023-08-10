@@ -4,6 +4,8 @@ go 1.20
 
 require (
 	filippo.io/age v1.1.1
+	github.com/artex-io/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20230809135414-4c4096bcd376
+	github.com/artex-io/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20230809135414-4c4096bcd376
 	github.com/dustin/go-humanize v1.0.1
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
@@ -22,8 +24,6 @@ require (
 	github.com/shopspring/decimal v1.3.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
-	github.com/sylr/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20220401195242-281940b8a21e
-	github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20220401195242-281940b8a21e
 	golang.org/x/crypto v0.12.0
 	golang.org/x/term v0.11.0
 	sylr.dev/yaml/age/v3 v3.0.0-20221203153010-eb6b46db8d90
@@ -35,8 +35,6 @@ replace (
 	github.com/quickfixgo/field => github.com/artex-io/quickfixgo-field v0.0.0-20230808145912-11a2ffdb0b8f
 	github.com/quickfixgo/quickfix => github.com/artex-io/quickfix-go v0.6.1-0.20230808141925-433a4c32211f
 	github.com/quickfixgo/tag => github.com/artex-io/quickfixgo-tag v0.0.0-20230808150418-f063b6a05d9a
-	github.com/sylr/quickfixgo-fix50sp2/marketdataincrementalrefresh => github.com/artex-io/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20230808162530-8db962299863
-	github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh => github.com/artex-io/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20230808162530-8db962299863
 )
 
 require (

@@ -11,12 +11,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 
+	"github.com/artex-io/quickfixgo-fix50sp2/marketdataincrementalrefresh"
+	"github.com/artex-io/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/quickfixgo/enum"
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
-	"github.com/sylr/quickfixgo-fix50sp2/marketdataincrementalrefresh"
-	"github.com/sylr/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh"
 
 	"sylr.dev/fix/pkg/dict"
 	"sylr.dev/fix/pkg/utils"

@@ -10,10 +10,10 @@ github.com/artex-io/quickfixgo-enum v0.0.0-20230808145624-9890aaad90be h1:hGdd52
 github.com/artex-io/quickfixgo-enum v0.0.0-20230808145624-9890aaad90be/go.mod h1:z3G743D3iJFhOHUk0bo3O/O15Wknl4hy+y515r/aK4c=
 github.com/artex-io/quickfixgo-field v0.0.0-20230808145912-11a2ffdb0b8f h1:1VO6/b5XyXPDwe9Iq7/Lg6ftlK8AaQ4qhkl7qe8UfwM=
 github.com/artex-io/quickfixgo-field v0.0.0-20230808145912-11a2ffdb0b8f/go.mod h1:60rsaU804P0ZfHxa/Ps16BHmzaZBiQ8dSix3sAk1x5E=
-github.com/artex-io/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20230808162530-8db962299863 h1:hdD/6BbTt5JQagBaZ3HQ8IdU6JS093ylpR3t38r+ABI=
-github.com/artex-io/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20230808162530-8db962299863/go.mod h1:udSlx3H55cgErGCi9PIHjVcPiCXJgX2dRRx/rvSWZB4=
-github.com/artex-io/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20230808162530-8db962299863 h1:SZTfs0oCmWELl9C2e17QRTGqGzO3fXE/Eud2qnorZsE=
-github.com/artex-io/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20230808162530-8db962299863/go.mod h1:YGl2HE2cMb0N0I63dbvKvWhQTC6mZKW6AKSQ+WSKdkQ=
+github.com/artex-io/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20230809135414-4c4096bcd376 h1:L7EGp8F9lC+xt98GmsgNc//IG1nQvuo86AL4tjg7qB4=
+github.com/artex-io/quickfixgo-fix50sp2/marketdataincrementalrefresh v0.0.0-20230809135414-4c4096bcd376/go.mod h1:SfZcJC3kwT0bQZjrQjOt6zN8yfndwKGRxER/CalzgWo=
+github.com/artex-io/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20230809135414-4c4096bcd376 h1:yCIejsz6N/G2VuWfoQh4rkQLeJngpJG7iHE+JCe0iQQ=
+github.com/artex-io/quickfixgo-fix50sp2/marketdatasnapshotfullrefresh v0.0.0-20230809135414-4c4096bcd376/go.mod h1:Kecw30s3aDdkE8tWVqqh7P4IyrHgeY6JXvoav54USv8=
 github.com/artex-io/quickfixgo-tag v0.0.0-20230808150418-f063b6a05d9a h1:v2iDC7RB+HGylQLjE/efNZLuDJEm0dPxlFCj/RAaSSY=
 github.com/artex-io/quickfixgo-tag v0.0.0-20230808150418-f063b6a05d9a/go.mod h1:W1mRUo/BCgwb8r/AMNRcjPccxah1VHLrku2lyEi6sa8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
