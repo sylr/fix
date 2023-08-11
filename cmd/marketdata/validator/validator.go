@@ -4,7 +4,6 @@
 package marketdatavalidator
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,6 +19,7 @@ import (
 	"github.com/quickfixgo/quickfix"
 	"github.com/quickfixgo/tag"
 
+	listsecurity "sylr.dev/fix/cmd/list/security"
 	"sylr.dev/fix/config"
 	"sylr.dev/fix/pkg/errors"
 	"sylr.dev/fix/pkg/initiator"
@@ -42,7 +42,7 @@ var MarketDataValidatorCmd = &cobra.Command{
 }
 
 func init() {
-	MarketDataValidatorCmd.Flags().StringSliceVar(&optionSymbol, "symbol", []string{""}, "Symbol")
+	MarketDataValidatorCmd.Flags().StringSliceVar(&optionSymbol, "symbol", []string{}, "Symbol")
 
 	MarketDataValidatorCmd.RegisterFlagCompletionFunc("symbol", cobra.NoFileCompletions)
 }
@@ -59,10 +59,6 @@ func Validate(cmd *cobra.Command, args []string) error {
 func Execute(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
 	logger := config.GetLogger()
-
-	if len(optionSymbol) == 0 {
-		return fmt.Errorf("symbol list is empty")
-	}
 
 	context, err := config.GetCurrentContext()
 	if err != nil {
@@ -116,19 +112,9 @@ func Execute(cmd *cobra.Command, args []string) error {
 		init.Stop()
 	}()
 
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if ctxInitiator.SocketTimeout != time.Duration(0) {
-		timeout = ctxInitiator.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
 	// Wait for session connection
 	select {
-	case <-time.After(timeout):
+	case <-time.After(buildTimeoutDuration(ctxInitiator)):
 		return errors.ConnectionTimeout
 	case _, ok := <-app.Connected:
 		if !ok {
@@ -136,18 +122,20 @@ func Execute(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	for _, symbol := range optionSymbol {
-		// Prepare market data request
-		marketDataRequest, err := buildMessage(*session, symbol)
-		if err != nil {
-			return err
-		}
+	if len(optionSymbol) == 0 {
+		loadSymbolsFromFix(app, session, ctxInitiator)
+	}
 
-		// Send the order
-		err = quickfix.Send(marketDataRequest)
-		if err != nil {
-			panic(err)
-		}
+	// Prepare market data request
+	marketDataRequest, err := buildMessage(*session)
+	if err != nil {
+		return err
+	}
+
+	// Send the order
+	err = quickfix.Send(marketDataRequest)
+	if err != nil {
+		panic(err)
 	}
 
 	interrupt := make(chan os.Signal, 1)
@@ -180,7 +168,19 @@ LOOP:
 	return nil
 }
 
-func buildMessage(session config.Session, symbol string) (quickfix.Messagable, error) {
+// Choose right timeout cli option > config > default value (5s)
+func buildTimeoutDuration(ctxInitiator *config.Initiator) time.Duration {
+	options := config.GetOptions()
+	if options.Timeout != time.Duration(0) {
+		return options.Timeout
+	}
+	if ctxInitiator.SocketTimeout != time.Duration(0) {
+		return ctxInitiator.SocketTimeout
+	}
+	return 5 * time.Second
+}
+
+func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	mdReqID := field.NewMDReqID(uuid.NewString())
 	subReqType := field.NewSubscriptionRequestType(enum.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES)
 	marketDepth := field.NewMarketDepth(0)
@@ -212,7 +212,9 @@ func buildMessage(session config.Session, symbol string) (quickfix.Messagable, e
 		quickfix.GroupTemplate{quickfix.GroupElement(tag.Symbol)},
 	)
 
-	relatedSym.Add().Set(field.NewSymbol(symbol))
+	for _, symbol := range optionSymbol {
+		relatedSym.Add().Set(field.NewSymbol(symbol))
+	}
 	message.Body.SetGroup(relatedSym)
 
 	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
@@ -221,4 +223,44 @@ func buildMessage(session config.Session, symbol string) (quickfix.Messagable, e
 	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
 	return message, nil
+}
+
+func loadSymbolsFromFix(app *application.MarketDataValidator, session *config.Session, ctxInitiator *config.Initiator) error {
+	req, err := listsecurity.BuildMessage(*session)
+	if err != nil {
+		return err
+	}
+
+	// Send the order
+	err = quickfix.Send(req)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the security list response
+	var responseMessage *quickfix.Message
+
+	select {
+	case <-time.After(buildTimeoutDuration(ctxInitiator)):
+		return errors.ResponseTimeout
+	case responseMessage = <-app.SecurityListResponse:
+	}
+
+	symbols := quickfix.NewRepeatingGroup(
+		tag.NoRelatedSym,
+		quickfix.GroupTemplate{
+			quickfix.GroupElement(tag.Symbol),
+		})
+	if err := responseMessage.Body.GetGroup(symbols); err != nil {
+		return err
+	}
+	for i := 0; i < symbols.Len(); i++ {
+		if symbol, err := symbols.Get(i).GetString(tag.Symbol); err != nil {
+			return nil
+		} else {
+			optionSymbol = append(optionSymbol, symbol)
+		}
+	}
+	app.UpdateSecurityList(optionSymbol)
+	return nil
 }

@@ -99,21 +99,11 @@ func init() {
 }
 
 func NewMarketDataValidator(logger *zerolog.Logger, securities []string) *MarketDataValidator {
-	secs := make(map[string]*Orders, len(securities))
-	for _, security := range securities {
-		secs[security] = &Orders{
-			orders:        make([]*Order, 0),
-			typesVolume:   make(map[enum.OrdType]int64),
-			sidesVolume:   make(map[enum.MDEntryType]int64),
-			bestBuyOrder:  &Order{},
-			bestSellOrder: &Order{},
-		}
-	}
-
 	mdr := MarketDataValidator{
-		Connected: make(chan interface{}),
+		Connected:            make(chan interface{}),
+		SecurityListResponse: make(chan *quickfix.Message),
 		Validator: &Validator{
-			secList: secs,
+			secList: createSecurityList(securities),
 			logger:  logger,
 		},
 		router: quickfix.NewMessageRouter(),
@@ -123,7 +113,7 @@ func NewMarketDataValidator(logger *zerolog.Logger, securities []string) *Market
 	mdr.router.AddRoute(marketdataincrementalrefresh.Route(mdr.onMarketDataIncrementalRefresh))
 	mdr.router.AddRoute(marketdatasnapshotfullrefresh.Route(mdr.onMarketDataSnapshotFullRefresh))
 
-	// Initialize error vectors so that we we have pre-existing 0 values allowing
+	// Initialize error vectors so that we have pre-existing 0 values allowing
 	// to do operations such as delta() when first errors are reported
 	for _, security := range securities {
 		metricMarketDataValidatorErrors.WithLabelValues(security, ErrOrderNotFound.Error()).Add(0)
@@ -134,20 +124,39 @@ func NewMarketDataValidator(logger *zerolog.Logger, securities []string) *Market
 	return &mdr
 }
 
+func createSecurityList(securities []string) map[string]*Orders {
+	secs := make(map[string]*Orders, len(securities))
+	for _, security := range securities {
+		secs[security] = &Orders{
+			orders:        make([]*Order, 0),
+			typesVolume:   make(map[enum.OrdType]int64),
+			sidesVolume:   make(map[enum.MDEntryType]int64),
+			bestBuyOrder:  &Order{},
+			bestSellOrder: &Order{},
+		}
+	}
+	return secs
+}
+
 type MarketDataValidator struct {
 	utils.QuickFixAppMessageLogger
 
-	Settings        *quickfix.Settings
-	Connected       chan interface{}
-	FromAppMessages chan quickfix.Messagable
-	stopped         bool
-	mux             sync.RWMutex
-	router          *quickfix.MessageRouter
+	Settings             *quickfix.Settings
+	Connected            chan interface{}
+	SecurityListResponse chan *quickfix.Message
+	stopped              bool
+	mux                  sync.RWMutex
+	router               *quickfix.MessageRouter
 
 	Validator *Validator
 }
 
 var _ quickfix.Application = (*MarketDataValidator)(nil)
+
+// UpdateSecurityList must be called before subscribing to market data to refresh the list of securities
+func (app *MarketDataValidator) UpdateSecurityList(securities []string) {
+	app.Validator.secList = createSecurityList(securities)
+}
 
 // Stop ensures the app chans are emptied so that quickfix can carry on with
 // the LOGOUT process correctly.
@@ -158,11 +167,6 @@ func (app *MarketDataValidator) Stop() {
 	defer app.mux.Unlock()
 
 	app.stopped = true
-
-	// Empty the channel to avoid blocking
-	for len(app.FromAppMessages) > 0 {
-		<-app.FromAppMessages
-	}
 }
 
 // Notification of a session begin created.
@@ -260,6 +264,18 @@ func (app *MarketDataValidator) FromApp(message *quickfix.Message, sessionID qui
 		app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
 		app.Connected <- struct{}{}
 		return nil
+	case string(enum.MsgType_SECURITY_LIST):
+		app.SecurityListResponse <- message
+		return nil
+	case string(enum.MsgType_NEWS):
+		if txt, err := message.Body.GetString(tag.Text); err != nil {
+			return err
+		} else if headline, err := message.Body.GetString(tag.Headline); err != nil {
+			return err
+		} else {
+			app.Logger.Info().Str("headline", headline).Str("text", txt).Msg("Receiving news")
+		}
+		return nil
 	}
 
 	app.LogMessage(zerolog.TraceLevel, message, sessionID, false)
@@ -280,7 +296,7 @@ func (app *MarketDataValidator) onMarketDataSnapshotFullRefresh(msg marketdatasn
 	var ok bool
 
 	if orders, ok = app.Validator.secList[security]; !ok {
-		reason := fmt.Sprintf("symbol not found internaly : %s", security)
+		reason := fmt.Sprintf("symbol not found internally : %s", security)
 		err = quickfix.NewMessageRejectError(reason, 0, nil)
 		app.Logger.Error().Err(err).Msgf(reason)
 		return err
@@ -689,7 +705,11 @@ func (o *Orders) isOrderBookCrossed(security string) bool {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 
-	if o.bestBuyOrder != nil && o.bestSellOrder != nil && o.bestBuyOrder.Price.GreaterThanOrEqual(o.bestSellOrder.Price) {
+	if o.bestBuyOrder != nil &&
+		!o.bestBuyOrder.Price.IsZero() &&
+		o.bestSellOrder != nil &&
+		!o.bestSellOrder.Price.IsZero() &&
+		o.bestBuyOrder.Price.GreaterThanOrEqual(o.bestSellOrder.Price) {
 		// Book is crossed
 		if !o.isCrossed {
 			metricMarketDataValidatorCrossedUpdates.WithLabelValues(security).Add(1)

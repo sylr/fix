@@ -131,7 +131,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prepare securitylist
-	securitylist, err := buildMessage(*session)
+	securitylist, err := BuildMessage(*session)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
+func BuildMessage(session config.Session) (quickfix.Messagable, error) {
 	etype, err := dict.SecurityListRequestTypeStringToEnum(optionType)
 	if err != nil {
 		return nil, err
