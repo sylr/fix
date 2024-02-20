@@ -1,9 +1,12 @@
 package acceptor
 
 import (
+	"fmt"
+
 	"github.com/rs/zerolog"
 
 	"github.com/quickfixgo/quickfix"
+	"github.com/quickfixgo/quickfix/store/sql"
 
 	"sylr.dev/fix/pkg/utils"
 )
@@ -17,9 +20,10 @@ func NewAcceptor(app quickfix.Application, settings *quickfix.Settings, logger *
 			return nil, err
 		}
 		switch driver {
-		case "sqlite3":
-		case "postgres":
-			msgStoreFactory = quickfix.NewSQLStoreFactory(settings)
+		case "sqlite3", "postgres":
+			msgStoreFactory = sql.NewStoreFactory(settings)
+		default:
+			return nil, fmt.Errorf("Unsupported SQLStoreDriver: %s", driver)
 		}
 	}
 
