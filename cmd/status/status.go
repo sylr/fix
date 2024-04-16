@@ -3,6 +3,7 @@ package status
 import (
 	"github.com/spf13/cobra"
 
+	status_order "sylr.dev/fix/cmd/status/order"
 	status_security "sylr.dev/fix/cmd/status/security"
 	status_tradingsession "sylr.dev/fix/cmd/status/tradingsession"
 	"sylr.dev/fix/pkg/initiator"
@@ -35,9 +36,11 @@ var StatusCmd = &cobra.Command{
 func init() {
 	initiator.AddPersistentFlags(StatusCmd)
 	initiator.AddPersistentFlagCompletions(StatusCmd)
+	initiator.AddPersistentFlagCompletions(status_order.StatusOrderCmd)
 	initiator.AddPersistentFlagCompletions(status_security.StatusSecurityCmd)
 	initiator.AddPersistentFlagCompletions(status_tradingsession.StatusTradingSessionCmd)
 
-	StatusCmd.AddCommand(status_tradingsession.StatusTradingSessionCmd)
+	StatusCmd.AddCommand(status_order.StatusOrderCmd)
 	StatusCmd.AddCommand(status_security.StatusSecurityCmd)
+	StatusCmd.AddCommand(status_tradingsession.StatusTradingSessionCmd)
 }
