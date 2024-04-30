@@ -63,12 +63,46 @@ func init() {
 	FixCmd.PersistentFlags().IntVar(&options.HTTPPort, "port", 8080, "HTTP port")
 }
 
+const (
+	colorBlack = iota + 30
+	colorRed
+	colorGreen
+	colorYellow
+	colorBlue
+	colorMagenta
+	colorCyan
+	colorWhite
+
+	colorBold     = 1
+	colorDarkGray = 90
+)
+
+func consoleDefaultFormatMessage() zerolog.Formatter {
+	return func(i interface{}) string {
+		if i == nil || i == "" {
+			return ""
+		}
+
+		return fmt.Sprintf("%s", i)
+	}
+}
+
 func InitLogger(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
 	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.LevelColors = map[zerolog.Level]int{
+		zerolog.TraceLevel: colorMagenta,
+		zerolog.DebugLevel: colorYellow,
+		zerolog.InfoLevel:  colorGreen,
+		zerolog.WarnLevel:  colorCyan,
+		zerolog.ErrorLevel: colorRed,
+		zerolog.FatalLevel: colorRed,
+		zerolog.PanicLevel: colorRed,
+	}
 	consoleWriter := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: "Jan 2 15:04:05.000-0700",
+		Out:           os.Stdout,
+		TimeFormat:    "Jan 2 15:04:05.000-0700",
+		FormatMessage: consoleDefaultFormatMessage(),
 	}
 	multi := zerolog.MultiLevelWriter(consoleWriter)
 	logger := zerolog.New(multi).With().Timestamp().Logger().Level(config.IntToZerologLevel(options.Verbose))
