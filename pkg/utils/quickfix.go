@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -62,16 +61,15 @@ func (app *QuickFixAppMessageLogger) LogMessage(level zerolog.Level, message *qu
 		return
 	}
 
-	message.Cook()
-	sort.Sort(message.Header)
-
-	loggedMessage := quickfix.NewMessage()
-	message.CopyInto(loggedMessage)
+	loggedMessage := message
 
 	if sending {
 		// When we are sending messages the quickfix.Message.fields is empty,
 		// we need to call ParseMessageWithDataDictionary to get it populated.
-		br := bytes.NewBufferString(message.String())
+		loggedMessage = quickfix.NewMessage()
+		message.CopyInto(loggedMessage)
+		br := bytes.NewBuffer(loggedMessage.Bytes())
+
 		err := quickfix.ParseMessageWithDataDictionary(loggedMessage, br, app.TransportDataDictionary, app.AppDataDictionary)
 		if err != nil {
 			app.Logger.Error().Err(err).Msg("")
