@@ -21,6 +21,10 @@ import (
 	"sylr.dev/fix/pkg/utils"
 )
 
+var (
+	optionNoLogout bool
+)
+
 var InitiatorCmd = &cobra.Command{
 	Use:   "initiator",
 	Short: "Launch a FIX initiator",
@@ -49,6 +53,8 @@ var InitiatorCmd = &cobra.Command{
 func init() {
 	initiator.AddPersistentFlags(InitiatorCmd)
 	initiator.AddPersistentFlagCompletions(InitiatorCmd)
+
+	InitiatorCmd.Flags().BoolVar(&optionNoLogout, "no-logout", false, "Do not send FIX logout")
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
@@ -104,7 +110,9 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 	defer func() {
 		app.Stop()
-		init.Stop()
+		if !optionNoLogout {
+			init.Stop()
+		}
 	}()
 
 	// Choose right timeout cli option > config > default value (5s)
