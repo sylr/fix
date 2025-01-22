@@ -31,5 +31,16 @@ func NewAcceptor(app quickfix.Application, settings *quickfix.Settings, logger *
 		msgStoreFactory = quickfix.NewMemoryStoreFactory()
 	}
 
-	return quickfix.NewAcceptor(app, msgStoreFactory, settings, utils.NewQuickFixLogFactory(logger))
+	var logFactory quickfix.LogFactory
+	if settings.GlobalSettings().HasSetting("LogLimit") {
+		limit, err := settings.GlobalSettings().IntSetting("LogLimit")
+		if err != nil {
+			return nil, err
+		}
+		logFactory = utils.NewQuickFixLogFactory(logger, limit)
+	} else {
+		logFactory = utils.NewQuickFixLogFactory(logger, 0)
+	}
+
+	return quickfix.NewAcceptor(app, msgStoreFactory, settings, logFactory)
 }

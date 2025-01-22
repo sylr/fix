@@ -179,6 +179,7 @@ type common struct {
 	SQLStoreDriver           string        `yaml:"SQLStoreDriver"`
 	SQLStoreDataSourceName   string        `yaml:"SQLStoreDataSourceName"`
 	RejectInvalidMessage     *bool         `yaml:"RejectInvalidMessage,omitempty"`
+	LogLimit                 int           `yaml:"LogLimit"`
 }
 
 func (c *common) GetName() string {
@@ -207,6 +208,10 @@ func (c *common) setQuickFixGlobalSettings(globalSettings *quickfix.SessionSetti
 
 	if len(c.SQLStoreDataSourceName) > 0 {
 		globalSettings.Set(qconfig.SQLStoreDataSourceName, c.SQLStoreDataSourceName)
+	}
+
+	if c.LogLimit > 0 {
+		globalSettings.Set("LogLimit", FixIntString(c.LogLimit))
 	}
 
 	if len(c.SocketPrivateKeyFile) != 0 {
