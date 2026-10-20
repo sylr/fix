@@ -3,10 +3,10 @@ package status
 import (
 	"github.com/spf13/cobra"
 
-	status_order "sylr.dev/fix/cmd/status/order"
-	status_security "sylr.dev/fix/cmd/status/security"
-	status_tradingsession "sylr.dev/fix/cmd/status/tradingsession"
-	"sylr.dev/fix/pkg/initiator"
+	status_order "sylr.dev/fix/v2/cmd/status/order"
+	status_security "sylr.dev/fix/v2/cmd/status/security"
+	status_tradingsession "sylr.dev/fix/v2/cmd/status/tradingsession"
+	"sylr.dev/fix/v2/initiator"
 )
 
 var StatusCmd = &cobra.Command{

@@ -3,9 +3,9 @@ package list
 import (
 	"github.com/spf13/cobra"
 
-	listsecurity "sylr.dev/fix/cmd/list/security"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/utils"
+	listsecurity "sylr.dev/fix/v2/cmd/list/security"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 // ListCmd represents the buy command

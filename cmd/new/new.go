@@ -3,10 +3,10 @@ package new
 import (
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/cmd/new/order"
-	"sylr.dev/fix/cmd/new/quote"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cmd/new/order"
+	"sylr.dev/fix/v2/cmd/new/quote"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 // NewCmd represents the buy command

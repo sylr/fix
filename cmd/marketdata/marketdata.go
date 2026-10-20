@@ -3,9 +3,9 @@ package marketdata
 import (
 	"github.com/spf13/cobra"
 
-	markedatarequest "sylr.dev/fix/cmd/marketdata/request"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/utils"
+	markedatarequest "sylr.dev/fix/v2/cmd/marketdata/request"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 // MarketDataCmd represents the buy command

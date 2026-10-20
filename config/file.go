@@ -40,7 +40,7 @@ func ReadYAMLNoAge(path string) (*fixConfig, error) {
 	err = decoder.Decode(&fix)
 
 	if err != nil {
-		return nil, err
+		return nil, decodeError(err)
 	}
 
 	return &fix, nil
@@ -65,7 +65,7 @@ func ReadYAML(path string, interactive bool) (*fixConfig, error) {
 	err = decoder.Decode(&w)
 
 	if err != nil {
-		return nil, err
+		return nil, decodeError(err)
 	}
 
 	return &fix, nil
@@ -212,4 +212,14 @@ func addSSHAgeIdentityToCache(pemBytes []byte, id age.Identity) {
 	defer sshAgeIdentitiesCacheMutex.Unlock()
 
 	sshAgeIdentitiesCache[sha256] = id
+}
+
+// decodeError points to the README when err may come from a configuration
+// in fix v1's format.
+func decodeError(err error) error {
+	if strings.Contains(err.Error(), "not found in type config.") {
+		return fmt.Errorf("%w (the configuration format changed in fix v2, see https://github.com/sylr/fix#migrating-from-v1)", err)
+	}
+
+	return err
 }

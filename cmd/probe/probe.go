@@ -1,20 +1,18 @@
 package probe
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/quickfixgo/quickfix"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 var (
@@ -115,85 +113,45 @@ type result struct {
 }
 
 func probe() {
-	options := config.GetOptions()
 	logger := config.GetLogger()
 
 	logger.Info().Msgf("Start probing")
 
 	contexts := config.GetContexts()
 
-	for i, context := range contexts {
-		if len(context.Initiator) == 0 {
+	for _, cfgContext := range contexts {
+		if len(cfgContext.Initiator) == 0 {
 			continue
 		}
 
-		for j, session := range context.Sessions {
-			go func(context *config.Context, i int, session string) {
-				logger.Debug().Str("context", context.GetName()).Str("session", session).Msgf("Start probing session")
+		initiatorConfig, err := cfgContext.GetInitiator()
+		if err != nil {
+			logger.Error().Err(err).Str("context", cfgContext.GetName()).Msg("Unable to get initiator")
+			continue
+		}
 
-				// Make a copy of the context which has only one session.
-				contextSingleSession := *context
-				contextSingleSession.Sessions = nil
-				contextSingleSession.Sessions = context.Sessions[i : i+1]
+		sessions, err := cfgContext.GetSessions()
+		if err != nil {
+			logger.Error().Err(err).Str("context", cfgContext.GetName()).Msg("Unable to get sessions")
+			continue
+		}
 
-				logger.Debug().Str("context", context.GetName()).Str("session", session).Strs("sessions", contextSingleSession.Sessions).Msgf("Copied context")
+		for _, session := range sessions {
+			go func(cfgContext *config.Context, session *config.Session) {
+				name := session.Name
+				logger.Debug().Str("context", cfgContext.GetName()).Str("session", name).Msgf("Start probing session")
 
-				settings, err := contextSingleSession.ToQuickFixInitiatorSettings()
+				c, err := initiator.ConnectSession(context.Background(), initiatorConfig, session, initiator.Options{})
 				if err != nil {
-					panic(err)
-				}
-
-				app := application.NewInitiator()
-				app.Settings = settings
-				app.Logger = logger
-
-				var quickfixLogger *zerolog.Logger
-				if options.QuickFixLogging {
-					quickfixLogger = logger
-				}
-
-				init, err := initiator.Initiate(app, settings, quickfixLogger)
-				if err != nil {
-					logger.Error().Err(err).Str("context", context.GetName()).Str("session", session).Msg("Unable to initiate initiator")
-					status <- result{context: context.GetName(), session: session, connected: false}
+					logger.Error().Err(err).Str("context", cfgContext.GetName()).Str("session", name).Msg("Unable to connect")
+					status <- result{context: cfgContext.GetName(), session: name, connected: false}
 					return
 				}
+				defer c.Close(true)
 
-				// Start session
-				if err = init.Start(); err != nil {
-					logger.Error().Err(err).Str("context", context.GetName()).Str("session", session).Msg("Unable to start initiator")
-					status <- result{context: context.GetName(), session: session, connected: false}
-					return
-				}
-
-				defer func() {
-					app.Stop()
-					init.Stop()
-					_ = quickfix.UnregisterSession(app.SessionID)
-				}()
-
-				// Choose right timeout cli option > config > default value (5s)
-				var timeout time.Duration
-				if options.Timeout != time.Duration(0) {
-					timeout = options.Timeout
-				} else {
-					timeout = 5 * time.Second
-				}
-
-				// Wait for session connection
-				select {
-				case <-time.After(timeout):
-					status <- result{context: context.GetName(), session: session, connected: false}
-
-				case _, ok := <-app.Connected:
-					if !ok {
-						status <- result{context: context.GetName(), session: session, connected: false}
-					} else {
-						logger.Debug().Msgf("connected")
-						status <- result{context: context.GetName(), session: session, connected: true}
-					}
-				}
-			}(contexts[i], j, session)
+				logger.Debug().Msgf("connected")
+				status <- result{context: cfgContext.GetName(), session: name, connected: true}
+			}(cfgContext, session)
 		}
 	}
 }

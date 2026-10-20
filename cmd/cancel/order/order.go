@@ -8,22 +8,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/tag"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix"
 
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/cli/complete"
-	"sylr.dev/fix/pkg/cli/options"
-	"sylr.dev/fix/pkg/dict"
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cli/complete"
+	"sylr.dev/fix/v2/cli/options"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/dict"
+	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/fixt11"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
+
+// errInvalidMessageType is returned by processResponse for messages that are
+// not an answer to the request.
+var errInvalidMessageType = fmt.Errorf("invalid message type")
 
 var (
 	optionOrderSide          string
@@ -73,92 +74,28 @@ func Validate(cmd *cobra.Command, args []string) error {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
 	logger := config.GetLogger()
 
-	context, err := config.GetCurrentContext()
+	c, err := initiator.Connect(cmd.Context(), initiator.Options{
+		MsgTypes: []string{
+			string(fix50sp2.MsgTypeExecutionreport),
+			string(fix50sp2.MsgTypeOrdercancelreject),
+			string(fix50sp2.MsgTypeOrdermasscancelreport),
+		},
+	})
 	if err != nil {
 		return err
 	}
-
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
-
-	session := sessions[0]
-	initiatorConfig, err := context.GetInitiator()
-	if err != nil {
-		return err
-	}
-
-	transportDict, appDict, err := session.GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		return err
-	}
-
-	app := application.NewCancelOrder()
-	app.Logger = logger
-	app.Settings = settings
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
-
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if initiatorConfig.SocketTimeout != time.Duration(0) {
-		timeout = initiatorConfig.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	if err = init.Start(); err != nil {
-		return err
-	}
-
-	defer func() {
-		app.Stop()
-		init.Stop()
-	}()
-
-	// Wait for session connection
-	var sessionId quickfix.SessionID
-	var ok bool
-	select {
-	case <-time.After(timeout):
-		return errors.ConnectionTimeout
-	case sessionId, ok = <-app.Connected:
-		if !ok {
-			return errors.FixLogout
-		}
-	}
+	defer c.Close(true)
 
 	// Prepare cancel message
-	cancelMsg, err := buildMessage(*session)
+	cancelMsg, err := buildMessage(c.Session)
 	if err != nil {
 		return err
 	}
 
 	// Send the cancel message
-	err = quickfix.SendToTarget(cancelMsg, sessionId)
-	if err != nil {
+	if _, err = c.Send(cmd.Context(), cancelMsg); err != nil {
 		return err
 	}
 
@@ -183,13 +120,12 @@ LOOP:
 			logger.Warn().Msgf("Timeout while expecting execution report or cancel request reject")
 			break LOOP
 
-		case msg, ok := <-app.FromAppMessages:
-			if !ok {
-				break LOOP
-			}
+		case <-c.Done():
+			break LOOP
 
-			if err := processResponse(app, msg); err != nil {
-				if errors.Is(err, quickfix.InvalidMessageType()) {
+		case msg := <-c.Messages():
+			if err := processResponse(c, msg); err != nil {
+				if errors.Is(err, errInvalidMessageType) {
 					continue LOOP
 				}
 				return err
@@ -201,89 +137,68 @@ LOOP:
 	return nil
 }
 
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
+func buildMessage(session *config.Session) (*fix50sp2.OrderCancelRequestBuilder, error) {
 	eside, err := dict.OrderSideStringToEnum(optionOrderSide)
 	if err != nil {
 		return nil, err
 	}
 
-	switch session.BeginString {
-	case quickfix.BeginStringFIXT11:
-		switch session.DefaultApplVerID {
-		case "FIX.5.0SP2":
-			message := quickfix.NewMessage()
-			message.Header.Set(field.NewMsgType(enum.MsgType_ORDER_CANCEL_REQUEST))
-			message.Body.Set(field.NewClOrdID(optionClientOrderID))
-			message.Body.Set(field.NewSide(eside))
-			message.Body.Set(field.NewTransactTime(time.Now()))
-			if len(optionOrderID) > 0 {
-				message.Body.Set(field.NewOrderID(optionOrderID))
-			}
-			if len(optionOrigClientOrderID) > 0 {
-				message.Body.Set(field.NewOrigClOrdID(optionOrigClientOrderID))
-			}
-			if len(optionOrderSymbol) > 0 {
-				message.Body.Set(field.NewSymbol(optionOrderSymbol))
-			}
-			partyIdOptions.EnrichMessageBody(&message.Body, session)
-
-			return message, nil
-
-		default:
-			return nil, errors.FixVersionNotImplemented
-		}
-
-	default:
+	if !session.IsFIX50SP2() {
 		return nil, errors.FixVersionNotImplemented
 	}
 
+	message := fix50sp2.BuildOrderCancelRequest(session.BeginString).
+		SetClOrdID(optionClientOrderID).
+		SetSide(eside).
+		SetTransactTime(time.Now())
+	if len(optionOrderID) > 0 {
+		message.SetOrderID(optionOrderID)
+	}
+	if len(optionOrigClientOrderID) > 0 {
+		message.SetOrigClOrdID(optionOrigClientOrderID)
+	}
+	if len(optionOrderSymbol) > 0 {
+		message.SetSymbol(optionOrderSymbol)
+	}
+	for _, entry := range partyIdOptions.PartyEntries(session) {
+		message.AddNoPartyIDsEntry(entry)
+	}
+
+	return message, nil
 }
 
-func processResponse(app *application.CancelOrder, msg *quickfix.Message) error {
-	msgType := field.MsgTypeField{}
-	text := field.TextField{}
-
-	// Text
-	if msg.Body.Has(tag.Text) {
-		if err := msg.Body.GetField(tag.Text, &text); err != nil {
-			return err
+func processResponse(c *initiator.Client, msg *fix.Message) error {
+	makeError := func(text string, _ bool) error {
+		if len(text) > 0 {
+			return fmt.Errorf("%w: %s", errors.FixOrderRejected, text)
 		}
+		return errors.FixOrderRejected
 	}
 
-	makeError := func(errType error) error {
-		if len(text.String()) > 0 {
-			return fmt.Errorf("%w: %s", errType, text.String())
-		} else {
-			return errType
+	switch string(msg.MsgType()) {
+	case string(fixt11.MsgTypeReject):
+		return makeError(fixt11.WrapReject(msg).Text())
+
+	case string(fix50sp2.MsgTypeBusinessmessagereject):
+		return makeError(fix50sp2.WrapBusinessMessageReject(msg).Text())
+
+	case string(fix50sp2.MsgTypeOrdercancelreject):
+		utils.WriteMessageBodyAsTable(os.Stdout, msg, c.Dictionary)
+		return makeError(fix50sp2.WrapOrderCancelReject(msg).Text())
+
+	case string(fix50sp2.MsgTypeExecutionreport):
+		utils.WriteMessageBodyAsTable(os.Stdout, msg, c.Dictionary)
+		report := fix50sp2.WrapExecutionReport(msg)
+		ordStatus, ok := report.OrdStatus()
+		if !ok {
+			return fmt.Errorf("%w: missing OrdStatus", errors.Fix)
 		}
-	}
-
-	// MsgType
-	err := msg.Header.GetField(tag.MsgType, &msgType)
-	if err != nil {
-		return err
-	}
-
-	if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
-		return makeError(errors.FixOrderRejected)
-	}
-
-	if msgType.Value() == enum.MsgType_ORDER_CANCEL_REJECT {
-		app.WriteMessageBodyAsTable(os.Stdout, msg)
-		return makeError(errors.FixOrderRejected)
-	}
-
-	if msgType.Value() == enum.MsgType_EXECUTION_REPORT {
-		app.WriteMessageBodyAsTable(os.Stdout, msg)
-		ordStatus := field.OrdStatusField{}
-		if err = msg.Body.GetField(tag.OrdStatus, &ordStatus); err != nil {
-			return err
+		if ordStatus == fix50sp2.OrdStatusRejected {
+			return makeError(report.Text())
 		}
-		if ordStatus.Value() == enum.OrdStatus_REJECTED {
-			return makeError(errors.FixOrderRejected)
-		}
-	} else {
-		return quickfix.InvalidMessageType()
+
+	default:
+		return errInvalidMessageType
 	}
 
 	return nil

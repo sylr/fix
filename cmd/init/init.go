@@ -3,8 +3,8 @@ package init
 import (
 	"github.com/spf13/cobra"
 
-	init_config "sylr.dev/fix/cmd/init/config"
-	init_database "sylr.dev/fix/cmd/init/database"
+	init_config "sylr.dev/fix/v2/cmd/init/config"
+	init_database "sylr.dev/fix/v2/cmd/init/database"
 )
 
 // ConfigCmd represents the buy command

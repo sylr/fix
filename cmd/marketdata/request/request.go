@@ -6,25 +6,19 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix/session"
 
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/fixt11"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/tag"
-
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/cli/complete"
-	"sylr.dev/fix/pkg/dict"
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cli/complete"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/dict"
+	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/marketdata"
+	"sylr.dev/fix/v2/utils"
 )
 
 var (
@@ -37,8 +31,8 @@ var (
 	optionMarketDepth int
 	optionNoLogout    bool
 
-	SubType      enum.SubscriptionRequestType
-	MDUpdateType enum.MDUpdateType
+	SubType      fix50sp2.SubscriptionRequestType
+	MDUpdateType fix50sp2.MDUpdateType
 )
 
 var MarketDataRequestCmd = &cobra.Command{
@@ -104,93 +98,33 @@ func Validate(cmd *cobra.Command, args []string) error {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
 	logger := config.GetLogger()
 
-	context, err := config.GetCurrentContext()
+	c, err := initiator.Connect(cmd.Context(), initiator.Options{
+		MsgTypes: []string{
+			string(fix50sp2.MsgTypeMarketdatasnapshotfullrefresh),
+			string(fix50sp2.MsgTypeMarketdataincrementalrefresh),
+			string(fix50sp2.MsgTypeMarketdatarequestreject),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	defer c.Close(!optionNoLogout)
+
+	handler := &marketdata.RequestHandler{Dictionary: c.Dictionary}
+	if optionPrintData {
+		handler.Writer = os.Stdout
+	}
+
+	// Prepare market data request
+	marketDataRequest, err := buildMessage(c)
 	if err != nil {
 		return err
 	}
 
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
-
-	ctxInitiator, err := context.GetInitiator()
-	if err != nil {
-		return err
-	}
-
-	session := sessions[0]
-	transportDict, appDict, err := session.GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		return err
-	}
-
-	app := application.NewMarketDataRequest(optionPrintData)
-	app.Logger = logger
-	app.Settings = settings
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
-
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	err = init.Start()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		app.Stop()
-		if !optionNoLogout {
-			init.Stop()
-		}
-	}()
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if ctxInitiator.SocketTimeout != time.Duration(0) {
-		timeout = ctxInitiator.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
-	// Wait for session connection
-	select {
-	case <-time.After(timeout):
-		return errors.ConnectionTimeout
-	case _, ok := <-app.Connected:
-		if !ok {
-			return errors.FixLogout
-		}
-	}
-
-	// Prepare securitylist
-	securitylist, err := buildMessage(*session)
-	if err != nil {
-		return err
-	}
-
-	// Send the order
-	err = quickfix.Send(securitylist)
-	if err != nil {
+	// Send the market data request
+	if _, err = c.Send(cmd.Context(), marketDataRequest); err != nil {
 		return err
 	}
 
@@ -204,8 +138,16 @@ LOOP:
 			logger.Debug().Msgf("Received signal: %s", signal)
 
 			break LOOP
-		case _, ok := <-app.FromAppMessages:
-			if !ok || SubType == enum.SubscriptionRequestType_SNAPSHOT {
+		case <-c.Done():
+			logger.Debug().Msgf("Session logged out: %v", c.Err())
+
+			break LOOP
+		case msg := <-c.Messages():
+			if err := handler.Handle(msg); err != nil {
+				return err
+			}
+
+			if SubType == fix50sp2.SubscriptionRequestTypeSnapshot {
 				break LOOP
 			}
 		}
@@ -214,49 +156,20 @@ LOOP:
 	return nil
 }
 
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	mdReqID := field.NewMDReqID(optionMDReqID)
-	subReqType := field.NewSubscriptionRequestType(dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)])
-	marketDepth := field.NewMarketDepth(optionMarketDepth)
-
-	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
-
-	header.Set(field.NewMsgType(enum.MsgType_MARKET_DATA_REQUEST))
-	message.Body.Set(mdReqID)
-	message.Body.Set(subReqType)
-	message.Body.Set(marketDepth)
-	message.Body.Set(field.NewMDUpdateType(MDUpdateType))
-
-	entryTypes := quickfix.NewRepeatingGroup(
-		tag.NoMDEntryTypes,
-		quickfix.GroupTemplate{
-			quickfix.GroupElement(tag.MDEntryType),
-		},
-	)
+func buildMessage(c *initiator.Client) (session.Outgoing, error) {
+	message := fix50sp2.BuildMarketDataRequest(c.BeginString()).
+		SetMDReqID(optionMDReqID).
+		SetSubscriptionRequestType(SubType).
+		SetMarketDepth(optionMarketDepth).
+		SetMDUpdateType(MDUpdateType)
 
 	for _, t := range optionTypes {
-		entryTypes.Add().Set(field.NewMDEntryType(dict.MDEntryTypes[strings.ToUpper(t)]))
+		message.AddNoMDEntryTypesEntry(fix50sp2.NewNoMDEntryTypesEntry().SetMDEntryType(dict.MDEntryTypes[strings.ToUpper(t)]))
 	}
 
-	message.Body.SetGroup(entryTypes)
-
-	relatedSym := quickfix.NewRepeatingGroup(
-		tag.NoRelatedSym,
-		quickfix.GroupTemplate{
-			quickfix.GroupElement(tag.Symbol),
-		},
-	)
 	for _, sym := range optionSymbols {
-		relatedSym.Add().Set(field.NewSymbol(sym))
+		message.AddNoRelatedSymEntry(fix50sp2.NewNoRelatedSymEntry().SetSymbol(sym))
 	}
-	message.Body.SetGroup(relatedSym)
-
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
 
 	return message, nil
 }

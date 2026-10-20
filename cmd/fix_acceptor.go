@@ -4,7 +4,7 @@
 package cmd
 
 import (
-	"sylr.dev/fix/cmd/acceptor"
+	"sylr.dev/fix/v2/cmd/acceptor"
 )
 
 func init() {

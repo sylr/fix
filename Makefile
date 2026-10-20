@@ -60,13 +60,13 @@ GO_BUILD_TAGS           := $(strip $(GO_BUILD_TAGS))
 GO_BUILD_TARGET_DEPS    := $(strip $(GO_BUILD_TARGET_DEPS))
 GO_BUILD_FLAGS          := $(strip $(GO_BUILD_FLAGS))
 GO_BUILD_LDFLAGS_OPTIMS := $(strip $(GO_BUILD_LDFLAGS_OPTIMS))
-GO_BUILD_LDFLAGS        := -ldflags '$(GO_BUILD_LDFLAGS_OPTIMS) -X sylr.dev/fix/cmd.Version=$(GIT_VERSION) -extldflags "$(GO_BUILD_EXTLDFLAGS)"'
+GO_BUILD_LDFLAGS        := -ldflags '$(GO_BUILD_LDFLAGS_OPTIMS) -X sylr.dev/fix/v2/cmd.Version=$(GIT_VERSION) -extldflags "$(GO_BUILD_EXTLDFLAGS)"'
 
 GO_TOOLS_GOLANGCI_LINT ?= $(shell $(GO) env GOPATH)/bin/golangci-lint
 
 DOCKER_BUILD_IMAGE      ?= ghcr.io/sylr/fix
 DOCKER_BUILD_VERSION    ?= $(GIT_VERSION)
-DOCKER_BUILD_GO_VERSION ?= 1.20
+DOCKER_BUILD_GO_VERSION ?= 1.27
 DOCKER_BUILD_LABELS      = --label org.opencontainers.image.title=fix
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.description="fix client"
 DOCKER_BUILD_LABELS     += --label org.opencontainers.image.url="https://github.com/sylr/fix"
@@ -147,6 +147,17 @@ crossbuild-checksums: dist/checksums
 
 dist/checksums : $(GO_CROSSBUILD_TARGETS)
 	cd dist && shasum -a 256 fix-*-* > checksums
+
+# -- go generate ---------------------------------------------------------------
+
+.PHONY: generate generate-verify
+
+generate:
+	$(GO) generate ./fix50sp2 ./fixt11
+
+generate-verify: generate
+	git diff --exit-code -- fix50sp2 fixt11
+	test -z "$$(git status --porcelain -- fix50sp2 fixt11)"
 
 # -- go mod --------------------------------------------------------------------
 

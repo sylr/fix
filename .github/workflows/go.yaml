@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        go: ["1.22"]
+        go: ["1.27"]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -36,6 +36,9 @@ jobs:
 
     - name: Verify go mod
       run: make go-mod-verify
+
+    - name: Verify generated code
+      run: make generate-verify
 
     - name: Test
       run: make test

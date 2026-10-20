@@ -9,25 +9,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix"
 
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/fixt11"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/tag"
-
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/cli/complete"
-	"sylr.dev/fix/pkg/cli/options"
-	"sylr.dev/fix/pkg/dict"
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cli/complete"
+	"sylr.dev/fix/v2/cli/options"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/dict"
+	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/fixt11"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
+
+var errInvalidMessageType = fmt.Errorf("invalid message type")
 
 var (
 	optionOrderSide, optionOrderType string
@@ -131,90 +128,31 @@ func Validate(cmd *cobra.Command, args []string) error {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
 	logger := config.GetLogger()
 
-	context, err := config.GetCurrentContext()
+	c, err := initiator.Connect(cmd.Context(), initiator.Options{
+		MsgTypes: []string{
+			string(fix50sp2.MsgTypeExecutionreport),
+			string(fix50sp2.MsgTypeOrdercancelreject),
+			string(fix50sp2.MsgTypeBusinessmessagereject),
+		},
+	})
 	if err != nil {
 		return err
 	}
 
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
+	defer c.Close(true)
 
-	session := sessions[0]
-	initiatorConfig, err := context.GetInitiator()
-	if err != nil {
-		return err
-	}
-
-	transportDict, appDict, err := session.GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		return err
-	}
-
-	app := application.NewNewOrder()
-	app.Logger = logger
-	app.Settings = settings
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
-
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if initiatorConfig.SocketTimeout != time.Duration(0) {
-		timeout = initiatorConfig.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	if err = init.Start(); err != nil {
-		return err
-	}
-
-	defer func() {
-		app.Stop()
-		init.Stop()
-	}()
-
-	// Wait for session connection
-	select {
-	case <-time.After(timeout):
-		return errors.ConnectionTimeout
-	case _, ok := <-app.Connected:
-		if !ok {
-			return errors.FixLogout
-		}
-	}
+	session := c.Session
 
 	// Prepare order
-	order, err := buildMessage(*session)
+	order, err := buildMessage(c.BeginString(), session)
 	if err != nil {
 		return err
 	}
 
 	// Send the order
-	err = quickfix.Send(order)
-	if err != nil {
+	if _, err = c.Send(cmd.Context(), order); err != nil {
 		return err
 	}
 
@@ -234,7 +172,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		updatePeriod = make(<-chan time.Time)
 	}
 
-	var lastExecutionReport *quickfix.Message
+	var lastExecutionReport *fix.Message
 
 LOOP:
 	for {
@@ -249,31 +187,29 @@ LOOP:
 
 		case <-updatePeriod:
 			// Prepare order
-			orderUpdateMsg, err := buildCancelReplaceMessage(*session, lastExecutionReport)
+			orderUpdateMsg, err := buildCancelReplaceMessage(c.BeginString(), session, lastExecutionReport)
 			if err != nil {
 				return err
 			}
 
 			// Send the order
-			err = quickfix.Send(orderUpdateMsg)
-			if err != nil {
+			if _, err = c.Send(cmd.Context(), orderUpdateMsg); err != nil {
 				return err
 			}
 
-		case msg, ok := <-app.FromAppMessages:
-			if !ok {
-				break LOOP
-			}
+		case <-c.Done():
+			break LOOP
 
-			if err := processResponse(app, msg); err != nil {
-				if errors.Is(err, quickfix.InvalidMessageType()) {
+		case msg := <-c.Messages():
+			if err := processResponse(c, msg); err != nil {
+				if errors.Is(err, errInvalidMessageType) {
 					continue LOOP
 				}
 
 				return err
 			}
 
-			if msgType, err := msg.Header.GetString(tag.MsgType); err == nil && enum.MsgType(msgType) == enum.MsgType_EXECUTION_REPORT {
+			if string(msg.MsgType()) == string(fix50sp2.MsgTypeExecutionreport) {
 				lastExecutionReport = msg
 			}
 
@@ -302,7 +238,11 @@ LOOP:
 	return nil
 }
 
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
+func buildMessage(beginString string, session *config.Session) (*fix50sp2.NewOrderSingleBuilder, error) {
+	if !session.IsFIX50SP2() {
+		return nil, errors.FixVersionNotImplemented
+	}
+
 	eside, err := dict.OrderSideStringToEnum(optionOrderSide)
 	if err != nil {
 		return nil, err
@@ -318,226 +258,174 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 		return nil, err
 	}
 
-	// Prepare order
-	clordid := field.NewClOrdID(optionOrderID)
-	ordtype := field.NewOrdType(etype)
-	transactime := field.NewTransactTime(time.Now())
-	ordside := field.NewSide(eside)
-
 	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
+	message := fix50sp2.BuildNewOrderSingle(beginString).
+		SetClOrdID(optionOrderID).
+		SetSide(eside).
+		SetTransactTime(time.Now()).
+		SetOrdType(etype).
+		SetSymbol(optionOrderSymbol).
+		SetTimeInForce(eExpiry)
 
-	switch session.BeginString {
-	case quickfix.BeginStringFIXT11:
-		switch session.DefaultApplVerID {
-		case "FIX.5.0SP2":
-			header.Set(field.NewMsgType(enum.MsgType_ORDER_SINGLE))
-			message.Body.Set(clordid)
-			message.Body.Set(ordside)
-			message.Body.Set(transactime)
-			message.Body.Set(ordtype)
-			partyIdOptions.EnrichMessageBody(&message.Body, session)
-			attributeOptions.EnrichMessageBody(&message.Body)
-
-		default:
-			return nil, errors.FixVersionNotImplemented
-		}
-	default:
-		return nil, errors.FixVersionNotImplemented
+	for _, entry := range partyIdOptions.PartyEntries(session) {
+		message.AddNoPartyIDsEntry(entry)
 	}
 
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
+	for _, entry := range attributeOptions.AttributeEntries() {
+		message.AddNoOrderAttributesEntry(entry)
+	}
 
-	message.Body.Set(field.NewSymbol(optionOrderSymbol))
-	message.Body.Set(field.NewOrderQty(decimal.NewFromInt(optionOrderQuantity), 2))
-	message.Body.Set(field.NewTimeInForce(eExpiry))
+	message.SetString(fix50sp2.TagOrderQty, decimal.NewFromInt(optionOrderQuantity).StringFixed(2))
 
-	if etype != enum.OrdType_MARKET {
-		message.Body.Set(field.NewPrice(decimal.NewFromFloat(optionOrderPrice), 2))
+	if etype != fix50sp2.OrdTypeMarket {
+		message.SetString(fix50sp2.TagPrice, decimal.NewFromFloat(optionOrderPrice).StringFixed(2))
 	}
 
 	if len(optionOrderOrigination) > 0 {
-		message.Body.Set(field.NewOrderOrigination(enum.OrderOrigination(dict.OrderOriginations[strings.ToUpper(optionOrderOrigination)])))
+		message.SetOrderOrigination(dict.OrderOriginations[strings.ToUpper(optionOrderOrigination)])
 	}
 
 	return message, nil
 }
 
-func buildCancelReplaceMessage(session config.Session, executionReport *quickfix.Message) (quickfix.Messagable, error) {
+func buildCancelReplaceMessage(beginString string, session *config.Session, executionReport *fix.Message) (*fix50sp2.OrderCancelReplaceRequestBuilder, error) {
 	if executionReport == nil {
 		return nil, fmt.Errorf("missing execution report")
 	}
 
+	if !session.IsFIX50SP2() {
+		return nil, errors.FixVersionNotImplemented
+	}
+
 	// Prepare order
-	orderId := field.OrderIDField{}
-	if err := executionReport.Body.GetField(tag.OrderID, &orderId); err != nil {
-		return nil, err
+	report := fix50sp2.WrapExecutionReport(executionReport)
+
+	orderId, ok := report.OrderID()
+	if !ok {
+		return nil, fmt.Errorf("execution report: missing OrderID")
 	}
-	oldClOrdId := field.ClOrdIDField{}
-	if err := executionReport.Body.GetField(tag.ClOrdID, &oldClOrdId); err != nil {
-		return nil, err
+	oldClOrdId, ok := report.ClOrdID()
+	if !ok {
+		return nil, fmt.Errorf("execution report: missing ClOrdID")
 	}
-	ordType := field.OrdTypeField{}
-	if err := executionReport.Body.GetField(tag.OrdType, &ordType); err != nil {
-		return nil, err
+	ordType, ok := report.OrdType()
+	if !ok {
+		return nil, fmt.Errorf("execution report: missing OrdType")
 	}
-	ordSide := field.SideField{}
-	if err := executionReport.Body.GetField(tag.Side, &ordSide); err != nil {
-		return nil, err
+	ordSide, ok := report.Side()
+	if !ok {
+		return nil, fmt.Errorf("execution report: missing Side")
 	}
 	eExpiry, err := dict.OrderTimeInForceStringToEnum(optionOrderExpiry)
 	if err != nil {
 		return nil, err
 	}
-	totalQty := field.OrderQtyField{}
-	if err := executionReport.Body.GetField(tag.OrderQty, &totalQty); err != nil {
+	totalQty, err := reportDecimal(report.OrderQtyBytes, "OrderQty")
+	if err != nil {
 		return nil, err
 	}
-	price := field.PriceField{}
-	if err := executionReport.Body.GetField(tag.Price, &price); err != nil {
+	price, err := reportDecimal(report.PriceBytes, "Price")
+	if err != nil {
 		return nil, err
 	}
-
-	clOrdId := field.NewClOrdID(uuid.NewString())
-	transactTime := field.NewTransactTime(time.Now())
-	origClOrdId := field.NewOrigClOrdID(oldClOrdId.String())
 
 	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
+	message := fix50sp2.BuildOrderCancelReplaceRequest(beginString).
+		SetOrderID(orderId).
+		SetClOrdID(uuid.NewString()).
+		SetOrigClOrdID(oldClOrdId).
+		SetSide(ordSide).
+		SetTransactTime(time.Now()).
+		SetOrdType(ordType).
+		SetTimeInForce(eExpiry).
+		SetSymbol(optionOrderSymbol)
 
-	switch session.BeginString {
-	case quickfix.BeginStringFIXT11:
-		switch session.DefaultApplVerID {
-		case "FIX.5.0SP2":
-			header.Set(field.NewMsgType(enum.MsgType_ORDER_CANCEL_REPLACE_REQUEST))
-			message.Body.Set(orderId)
-			message.Body.Set(clOrdId)
-			message.Body.Set(origClOrdId)
-			message.Body.Set(ordSide)
-			message.Body.Set(transactTime)
-			message.Body.Set(ordType)
-			message.Body.Set(field.NewTimeInForce(eExpiry))
-			message.Body.Set(field.NewSymbol(optionOrderSymbol))
-			message.Body.Set(field.NewOrderQty(totalQty.Value().Add(decimal.NewFromFloat(optionUpdateOrderQuantity)), 2))
-			message.Body.Set(field.NewPrice(price.Value().Add(decimal.NewFromFloat(optionUpdateOrderPrice)), 2))
-			partyIdOptions.EnrichMessageBody(&message.Body, session)
-
-		default:
-			return nil, errors.FixVersionNotImplemented
-		}
-	default:
-		return nil, errors.FixVersionNotImplemented
+	for _, entry := range partyIdOptions.PartyEntries(session) {
+		message.AddNoPartyIDsEntry(entry)
 	}
 
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
+	message.SetString(fix50sp2.TagOrderQty, totalQty.Add(decimal.NewFromFloat(optionUpdateOrderQuantity)).StringFixed(2))
+	message.SetString(fix50sp2.TagPrice, price.Add(decimal.NewFromFloat(optionUpdateOrderPrice)).StringFixed(2))
 
 	return message, nil
 }
 
-func processResponse(app *application.NewOrder, msg *quickfix.Message) error {
-	msgType := field.MsgTypeField{}
-	ordStatus := field.OrdStatusField{}
-	text := field.TextField{}
-
-	// Text
-	if msg.Body.Has(tag.Text) {
-		if err := msg.Body.GetField(tag.Text, &text); err != nil {
-			return err
-		}
+// reportDecimal reads a decimal field of an execution report from its raw bytes.
+func reportDecimal(get func() ([]byte, bool), name string) (decimal.Decimal, error) {
+	raw, ok := get()
+	if !ok {
+		return decimal.Decimal{}, fmt.Errorf("execution report: missing %s", name)
 	}
 
+	return decimal.NewFromString(string(raw))
+}
+
+func processResponse(c *initiator.Client, msg *fix.Message) error {
+	text := string(msg.Get(fix50sp2.TagText))
+
 	makeError := func(errType error) error {
-		if len(text.String()) > 0 {
-			return fmt.Errorf("%w: %s", errType, text.String())
+		if len(text) > 0 {
+			return fmt.Errorf("%w: %s", errType, text)
 		} else {
 			return errType
 		}
 	}
 
 	// MsgType
-	err := msg.Header.GetField(tag.MsgType, &msgType)
-	if err != nil {
-		return err
-	} else if msgType.Value() == enum.MsgType_REJECT ||
-		msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT ||
-		msgType.Value() == enum.MsgType_ORDER_CANCEL_REJECT {
+	switch msgType := string(msg.MsgType()); msgType {
+	case string(fixt11.MsgTypeReject),
+		string(fix50sp2.MsgTypeBusinessmessagereject),
+		string(fix50sp2.MsgTypeOrdercancelreject):
 		return makeError(errors.FixOrderRejected)
-	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
-		return quickfix.InvalidMessageType()
+	case string(fix50sp2.MsgTypeExecutionreport):
+	default:
+		return errInvalidMessageType
 	}
 
 	// OrdStatus
-	err = msg.Body.GetField(tag.OrdStatus, &ordStatus)
-	if err != nil {
-		return err
+	ordStatus, ok := fix50sp2.WrapExecutionReport(msg).OrdStatus()
+	if !ok {
+		return fmt.Errorf("missing OrdStatus")
 	}
 
-	app.WriteMessageBodyAsTable(os.Stdout, msg)
-	switch ordStatus.Value() {
-	case enum.OrdStatus_NEW:
-		break
-	case enum.OrdStatus_PARTIALLY_FILLED:
-		break
-	case enum.OrdStatus_FILLED:
-		break
-	case enum.OrdStatus_DONE_FOR_DAY:
-		break
-	case enum.OrdStatus_REPLACED:
-		break
-	case enum.OrdStatus_PENDING_CANCEL:
-		break
-	case enum.OrdStatus_STOPPED:
-		break
-	case enum.OrdStatus_SUSPENDED:
-		break
-	case enum.OrdStatus_PENDING_NEW:
-		break
-	case enum.OrdStatus_CALCULATED:
-		break
-	case enum.OrdStatus_EXPIRED:
-		break
-	case enum.OrdStatus_ACCEPTED_FOR_BIDDING:
-		break
-	case enum.OrdStatus_PENDING_REPLACE:
-		break
-	case enum.OrdStatus_CANCELED:
+	utils.WriteMessageBodyAsTable(os.Stdout, msg, c.Dictionary)
+	switch ordStatus {
+	case fix50sp2.OrdStatusNew,
+		fix50sp2.OrdStatusPartiallyFilled,
+		fix50sp2.OrdStatusFilled,
+		fix50sp2.OrdStatusDoneForDay,
+		fix50sp2.OrdStatusReplaced,
+		fix50sp2.OrdStatusPendingCancel,
+		fix50sp2.OrdStatusStopped,
+		fix50sp2.OrdStatusSuspended,
+		fix50sp2.OrdStatusPendingNew,
+		fix50sp2.OrdStatusCalculated,
+		fix50sp2.OrdStatusExpired,
+		fix50sp2.OrdStatusAcceptedForBidding,
+		fix50sp2.OrdStatusPendingReplace:
+		return nil
+	case fix50sp2.OrdStatusCanceled:
 		return makeError(errors.FixOrderCanceled)
-	case enum.OrdStatus_REJECTED:
+	case fix50sp2.OrdStatusRejected:
 		return makeError(errors.FixOrderRejected)
 	default:
 		return makeError(errors.FixOrderStatusUnknown)
 	}
-
-	return nil
 }
 
-func isFinalStatus(msg *quickfix.Message) bool {
-	ordStatus := field.OrdStatusField{}
-
-	if err := msg.Body.GetField(tag.OrdStatus, &ordStatus); err != nil {
+func isFinalStatus(msg *fix.Message) bool {
+	ordStatus, ok := fix50sp2.WrapExecutionReport(msg).OrdStatus()
+	if !ok {
 		return false
 	}
 
-	switch ordStatus.Value() {
-	case enum.OrdStatus_FILLED:
-		return true
-	case enum.OrdStatus_DONE_FOR_DAY:
-		return true
-	case enum.OrdStatus_STOPPED:
-		return true
-	case enum.OrdStatus_EXPIRED:
-		return true
-	case enum.OrdStatus_CANCELED:
-		return true
-	case enum.OrdStatus_REJECTED:
+	switch ordStatus {
+	case fix50sp2.OrdStatusFilled,
+		fix50sp2.OrdStatusDoneForDay,
+		fix50sp2.OrdStatusStopped,
+		fix50sp2.OrdStatusExpired,
+		fix50sp2.OrdStatusCanceled,
+		fix50sp2.OrdStatusRejected:
 		return true
 	default:
 		return false

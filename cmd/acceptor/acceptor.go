@@ -1,17 +1,18 @@
 package acceptor
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix/session"
 
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/acceptor"
-	"sylr.dev/fix/pkg/acceptor/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/acceptor"
+	"sylr.dev/fix/v2/acceptor/application"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/utils"
 )
 
 var (
@@ -38,28 +39,7 @@ func init() {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
 	logger := config.GetLogger()
-
-	context, err := config.GetCurrentContext()
-	if err != nil {
-		return err
-	}
-
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixAcceptorSettings()
-	if err != nil {
-		return err
-	}
-
-	transportDict, appDict, err := sessions[0].GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
 
 	acceptorOptions := application.AcceptorOptions{
 		NATSEmbeded:      optionNatsEmbeded,
@@ -71,36 +51,14 @@ func Execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	defer app.Close()
 
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
 	app.Logger = logger
 
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	acceptor, err := acceptor.NewAcceptor(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	if err = acceptor.Start(); err != nil {
-		return err
-	}
-
-	defer func() {
-		acceptor.Stop()
-	}()
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-	<-interrupt
-	acceptor.Stop()
-	os.Exit(0)
-
-	return nil
+	return acceptor.Serve(ctx, func(*config.Session) (session.Handler, error) {
+		return app, nil
+	})
 }

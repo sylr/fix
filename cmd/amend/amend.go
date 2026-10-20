@@ -3,9 +3,9 @@ package amend
 import (
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/cmd/amend/order"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cmd/amend/order"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 // AmendCmd represents the buy command

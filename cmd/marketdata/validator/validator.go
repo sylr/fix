@@ -7,23 +7,17 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix/session"
 
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/fixt11"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/tag"
-
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/marketdata"
+	"sylr.dev/fix/v2/utils"
 )
 
 var (
@@ -56,91 +50,31 @@ func Validate(cmd *cobra.Command, args []string) error {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
 	logger := config.GetLogger()
 
-	context, err := config.GetCurrentContext()
+	c, err := initiator.Connect(cmd.Context(), initiator.Options{
+		MsgTypes: []string{
+			string(fix50sp2.MsgTypeMarketdatasnapshotfullrefresh),
+			string(fix50sp2.MsgTypeMarketdataincrementalrefresh),
+			string(fix50sp2.MsgTypeBusinessmessagereject),
+		},
+	})
 	if err != nil {
 		return err
 	}
+	defer c.Close(true)
 
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
-
-	ctxInitiator, err := context.GetInitiator()
-	if err != nil {
-		return err
-	}
-
-	session := sessions[0]
-	transportDict, appDict, err := session.GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		return err
-	}
-
-	app := application.NewMarketDataValidator(logger, optionSymbol)
-	app.Settings = settings
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
-
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	err = init.Start()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		app.Stop()
-		init.Stop()
-	}()
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if ctxInitiator.SocketTimeout != time.Duration(0) {
-		timeout = ctxInitiator.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
-	// Wait for session connection
-	select {
-	case <-time.After(timeout):
-		return errors.ConnectionTimeout
-	case _, ok := <-app.Connected:
-		if !ok {
-			return errors.FixLogout
-		}
-	}
+	validator := marketdata.NewValidator(logger, optionSymbol)
 
 	// Prepare market data request
-	marketDataRequest, err := buildMessage(*session, optionSymbol)
+	marketDataRequest, err := buildMessage(c, optionSymbol)
 	if err != nil {
 		return err
 	}
 
-	// Send the order
-	err = quickfix.Send(marketDataRequest)
-	if err != nil {
-		panic(err)
+	// Send the market data request
+	if _, err = c.Send(cmd.Context(), marketDataRequest); err != nil {
+		return err
 	}
 
 	interrupt := make(chan os.Signal, 1)
@@ -158,13 +92,17 @@ LOOP:
 				logger.Info().Msgf("Received unhandled signal: %v", signal)
 			}
 
-		case _, ok := <-app.Connected:
-			if !ok {
-				logger.Info().Msgf("Fix application not connected anymore")
+		case <-c.Done():
+			logger.Info().Msgf("Fix application not connected anymore")
+			break LOOP
+
+		case msg := <-c.Messages():
+			err := validator.Handle(msg)
+			if errors.Is(err, marketdata.ErrBusinessMessageReject) {
+				logger.Info().Msgf("Fix application received a BusinessMessageReject, wants to exit: %s", err)
 				break LOOP
-			} else {
-				logger.Info().Msgf("Fix application wrote on Connected chan, wants to exit")
-				break LOOP
+			} else if err != nil {
+				return err
 			}
 		}
 	}
@@ -173,45 +111,17 @@ LOOP:
 	return nil
 }
 
-func buildMessage(session config.Session, symbol string) (quickfix.Messagable, error) {
-	mdReqID := field.NewMDReqID(uuid.NewString())
-	subReqType := field.NewSubscriptionRequestType(enum.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES)
-	marketDepth := field.NewMarketDepth(0)
-
-	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
-
-	header.Set(field.NewMsgType(enum.MsgType_MARKET_DATA_REQUEST))
-	message.Body.Set(mdReqID)
-	message.Body.Set(subReqType)
-	message.Body.Set(marketDepth)
-	message.Body.Set(field.NewMDUpdateType(enum.MDUpdateType_INCREMENTAL_REFRESH))
-
-	entryTypes := quickfix.NewRepeatingGroup(
-		tag.NoMDEntryTypes,
-		quickfix.GroupTemplate{quickfix.GroupElement(tag.MDEntryType)},
-	)
-
-	entryTypes.Add().Set(field.NewMDEntryType(enum.MDEntryType_BID))
-	entryTypes.Add().Set(field.NewMDEntryType(enum.MDEntryType_OFFER))
-	entryTypes.Add().Set(field.NewMDEntryType(enum.MDEntryType_TRADE))
-	entryTypes.Add().Set(field.NewMDEntryType(enum.MDEntryType("101"))) // Trade History
-
-	message.Body.SetGroup(entryTypes)
-
-	relatedSym := quickfix.NewRepeatingGroup(
-		tag.NoRelatedSym,
-		quickfix.GroupTemplate{quickfix.GroupElement(tag.Symbol)},
-	)
-
-	relatedSym.Add().Set(field.NewSymbol(symbol))
-	message.Body.SetGroup(relatedSym)
-
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
+func buildMessage(c *initiator.Client, symbol string) (session.Outgoing, error) {
+	message := fix50sp2.BuildMarketDataRequest(c.BeginString()).
+		SetMDReqID(uuid.NewString()).
+		SetSubscriptionRequestType(fix50sp2.SubscriptionRequestTypeSnapshotPlusUpdates).
+		SetMarketDepth(0).
+		SetMDUpdateType(fix50sp2.MDUpdateTypeIncrementalRefresh).
+		AddNoMDEntryTypesEntry(fix50sp2.NewNoMDEntryTypesEntry().SetMDEntryType(fix50sp2.MDEntryTypeBid)).
+		AddNoMDEntryTypesEntry(fix50sp2.NewNoMDEntryTypesEntry().SetMDEntryType(fix50sp2.MDEntryTypeOffer)).
+		AddNoMDEntryTypesEntry(fix50sp2.NewNoMDEntryTypesEntry().SetMDEntryType(fix50sp2.MDEntryTypeTrade)).
+		AddNoMDEntryTypesEntry(fix50sp2.NewNoMDEntryTypesEntry().SetMDEntryType(fix50sp2.MDEntryType("101"))). // Trade History
+		AddNoRelatedSymEntry(fix50sp2.NewNoRelatedSymEntry().SetSymbol(symbol))
 
 	return message, nil
 }

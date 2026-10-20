@@ -9,24 +9,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/fixt11"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/tag"
-	"github.com/rs/zerolog"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix"
 
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/cli/complete"
-	"sylr.dev/fix/pkg/cli/options"
-	"sylr.dev/fix/pkg/dict"
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cli/complete"
+	"sylr.dev/fix/v2/cli/options"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/dict"
+	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/fixt11"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
+
+var errInvalidMessageType = fmt.Errorf("invalid message type")
 
 var (
 	optionSymbol, optionQuoteID               string
@@ -115,90 +113,31 @@ func Validate(cmd *cobra.Command, args []string) error {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
 	logger := config.GetLogger()
 
-	context, err := config.GetCurrentContext()
+	c, err := initiator.Connect(cmd.Context(), initiator.Options{
+		MsgTypes: []string{
+			string(fix50sp2.MsgTypeExecutionreport),
+			string(fix50sp2.MsgTypeQuotestatusreport),
+			string(fix50sp2.MsgTypeBusinessmessagereject),
+		},
+	})
 	if err != nil {
 		return err
 	}
 
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
+	defer c.Close(true)
 
-	session := sessions[0]
-	initiatorConfig, err := context.GetInitiator()
-	if err != nil {
-		return err
-	}
-
-	transportDict, appDict, err := session.GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		return err
-	}
-
-	app := application.NewNewOrder()
-	app.Logger = logger
-	app.Settings = settings
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
-
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if initiatorConfig.SocketTimeout != time.Duration(0) {
-		timeout = initiatorConfig.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	if err = init.Start(); err != nil {
-		return err
-	}
-
-	defer func() {
-		app.Stop()
-		init.Stop()
-	}()
-
-	// Wait for session connection
-	select {
-	case <-time.After(timeout):
-		return errors.ConnectionTimeout
-	case _, ok := <-app.Connected:
-		if !ok {
-			return errors.FixLogout
-		}
-	}
+	session := c.Session
 
 	// Prepare quote
-	quote, err := buildMessage(*session)
+	quote, err := buildMessage(c.BeginString(), session)
 	if err != nil {
 		return err
 	}
 
 	// Send the quote
-	err = quickfix.Send(quote)
-	if err != nil {
+	if _, err = c.Send(cmd.Context(), quote); err != nil {
 		return err
 	}
 
@@ -234,12 +173,11 @@ LOOP:
 				optionUpdateQuotePeriod = 0
 
 				if optionCancelAfterUpdates {
-					cancelMsg, err := buildCancelMessage(*session)
+					cancelMsg, err := buildCancelMessage(c.BeginString(), session)
 					if err != nil {
 						return err
 					}
-					err = quickfix.Send(cancelMsg)
-					if err != nil {
+					if _, err = c.Send(cmd.Context(), cancelMsg); err != nil {
 						return err
 					}
 				}
@@ -248,37 +186,34 @@ LOOP:
 
 			if optionCancelAfterXUpdates > 0 && priceIteration%optionCancelAfterXUpdates == 0 {
 				// Prepare quote cancel
-				quoteMsg, err := buildCancelMessage(*session)
+				quoteMsg, err := buildCancelMessage(c.BeginString(), session)
 				if err != nil {
 					return err
 				}
 
 				// Send the cancellation
-				err = quickfix.Send(quoteMsg)
-				if err != nil {
+				if _, err = c.Send(cmd.Context(), quoteMsg); err != nil {
 					return err
 				}
 			}
 
 			// Prepare quote
-			quoteMsg, err := buildMessage(*session)
+			quoteMsg, err := buildMessage(c.BeginString(), session)
 			if err != nil {
 				return err
 			}
 
 			// Send the quote
-			err = quickfix.Send(quoteMsg)
-			if err != nil {
+			if _, err = c.Send(cmd.Context(), quoteMsg); err != nil {
 				return err
 			}
 
-		case msg, ok := <-app.FromAppMessages:
-			if !ok {
-				break LOOP
-			}
+		case <-c.Done():
+			break LOOP
 
-			if err := processResponse(app, msg); err != nil {
-				if errors.Is(err, quickfix.InvalidMessageType()) {
+		case msg := <-c.Messages():
+			if err := processResponse(c, msg); err != nil {
+				if errors.Is(err, errInvalidMessageType) {
 					continue LOOP
 				}
 
@@ -309,56 +244,40 @@ LOOP:
 	return nil
 }
 
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
+func buildMessage(beginString string, session *config.Session) (*fix50sp2.QuoteBuilder, error) {
+	if !session.IsFIX50SP2() {
+		return nil, errors.FixVersionNotImplemented
+	}
 
 	quoteId := optionQuoteID
 	if len(quoteId) == 0 {
 		quoteId = uuid.NewString()
 	}
 
-	switch session.BeginString {
-	case quickfix.BeginStringFIXT11:
-		switch session.DefaultApplVerID {
-		case "FIX.5.0SP2":
-			header.Set(field.NewMsgType(enum.MsgType_QUOTE))
-			message.Body.Set(field.NewQuoteID(quoteId))
-			message.Body.Set(field.NewTransactTime(time.Now()))
-			partyIdOptions.EnrichMessageBody(&message.Body, session)
+	// Message
+	message := fix50sp2.BuildQuote(beginString).
+		SetQuoteID(quoteId).
+		SetTransactTime(time.Now()).
+		SetSymbol(optionSymbol)
 
-		default:
-			return nil, errors.FixVersionNotImplemented
-		}
-	default:
-		return nil, errors.FixVersionNotImplemented
+	for _, entry := range partyIdOptions.PartyEntries(session) {
+		message.AddNoPartyIDsEntry(entry)
 	}
 
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
-
-	message.Body.Set(field.NewSymbol(optionSymbol))
 	if optionAutoPriceUpdate {
 		priceAdjustment := 0.01 * float64(priceIteration%100)
 		if len(optionBuyPrices) == 1 {
-			message.Body.Set(field.NewBidSize(decimal.NewFromInt(optionBuyQuantities[0]), 2))
-			message.Body.Set(field.NewBidPx(decimal.NewFromFloat(optionBuyPrices[0]-priceAdjustment), 2))
+			setQuoteSide(message, fix50sp2.TagBidSize, fix50sp2.TagBidPx, optionBuyQuantities[0], optionBuyPrices[0]-priceAdjustment)
 		}
 		if len(optionSellPrices) == 1 {
-			message.Body.Set(field.NewOfferSize(decimal.NewFromInt(optionSellQuantities[0]), 2))
-			message.Body.Set(field.NewOfferPx(decimal.NewFromFloat(optionSellPrices[0]+priceAdjustment), 2))
+			setQuoteSide(message, fix50sp2.TagOfferSize, fix50sp2.TagOfferPx, optionSellQuantities[0], optionSellPrices[0]+priceAdjustment)
 		}
 	} else {
 		if priceIteration < len(optionBuyPrices) {
-			message.Body.Set(field.NewBidSize(decimal.NewFromInt(optionBuyQuantities[priceIteration]), 2))
-			message.Body.Set(field.NewBidPx(decimal.NewFromFloat(optionBuyPrices[priceIteration]), 2))
+			setQuoteSide(message, fix50sp2.TagBidSize, fix50sp2.TagBidPx, optionBuyQuantities[priceIteration], optionBuyPrices[priceIteration])
 		}
 		if priceIteration < len(optionSellPrices) {
-			message.Body.Set(field.NewOfferSize(decimal.NewFromInt(optionSellQuantities[priceIteration]), 2))
-			message.Body.Set(field.NewOfferPx(decimal.NewFromFloat(optionSellPrices[priceIteration]), 2))
+			setQuoteSide(message, fix50sp2.TagOfferSize, fix50sp2.TagOfferPx, optionSellQuantities[priceIteration], optionSellPrices[priceIteration])
 		}
 	}
 
@@ -367,116 +286,89 @@ func buildMessage(session config.Session) (quickfix.Messagable, error) {
 	return message, nil
 }
 
-func buildCancelMessage(session config.Session) (quickfix.Messagable, error) {
-	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
+// setQuoteSide writes the size and price of one side of a quote at scale 2.
+func setQuoteSide(message *fix50sp2.QuoteBuilder, sizeTag, pxTag int, size int64, price float64) {
+	message.SetString(sizeTag, decimal.NewFromInt(size).StringFixed(2))
+	message.SetString(pxTag, decimal.NewFromFloat(price).StringFixed(2))
+}
+
+func buildCancelMessage(beginString string, session *config.Session) (*fix50sp2.QuoteCancelBuilder, error) {
+	if !session.IsFIX50SP2() {
+		return nil, errors.FixVersionNotImplemented
+	}
 
 	quoteId := optionQuoteID
 	if len(quoteId) == 0 {
 		quoteId = uuid.NewString()
 	}
 
-	switch session.BeginString {
-	case quickfix.BeginStringFIXT11:
-		switch session.DefaultApplVerID {
-		case "FIX.5.0SP2":
-			header.Set(field.NewMsgType(enum.MsgType_QUOTE_CANCEL))
-			message.Body.Set(field.NewQuoteID(quoteId))
-			message.Body.Set(field.NewQuoteMsgID("msg_" + quoteId))
-			partyIdOptions.EnrichMessageBody(&message.Body, session)
+	// Message
+	message := fix50sp2.BuildQuoteCancel(beginString).
+		SetQuoteID(quoteId).
+		SetQuoteMsgID("msg_" + quoteId).
+		SetQuoteCancelType(fix50sp2.QuoteCancelTypeCancelForOneOrMoreSecurities).
+		AddNoQuoteEntriesEntry(fix50sp2.NewNoQuoteEntriesEntry().SetSymbol(optionSymbol))
 
-		default:
-			return nil, errors.FixVersionNotImplemented
-		}
-	default:
-		return nil, errors.FixVersionNotImplemented
+	for _, entry := range partyIdOptions.PartyEntries(session) {
+		message.AddNoPartyIDsEntry(entry)
 	}
-
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
-
-	message.Body.Set(field.NewQuoteCancelType(enum.QuoteCancelType_CANCEL_FOR_ONE_OR_MORE_SECURITIES))
-	instruments := quickfix.NewRepeatingGroup(tag.NoQuoteEntries, nil)
-	inst := instruments.Add()
-	inst.Set(field.NewSymbol(optionSymbol))
-	message.Body.SetGroup(instruments)
 
 	return message, nil
 }
 
-func processResponse(app *application.NewOrder, msg *quickfix.Message) error {
-	msgType := field.MsgTypeField{}
-	text := field.TextField{}
-
-	// Text
-	if msg.Body.Has(tag.Text) {
-		if err := msg.Body.GetField(tag.Text, &text); err != nil {
-			return err
-		}
-	}
+func processResponse(c *initiator.Client, msg *fix.Message) error {
+	text := string(msg.Get(fix50sp2.TagText))
 
 	makeError := func(errType error) error {
-		if len(text.String()) > 0 {
-			return fmt.Errorf("%w: %s", errType, text.String())
+		if len(text) > 0 {
+			return fmt.Errorf("%w: %s", errType, text)
 		} else {
 			return errType
 		}
 	}
 
 	// MsgType
-	err := msg.Header.GetField(tag.MsgType, &msgType)
-	if err != nil {
-		return err
-	} else if msgType.Value() == enum.MsgType_REJECT || msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT {
+	switch string(msg.MsgType()) {
+	case string(fixt11.MsgTypeReject), string(fix50sp2.MsgTypeBusinessmessagereject):
 		return makeError(errors.FixOrderRejected)
-	} else if msgType.Value() == enum.MsgType_QUOTE_STATUS_REPORT {
-		app.WriteMessageBodyAsTable(os.Stdout, msg)
-		quoteStatus := field.QuoteStatusField{}
-		err = msg.Body.GetField(tag.QuoteStatus, &quoteStatus)
-		if err != nil {
-			return err
+	case string(fix50sp2.MsgTypeQuotestatusreport):
+		utils.WriteMessageBodyAsTable(os.Stdout, msg, c.Dictionary)
+		quoteStatus, ok := fix50sp2.WrapQuoteStatusReport(msg).QuoteStatus()
+		if !ok {
+			return fmt.Errorf("missing QuoteStatus")
 		}
-		if quoteStatus.Value() == enum.QuoteStatus_REJECTED {
+		if quoteStatus == fix50sp2.QuoteStatusRejected {
 			return makeError(errors.FixOrderRejected)
 		}
 		return nil
-	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
-		return quickfix.InvalidMessageType()
+	case string(fix50sp2.MsgTypeExecutionreport):
+	default:
+		return errInvalidMessageType
 	}
 
 	// OrdStatus
-	ordStatus := field.OrdStatusField{}
-	err = msg.Body.GetField(tag.OrdStatus, &ordStatus)
-	if err != nil {
-		return err
+	if _, ok := fix50sp2.WrapExecutionReport(msg).OrdStatus(); !ok {
+		return fmt.Errorf("missing OrdStatus")
 	}
 
-	app.WriteMessageBodyAsTable(os.Stdout, msg)
+	utils.WriteMessageBodyAsTable(os.Stdout, msg, c.Dictionary)
 	return nil
 }
 
-func isFinalStatus(msg *quickfix.Message) bool {
-	ordStatus := field.OrdStatusField{}
-	err := msg.Body.GetField(tag.OrdStatus, &ordStatus)
-	if err != nil {
+func isFinalStatus(msg *fix.Message) bool {
+	ordStatus, ok := fix50sp2.WrapExecutionReport(msg).OrdStatus()
+	if !ok {
 		return false
 	}
-	switch ordStatus.Value() {
-	case enum.OrdStatus_FILLED:
+
+	switch ordStatus {
+	case fix50sp2.OrdStatusFilled,
+		fix50sp2.OrdStatusDoneForDay,
+		fix50sp2.OrdStatusStopped,
+		fix50sp2.OrdStatusExpired,
+		fix50sp2.OrdStatusCanceled,
+		fix50sp2.OrdStatusRejected: // because there is no modification in our use case
 		return true
-	case enum.OrdStatus_DONE_FOR_DAY:
-		return true
-	case enum.OrdStatus_STOPPED:
-		return true
-	case enum.OrdStatus_EXPIRED:
-		return true
-	case enum.OrdStatus_CANCELED:
-		return true
-	case enum.OrdStatus_REJECTED:
-		return true // because there is no modification in our use case
 	default:
 		return false
 	}

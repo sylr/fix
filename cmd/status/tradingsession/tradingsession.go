@@ -7,21 +7,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix/session"
 
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/fixt11"
-	"github.com/quickfixgo/quickfix"
-
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/cli/complete"
-	"sylr.dev/fix/pkg/dict"
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cli/complete"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/dict"
+	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 var (
@@ -76,125 +71,40 @@ func Validate(cmd *cobra.Command, args []string) error {
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
-	logger := config.GetLogger()
-
-	context, err := config.GetCurrentContext()
+	c, err := initiator.Connect(cmd.Context(), initiator.Options{
+		MsgTypes: []string{string(fix50sp2.MsgTypeTradingsessionstatus)},
+	})
 	if err != nil {
 		return err
 	}
-
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
-
-	session := sessions[0]
-	initiatior, err := context.GetInitiator()
-	if err != nil {
-		return err
-	}
-
-	transportDict, appDict, err := session.GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		return err
-	}
-
-	app := application.NewTradingSessionStatusRequest()
-	app.Logger = logger
-	app.Settings = settings
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
-
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	if err = init.Start(); err != nil {
-		return err
-	}
-
-	defer func() {
-		app.Stop()
-		init.Stop()
-	}()
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if initiatior.SocketTimeout != time.Duration(0) {
-		timeout = initiatior.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
-	// Wait for session connection
-	select {
-	case <-time.After(timeout):
-		return errors.ConnectionTimeout
-	case _, ok := <-app.Connected:
-		if !ok {
-			return errors.FixLogout
-		}
-	}
+	defer c.Close(true)
 
 	// Prepare Trading Session Status Request
-	tssr, err := buildMessage(*session)
+	tssr, err := buildMessage(c)
 	if err != nil {
 		return err
 	}
 
 	// Send the trading session status request
-	err = quickfix.Send(tssr)
-	if err != nil {
+	if _, err = c.Send(cmd.Context(), tssr); err != nil {
 		return err
 	}
 
-	// Wait for the order response
-	var ok bool
-	var responseMessage *quickfix.Message
-
+	// Wait for the response
 	select {
-	case <-time.After(timeout):
+	case <-time.After(config.Timeout(0)):
 		return errors.ResponseTimeout
-
-	case responseMessage, ok = <-app.FromAppMessages:
-		if !ok {
-			return errors.FixLogout
-		}
+	case <-c.Done():
+		return errors.FixLogout
+	case responseMessage := <-c.Messages():
+		utils.WriteMessageBodyAsTable(os.Stdout, responseMessage, c.Dictionary)
 	}
-
-	app.WriteMessageBodyAsTable(os.Stdout, responseMessage)
 
 	return nil
 }
 
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
-	header.Set(field.NewMsgType(enum.MsgType_TRADING_SESSION_STATUS_REQUEST))
-
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
-
-	utils.QuickFixMessagePartSetString(&message.Body, optionTradingSessionID, field.NewTradSesReqID)
-	utils.QuickFixMessagePartSetString(&message.Body, dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)], field.NewSubscriptionRequestType)
-
-	return message, nil
+func buildMessage(c *initiator.Client) (session.Outgoing, error) {
+	return fix50sp2.BuildTradingSessionStatusRequest(c.BeginString()).
+		SetTradSesReqID(optionTradingSessionID).
+		SetSubscriptionRequestType(dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]), nil
 }

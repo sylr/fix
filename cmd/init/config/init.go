@@ -1,21 +1,16 @@
 package init_config
 
 import (
-	"compress/bzip2"
 	"embed"
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/errors"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/errors"
 )
 
 // ConfigCmd represents the buy command
@@ -38,33 +33,6 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Dictionnaries
-	dicts, err := fs.Glob(templates, "templates/FIX*.xml.bz2")
-	if err != nil {
-		return err
-	}
-
-	for _, dict := range dicts {
-		bzf, err := templates.Open(dict)
-		if err != nil {
-			return err
-		}
-		defer bzf.Close()
-
-		bunzf := bzip2.NewReader(bzf)
-		b, err := io.ReadAll(bunzf)
-		if err != nil {
-			return err
-		}
-
-		basenamebz2 := path.Base(dict)
-		filename := strings.TrimSuffix(basenamebz2, filepath.Ext(basenamebz2))
-		err = os.WriteFile(filepath.Join(configDir, filename), b, 0600)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Config
 	_, err = os.Stat(options.Config)
 	if err == nil {
@@ -77,16 +45,12 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 	defer config.Close()
 
-	data := struct{ ConfigDir string }{
-		ConfigDir: configDir,
-	}
-
 	t, err := template.ParseFS(templates, "templates/config")
 	if err != nil {
 		return err
 	}
 
-	err = t.ExecuteTemplate(config, "config", &data)
+	err = t.ExecuteTemplate(config, "config", nil)
 	if err != nil {
 		return err
 	}

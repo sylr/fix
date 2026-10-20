@@ -4,8 +4,8 @@
 package marketdata
 
 import (
-	markedatavalidator "sylr.dev/fix/cmd/marketdata/validator"
-	"sylr.dev/fix/pkg/initiator"
+	markedatavalidator "sylr.dev/fix/v2/cmd/marketdata/validator"
+	"sylr.dev/fix/v2/initiator"
 )
 
 func init() {

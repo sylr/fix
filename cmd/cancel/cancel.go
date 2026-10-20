@@ -3,11 +3,11 @@ package cancel
 import (
 	"github.com/spf13/cobra"
 
-	masscancelorder "sylr.dev/fix/cmd/cancel/mass"
-	cancelorder "sylr.dev/fix/cmd/cancel/order"
-	cancelquote "sylr.dev/fix/cmd/cancel/quote"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/utils"
+	masscancelorder "sylr.dev/fix/v2/cmd/cancel/mass"
+	cancelorder "sylr.dev/fix/v2/cmd/cancel/order"
+	cancelquote "sylr.dev/fix/v2/cmd/cancel/quote"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 // CancelCmd represents the buy command
