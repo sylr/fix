@@ -52,16 +52,20 @@ func Execute(cmd *cobra.Command, args []string) error {
 
 	for _, acceptor := range conf.Acceptors {
 		sessions := contextSessions(func(c *config.Context) bool { return c.Acceptor == acceptor.Name })
-		if err := createDatabase(acceptor.Store, "acceptor.db", sessions); err != nil {
+		if err := createDatabase("acceptor "+acceptor.Name, acceptor.Store, "acceptor.db", sessions); err != nil {
 			return err
 		}
 	}
 
 	for _, initiator := range conf.Initiators {
 		sessions := contextSessions(func(c *config.Context) bool { return c.Initiator == initiator.Name })
-		if err := createDatabase(initiator.Store, "initiator.db", sessions); err != nil {
+		if err := createDatabase("initiator "+initiator.Name, initiator.Store, "initiator.db", sessions); err != nil {
 			return err
 		}
+	}
+
+	if len(conf.Acceptors) == 0 && len(conf.Initiators) == 0 {
+		fmt.Println("No initiator nor acceptor configured: no database to create.")
 	}
 
 	return nil
@@ -88,9 +92,12 @@ func contextSessions(match func(*config.Context) bool) []*config.Session {
 
 // createDatabase creates the SQLite database of a sqlite3 store, and the
 // tables of its sessions, which fix2's store creates when opened.
-func createDatabase(store config.Store, defaultDBName string, sessions []*config.Session) error {
-	if store.Type != "sqlite3" {
+func createDatabase(owner string, store config.Store, defaultDBName string, sessions []*config.Session) error {
+	if store.IsMemory() {
+		fmt.Printf("%s keeps its sessions in memory (store.type: sqlite3 to keep them in a database), skipping.\n", owner)
 		return nil
+	} else if store.Type != "sqlite3" {
+		return fmt.Errorf("%s: unknown store type %q (known: memory, sqlite3)", owner, store.Type)
 	}
 
 	file, err := store.SQLitePath(defaultDBName)
@@ -145,6 +152,8 @@ func createDatabase(store config.Store, defaultDBName string, sessions []*config
 			return err
 		}
 	}
+
+	fmt.Printf("Database %s of %s initialized.\n", file, owner)
 
 	return nil
 }

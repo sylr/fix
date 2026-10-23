@@ -128,6 +128,18 @@ func (f *fixConfig) Validate() error {
 		return err
 	}
 
+	for _, initiator := range f.Initiators {
+		if err := initiator.Store.validate(); err != nil {
+			return fmt.Errorf("%w: initiator %s: %w", errors.Config, initiator.Name, err)
+		}
+	}
+
+	for _, acceptor := range f.Acceptors {
+		if err := acceptor.Store.validate(); err != nil {
+			return fmt.Errorf("%w: acceptor %s: %w", errors.Config, acceptor.Name, err)
+		}
+	}
+
 	for _, session := range f.Sessions {
 		if err := session.validate(); err != nil {
 			return fmt.Errorf("%w: session %s: %w", errors.Config, session.Name, err)

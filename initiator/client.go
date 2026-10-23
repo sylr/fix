@@ -63,8 +63,8 @@ type Client struct {
 	stopping chan struct{}
 
 	// logonAccepted is set on the reader's goroutine when the counterparty's
-	// Logon is processed, before OnLogon runs on the delivery's: a Logout
-	// after it is not a refusal.
+	// Logon established the session, before OnLogon runs on the delivery's:
+	// a Logout after it is not a refusal.
 	logonAccepted atomic.Bool
 
 	mu         sync.Mutex
@@ -339,10 +339,16 @@ func (c *Client) ToAdmin(_ context.Context, _ *session.Session, msgType string, 
 // Connect whose Logon the counterparty refused, which OnLogout is not told
 // of. It must return quickly: a Reject is dropped if the reader lags far
 // behind.
-func (c *Client) FromAdmin(_ context.Context, _ *session.Session, m *fix.Message, _ session.Inbound) {
+func (c *Client) FromAdmin(_ context.Context, s *session.Session, m *fix.Message, _ session.Inbound) {
 	switch string(m.MsgType()) {
 	case string(fixt11.MsgTypeLogon):
-		c.logonAccepted.Store(true)
+		// FromAdmin is told of a Logon the session refused too, logging
+		// out (an invalid NextExpectedMsgSeqNum, say): only one that
+		// established the session is accepted.
+		switch s.State() {
+		case session.StateLoggedOn, session.StateStalled, session.StateResettingSeqs:
+			c.logonAccepted.Store(true)
+		}
 
 	case string(fixt11.MsgTypeReject):
 		select {

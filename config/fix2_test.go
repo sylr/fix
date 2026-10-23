@@ -78,3 +78,22 @@ func TestSessionFIXConfig(t *testing.T) {
 		t.Error("unknown check: no error")
 	}
 }
+
+func TestConfigValidateStoreType(t *testing.T) {
+	for name, conf := range map[string]fixConfig{
+		"initiator": {Initiators: []*Initiator{{Name: "i", Store: Store{Type: "sqlit3"}}}},
+		"acceptor":  {Acceptors: []*Acceptor{{Name: "a", Store: Store{Type: "postgres"}}}},
+	} {
+		if err := conf.Validate(); err == nil {
+			t.Errorf("%s: unknown store type: no error", name)
+		}
+	}
+
+	ok := fixConfig{
+		Initiators: []*Initiator{{Name: "i", Store: Store{Type: "sqlite3"}}},
+		Acceptors:  []*Acceptor{{Name: "a"}, {Name: "b", Store: Store{Type: "memory"}}},
+	}
+	if err := ok.Validate(); err != nil {
+		t.Errorf("Validate() = %v", err)
+	}
+}

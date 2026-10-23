@@ -348,21 +348,36 @@ func (s *Session) FIXConfig(handler session.Handler, logger *slog.Logger, observ
 	return cfg, cfg.Validate()
 }
 
+// IsMemory reports whether the store keeps sessions in memory, the default.
+func (st Store) IsMemory() bool {
+	return st.Type == "" || st.Type == "memory"
+}
+
+func (st Store) validate() error {
+	if !st.IsMemory() && st.Type != "sqlite3" {
+		return fmt.Errorf("unknown store type %q (known: memory, sqlite3)", st.Type)
+	}
+
+	return nil
+}
+
 // Open opens the store of the session id, in the SQLite database
 // $HOME/.fix/<defaultName> unless Path names another.
 func (st Store) Open(defaultName string, id session.SessionID) (store.Store, error) {
-	switch st.Type {
-	case "", "memory":
-		return memstore.New(), nil
-	case "sqlite3":
-		path, err := st.SQLitePath(defaultName)
-		if err != nil {
-			return nil, err
-		}
-		return openSQLite(path, id.String())
+	if err := st.validate(); err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf("unknown store type %q (known: memory, sqlite3)", st.Type)
+	if st.IsMemory() {
+		return memstore.New(), nil
+	}
+
+	path, err := st.SQLitePath(defaultName)
+	if err != nil {
+		return nil, err
+	}
+
+	return openSQLite(path, id.String())
 }
 
 // SQLitePath returns the SQLite database of a sqlite3 store, creating its

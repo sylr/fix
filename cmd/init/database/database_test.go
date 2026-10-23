@@ -18,7 +18,7 @@ func TestCreateDatabase(t *testing.T) {
 		TargetCompID: "BIGCORP",
 	}}
 
-	if err := createDatabase(store, "initiator.db", sessions); err != nil {
+	if err := createDatabase("initiator test", store, "initiator.db", sessions); err != nil {
 		t.Fatal(err)
 	}
 
@@ -31,20 +31,37 @@ func TestCreateDatabase(t *testing.T) {
 	}
 
 	// Existing databases are skipped without --overwrite.
-	if err := createDatabase(store, "initiator.db", sessions); err != nil {
+	if err := createDatabase("initiator test", store, "initiator.db", sessions); err != nil {
 		t.Fatal(err)
 	}
 
 	overwrite = true
 	defer func() { overwrite = false }()
 
-	if err := createDatabase(store, "initiator.db", sessions); err != nil {
+	if err := createDatabase("initiator test", store, "initiator.db", sessions); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestCreateDatabaseMemory(t *testing.T) {
-	if err := createDatabase(config.Store{}, "initiator.db", nil); err != nil {
+	if err := createDatabase("initiator test", config.Store{}, "initiator.db", nil); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCreateDatabaseUnknownType(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "initiator.db")
+	if err := os.WriteFile(path, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	overwrite = true
+	defer func() { overwrite = false }()
+
+	if err := createDatabase("initiator test", config.Store{Type: "sqlit3", Path: path}, "initiator.db", nil); err == nil {
+		t.Fatal("unknown store type: no error")
+	}
+	if b, err := os.ReadFile(path); err != nil || string(b) != "keep" {
+		t.Errorf("an unknown store type touched %s: %q, %v", path, b, err)
 	}
 }

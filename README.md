@@ -61,8 +61,10 @@ make crossbuild
 make install
 ```
 
-`go install sylr.dev/fix/v2@version` does not work for now: `go.mod` needs a `replace`
-directive for fix2's SQLite store module.
+```shell
+# Or install a released version with the go toolchain
+go install sylr.dev/fix/v2@latest
+```
 
 ### FIX dictionaries
 

@@ -15,8 +15,8 @@ require (
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
-	github.com/sylr/fix2 v0.0.0
-	github.com/sylr/fix2/contribs/store/sqlite3 v0.0.0-20261020083419-8e9a7f4726de
+	github.com/sylr/fix2 v0.1.0
+	github.com/sylr/fix2/contribs/store/sqlite3 v0.1.0
 	golang.org/x/crypto v0.32.0
 	golang.org/x/term v0.28.0
 	sylr.dev/yaml/age/v3 v3.0.0-20221203153010-eb6b46db8d90
@@ -52,5 +52,3 @@ require (
 )
 
 tool github.com/sylr/fix2/cmd/fix2gen
-
-replace github.com/sylr/fix2 v0.0.0 => github.com/sylr/fix2 v0.0.0-20261020083419-8e9a7f4726de

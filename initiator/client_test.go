@@ -3,6 +3,7 @@ package initiator_test
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"strings"
 	"testing"
@@ -281,6 +282,71 @@ LOOP:
 	}
 	if err := c.Err(); err == nil || strings.Contains(err.Error(), "refused") {
 		t.Errorf("Err() = %v, want the counterparty's logout", err)
+	}
+}
+
+// TestClientLogonRejected checks that a Logon answer the session itself
+// rejects, here for its invalid NextExpectedMsgSeqNum, ends Connect rather
+// than being taken for an accepted Logon and retried until the timeout.
+func TestClientLogonRejected(t *testing.T) {
+	logger := zerolog.Nop()
+	config.SetLogger(&logger)
+
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { l.Close() })
+
+	// A fake acceptor answering every Logon with one whose
+	// NextExpectedMsgSeqNum (789) is beyond what was sent.
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				if _, err := fix.NewFramer(conn, fix.FramerOptions{}).Next(); err != nil {
+					return
+				}
+				answer := fix.NewBuilder(session.FIXT11, "A").
+					SetString(49, "BIGCORP").
+					SetString(56, "smallcorp").
+					SetString(57, "john").
+					SetInt(34, 1).
+					SetString(52, time.Now().UTC().Format("20060102-15:04:05.000")).
+					SetInt(98, 0).
+					SetInt(108, 5).
+					SetString(1137, "9").
+					SetInt(789, 100)
+				conn.Write(answer.Build())
+				io.Copy(io.Discard, conn)
+			}()
+		}
+	}()
+
+	client := &config.Session{
+		Name:                  "client",
+		BeginString:           session.FIXT11,
+		SenderCompID:          "smallcorp",
+		SenderSubID:           "john",
+		TargetCompID:          "BIGCORP",
+		DefaultApplVerID:      "FIX.5.0SP2",
+		HeartBtInt:            5 * time.Second,
+		LogonTimeout:          10 * time.Second,
+		NextExpectedMsgSeqNum: true,
+	}
+	initiatorConfig := &config.Initiator{Name: "client", Addresses: []string{l.Addr().String()}}
+
+	start := time.Now()
+	_, err = initiator.ConnectSession(context.Background(), initiatorConfig, client, initiator.Options{})
+	if !errors.Is(err, fixerrors.FixLogout) || !strings.Contains(err.Error(), "logon refused") {
+		t.Fatalf("ConnectSession() = %v, want a refused logon", err)
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("ConnectSession() took %v, the logon timeout is 10s", elapsed)
 	}
 }
 
