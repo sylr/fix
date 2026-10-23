@@ -112,6 +112,10 @@ LOOP:
 }
 
 func buildMessage(c *initiator.Client, symbol string) (session.Outgoing, error) {
+	if err := c.Session.CheckSupported(); err != nil {
+		return nil, err
+	}
+
 	message := fix50sp2.BuildMarketDataRequest(c.BeginString()).
 		SetMDReqID(uuid.NewString()).
 		SetSubscriptionRequestType(fix50sp2.SubscriptionRequestTypeSnapshotPlusUpdates).

@@ -162,8 +162,8 @@ func buildMessage(session *config.Session) (*fix50sp2.OrderStatusRequestBuilder,
 		return nil, err
 	}
 
-	if !session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	message := fix50sp2.BuildOrderStatusRequest(session.BeginString).
@@ -174,8 +174,14 @@ func buildMessage(session *config.Session) (*fix50sp2.OrderStatusRequestBuilder,
 		message.SetOrderID(optionOrderID)
 	}
 	if len(optionOrigClOrdID) > 0 {
-		// OrigClOrdID has no setter on the trimmed OrderStatusRequest
-		message.SetString(fix50sp2.TagOrigClOrdID, optionOrigClOrdID)
+		if session.Defines(string(fix50sp2.MsgTypeOrderstatusrequest), fix50sp2.TagOrigClOrdID) {
+			// OrigClOrdID has no setter on the trimmed OrderStatusRequest
+			message.SetString(fix50sp2.TagOrigClOrdID, optionOrigClOrdID)
+		} else {
+			// FIX 4.3 and 4.4 do not define OrigClOrdID in an
+			// OrderStatusRequest: its ClOrdID names the order.
+			message.SetClOrdID(optionOrigClOrdID)
+		}
 	}
 	for _, entry := range partyIdOptions.PartyEntries(session) {
 		message.AddNoPartyIDsEntry(entry)

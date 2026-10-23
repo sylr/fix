@@ -96,3 +96,26 @@ func TestValidatorBusinessMessageReject(t *testing.T) {
 		t.Fatalf("err = %v, want %v", err, ErrBusinessMessageReject)
 	}
 }
+
+// TestValidatorWithoutOrdType checks the book of a FIX 4.4 session, whose
+// market data entries have no OrdType, is kept.
+func TestValidatorWithoutOrdType(t *testing.T) {
+	logger := zerolog.Nop()
+	v := NewValidator(&logger, "EURUSD")
+
+	snapshot := fix50sp2.BuildMarketDataSnapshotFullRefresh("FIX.4.4").
+		SetSymbol("EURUSD").
+		AddNoMDEntriesEntry(fix50sp2.NewNoMDEntriesEntry().SetMDEntryType(fix50sp2.MDEntryTypeBid).SetOrderID("O1").SetMDEntrySize(10)).
+		AddNoMDEntriesEntry(fix50sp2.NewNoMDEntriesEntry().SetMDEntryType(fix50sp2.MDEntryTypeOffer).SetOrderID("O2").SetMDEntrySize(20))
+
+	if err := v.Handle(parse(t, snapshot)); err != nil {
+		t.Fatal(err)
+	}
+
+	if n := v.orders.Len(); n != 2 {
+		t.Fatalf("orders = %d, want 2", n)
+	}
+	if n := v.orders.Stats()[""][fix50sp2.MDEntryTypeOffer]; n != 1 {
+		t.Errorf("offers without OrdType = %d, want 1", n)
+	}
+}

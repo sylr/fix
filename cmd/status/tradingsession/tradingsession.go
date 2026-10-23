@@ -104,6 +104,10 @@ func Execute(cmd *cobra.Command, args []string) error {
 }
 
 func buildMessage(c *initiator.Client) (session.Outgoing, error) {
+	if err := c.Session.CheckSupported(); err != nil {
+		return nil, err
+	}
+
 	return fix50sp2.BuildTradingSessionStatusRequest(c.BeginString()).
 		SetTradSesReqID(optionTradingSessionID).
 		SetSubscriptionRequestType(dict.SubscriptionRequestTypes[strings.ToUpper(optionSubType)]), nil

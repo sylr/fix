@@ -7,6 +7,7 @@ import (
 
 	"sylr.dev/fix/v2/config"
 	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/internal/fixmsg/fixmsgtest"
 )
 
 func TestBuildMessage(t *testing.T) {
@@ -36,5 +37,22 @@ func TestBuildMessage(t *testing.T) {
 		if got := string(m.Get(tag)); got != want {
 			t.Errorf("tag %d = %q, want %q", tag, got, want)
 		}
+	}
+}
+
+func TestBuildMessageVersions(t *testing.T) {
+	optionOrderID = "MASS-1"
+
+	for _, version := range fixmsgtest.Versions {
+		t.Run(version, func(t *testing.T) {
+			session := fixmsgtest.Session(version)
+
+			b, err := buildMessage(session, "EURUSD", "sell")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fixmsgtest.Validate(t, session, b)
+		})
 	}
 }

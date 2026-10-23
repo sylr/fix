@@ -128,8 +128,8 @@ LOOP:
 }
 
 func buildMessage(session *config.Session) (*fix50sp2.QuoteCancelBuilder, error) {
-	if !session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	quoteId := optionQuoteID
@@ -138,9 +138,12 @@ func buildMessage(session *config.Session) (*fix50sp2.QuoteCancelBuilder, error)
 	}
 
 	message := fix50sp2.BuildQuoteCancel(session.BeginString).
-		SetQuoteID(quoteId).
-		SetQuoteMsgID("msg_" + quoteId).
-		SetQuoteCancelType(fix50sp2.QuoteCancelTypeCancelForOneOrMoreSecurities)
+		SetQuoteID(quoteId)
+	// FIX 4.3 and 4.4 do not define QuoteMsgID in a QuoteCancel.
+	if session.Defines(string(fix50sp2.MsgTypeQuotecancel), fix50sp2.TagQuoteMsgID) {
+		message.SetQuoteMsgID("msg_" + quoteId)
+	}
+	message.SetQuoteCancelType(fix50sp2.QuoteCancelTypeCancelForOneOrMoreSecurities)
 	for _, entry := range partyIdOptions.PartyEntries(session) {
 		message.AddNoPartyIDsEntry(entry)
 	}

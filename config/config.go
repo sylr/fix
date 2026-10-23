@@ -336,6 +336,9 @@ type Session struct {
 	// "unknownTags" is skipped with the built-in FIX.5.0SP2 dictionary,
 	// which leaves out the components fix does not use.
 	SkipChecks []string `yaml:"skipChecks"`
+
+	// loaded holds the dictionaries FIXDictionaries loaded.
+	loaded *loadedDictionaries
 }
 
 func (s *Session) GetName() string {

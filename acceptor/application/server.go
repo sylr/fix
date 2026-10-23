@@ -155,17 +155,27 @@ func (d *dispatcher) OnNewOrderSingle(order *fix50sp2.NewOrderSingle) error {
 }
 
 func (d *dispatcher) sendExecutionReport(order *fix50sp2.NewOrderSingle, side fix50sp2.Side, status fix50sp2.OrdStatus) error {
+	report, err := buildExecutionReport(d.session.ID().BeginString, order, side, status)
+	if err != nil {
+		return err
+	}
+
+	_, err = d.session.Send(d.ctx, report)
+	return err
+}
+
+func buildExecutionReport(beginString string, order *fix50sp2.NewOrderSingle, side fix50sp2.Side, status fix50sp2.OrdStatus) (*fix50sp2.ExecutionReportBuilder, error) {
 	clOrdID, _ := order.ClOrdID()
 
 	orderQty := decimal.Zero
 	if v, ok := order.OrderQtyBytes(); ok {
 		var err error
 		if orderQty, err = decimal.NewFromString(string(v)); err != nil {
-			return fmt.Errorf("OrderQty: %w", err)
+			return nil, fmt.Errorf("OrderQty: %w", err)
 		}
 	}
 
-	report := fix50sp2.BuildExecutionReport(d.session.ID().BeginString).
+	report := fix50sp2.BuildExecutionReport(beginString).
 		SetOrderID(clOrdID).
 		SetExecID("0").
 		SetExecType(fix50sp2.ExecType(status)).
@@ -175,9 +185,10 @@ func (d *dispatcher) sendExecutionReport(order *fix50sp2.NewOrderSingle, side fi
 	report.SetString(fix50sp2.TagLeavesQty, orderQty.StringFixed(2))
 	report.SetString(fix50sp2.TagCumQty, decimal.Zero.StringFixed(2))
 	report.SetString(fix50sp2.TagOrderQty, orderQty.StringFixed(2))
+	// FIX 4.3 and 4.4 require AvgPx: nothing was executed yet.
+	report.SetString(fix50sp2.TagAvgPx, decimal.Zero.StringFixed(2))
 
-	_, err := d.session.Send(d.ctx, report)
-	return err
+	return report, nil
 }
 
 func missingField(clOrdID string, tag int) error {

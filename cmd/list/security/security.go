@@ -88,8 +88,8 @@ func buildMessage(c *initiator.Client) (session.Outgoing, error) {
 		return nil, err
 	}
 
-	if !c.Session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := c.Session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	return fix50sp2.BuildSecurityListRequest(c.BeginString()).

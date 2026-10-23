@@ -8,6 +8,7 @@ import (
 	"sylr.dev/fix/v2/config"
 	"sylr.dev/fix/v2/errors"
 	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/internal/fixmsg/fixmsgtest"
 )
 
 var testSession = &config.Session{BeginString: "FIXT.1.1", DefaultApplVerID: "FIX.5.0SP2"}
@@ -53,8 +54,29 @@ func TestBuildMessage(t *testing.T) {
 func TestBuildMessageUnsupportedVersion(t *testing.T) {
 	optionOrderSide = "buy"
 
-	_, err := buildMessage(&config.Session{BeginString: "FIX.4.4"})
+	_, err := buildMessage(&config.Session{BeginString: "FIX.4.2"})
 	if !errors.Is(err, errors.FixVersionNotImplemented) {
 		t.Errorf("err = %v, want %v", err, errors.FixVersionNotImplemented)
+	}
+}
+
+func TestBuildMessageVersions(t *testing.T) {
+	optionClientOrderID = "CL-1"
+	optionOrigClientOrderID = "ORIG-1"
+	optionOrderID = "ORD-1"
+	optionOrderSide = "buy"
+	optionOrderSymbol = "EURUSD"
+
+	for _, version := range fixmsgtest.Versions {
+		t.Run(version, func(t *testing.T) {
+			session := fixmsgtest.Session(version)
+
+			b, err := buildMessage(session)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fixmsgtest.Validate(t, session, b)
+		})
 	}
 }

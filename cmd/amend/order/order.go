@@ -202,8 +202,8 @@ LOOP:
 }
 
 func buildMessage(beginString string, session *config.Session) (*fix50sp2.OrderCancelReplaceRequestBuilder, error) {
-	if !session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	eSide, err := dict.OrderSideStringToEnum(optionOrderSide)
@@ -235,6 +235,11 @@ func buildMessage(beginString string, session *config.Session) (*fix50sp2.OrderC
 		SetOrdType(eType).
 		SetTimeInForce(eExpiry).
 		SetSymbol(optionOrderSymbol)
+
+	// FIX 4.3 requires HandlInst.
+	if session.Requires(string(fix50sp2.MsgTypeOrdercancelreplacerequest), fix50sp2.TagHandlInst) {
+		message.SetHandlInst(fix50sp2.HandlInstAutomatedExecutionOrderPrivateNoBrokerIntervention)
+	}
 
 	for _, entry := range partyIdOptions.PartyEntries(session) {
 		message.AddNoPartyIDsEntry(entry)

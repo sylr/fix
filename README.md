@@ -5,6 +5,16 @@
 `fix` v2 is built on [fix2](https://github.com/sylr/fix2) instead of QuickFIX/Go. Its configuration
 format changed: see [Configuration](#configuration). `fix` v1, built on QuickFIX/Go, is the `v0.x` tags.
 
+## FIX versions
+
+`fix` speaks FIX 5.0 SP2 over FIXT 1.1 (`beginString: FIXT.1.1`, `defaultApplVerID: FIX.5.0SP2`),
+FIX 4.4 (`beginString: FIX.4.4`) and FIX 4.3 (`beginString: FIX.4.3`). Commands refuse other versions,
+and refuse to send a message the session's version does not define, or that lacks a field it
+requires, rather than have the counterparty reject it: options such as `--origination` or
+`--attribute-type`, whose fields came with FIX 5.0, only work with FIX 5.0 SP2 sessions, and
+`--party-sub-ids`, whose typed sub IDs came with FIX 4.4, only with FIX 4.4 and later. With
+FIX 4.3, orders carry `HandlInst=1` (automated execution, no broker intervention), which it requires.
+
 ## Bootstrap configuration
 
 `fix` configuration allows you to define initiators, acceptors and sessions. Those
@@ -43,7 +53,7 @@ fix init database
 
 ## Acceptor
 
-The acceptor bundled in `fix` is a FIX5.0SP2 server that takes `NewOrderSingle`
+The acceptor bundled in `fix` is a FIX 5.0 SP2, 4.4 and 4.3 server that takes `NewOrderSingle`
 messages, forwards them to an embedded NATS server and sends an `ExecutionReport`
 message with an `OrdStatus` set to `0` (New). It is built with the `acceptor` build tag.
 
@@ -68,9 +78,11 @@ go install sylr.dev/fix/v2@latest
 
 ### FIX dictionaries
 
-`fix` validates messages with the FIXT 1.1 and FIX 5.0 SP2 dictionaries it is built with, and
-sends and reads them with typed code [fix2gen](https://github.com/sylr/fix2) generates from them
-(packages `fixt11` and `fix50sp2`). QuickFIX's FIX 5.0 SP2 dictionary is too large for fix2:
+`fix` validates messages with the FIXT 1.1, FIX 5.0 SP2, FIX 4.4 and FIX 4.3 dictionaries it is
+built with, and sends and reads them with typed code [fix2gen](https://github.com/sylr/fix2)
+generates from the FIXT 1.1 and FIX 5.0 SP2 ones (packages `fixt11` and `fix50sp2`), whose tags
+and values FIX 4.3 and 4.4 share. The FIX 4.3 and 4.4 dictionaries are QuickFIX's, whole
+(packages `fix43` and `fix44`). QuickFIX's FIX 5.0 SP2 dictionary is too large for fix2:
 `fix50sp2/FIX50SP2.xml` keeps only the messages `fix` uses, without the components describing
 legs, underlyings and derivatives terms. Sessions using it accept the tags of those components
 (`skipChecks: [unknownTags]` is implied).

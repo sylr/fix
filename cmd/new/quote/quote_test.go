@@ -7,6 +7,7 @@ import (
 
 	"sylr.dev/fix/v2/config"
 	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/internal/fixmsg/fixmsgtest"
 )
 
 func testSession() *config.Session {
@@ -73,5 +74,45 @@ func TestBuildCancelMessage(t *testing.T) {
 		if got := string(msg.Get(tag)); got != want {
 			t.Errorf("tag %d: got %q, want %q", tag, got, want)
 		}
+	}
+}
+
+func TestBuildMessageVersions(t *testing.T) {
+	optionQuoteID = "quote-1"
+	optionSymbol = "EURUSD"
+	optionAutoPriceUpdate = false
+	optionBuyQuantities, optionBuyPrices = []int64{10}, []float64{1.1}
+	optionSellQuantities, optionSellPrices = []int64{20}, []float64{1.2}
+
+	for _, version := range fixmsgtest.Versions {
+		t.Run(version, func(t *testing.T) {
+			priceIteration = 0
+			session := fixmsgtest.Session(version)
+
+			builder, err := buildMessage(session.BeginString, session)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fixmsgtest.Validate(t, session, builder)
+		})
+	}
+}
+
+func TestBuildCancelMessageVersions(t *testing.T) {
+	optionQuoteID = "quote-1"
+	optionSymbol = "EURUSD"
+
+	for _, version := range fixmsgtest.Versions {
+		t.Run(version, func(t *testing.T) {
+			session := fixmsgtest.Session(version)
+
+			builder, err := buildCancelMessage(session.BeginString, session)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fixmsgtest.Validate(t, session, builder)
+		})
 	}
 }

@@ -264,10 +264,9 @@ func newOrder(mdentry *fix50sp2.NoMDEntriesEntry, side fix50sp2.MDEntryType) (*O
 		return nil, fmt.Errorf("no order ID found")
 	}
 
-	orderType, ok := mdentry.OrdType()
-	if !ok {
-		return nil, fmt.Errorf("no order type found")
-	}
+	// FIX 4.3 and 4.4 market data entries have no OrdType: such orders
+	// are counted with an empty type.
+	orderType, _ := mdentry.OrdType()
 
 	var size decimal.Decimal
 	if raw, ok := mdentry.MDEntrySizeBytes(); ok {

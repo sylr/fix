@@ -239,8 +239,8 @@ LOOP:
 }
 
 func buildMessage(beginString string, session *config.Session) (*fix50sp2.NewOrderSingleBuilder, error) {
-	if !session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	eside, err := dict.OrderSideStringToEnum(optionOrderSide)
@@ -266,6 +266,11 @@ func buildMessage(beginString string, session *config.Session) (*fix50sp2.NewOrd
 		SetOrdType(etype).
 		SetSymbol(optionOrderSymbol).
 		SetTimeInForce(eExpiry)
+
+	// FIX 4.3 requires HandlInst.
+	if session.Requires(string(fix50sp2.MsgTypeNewordersingle), fix50sp2.TagHandlInst) {
+		message.SetHandlInst(fix50sp2.HandlInstAutomatedExecutionOrderPrivateNoBrokerIntervention)
+	}
 
 	for _, entry := range partyIdOptions.PartyEntries(session) {
 		message.AddNoPartyIDsEntry(entry)
@@ -293,8 +298,8 @@ func buildCancelReplaceMessage(beginString string, session *config.Session, exec
 		return nil, fmt.Errorf("missing execution report")
 	}
 
-	if !session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	// Prepare order
@@ -339,6 +344,11 @@ func buildCancelReplaceMessage(beginString string, session *config.Session, exec
 		SetOrdType(ordType).
 		SetTimeInForce(eExpiry).
 		SetSymbol(optionOrderSymbol)
+
+	// FIX 4.3 requires HandlInst.
+	if session.Requires(string(fix50sp2.MsgTypeOrdercancelreplacerequest), fix50sp2.TagHandlInst) {
+		message.SetHandlInst(fix50sp2.HandlInstAutomatedExecutionOrderPrivateNoBrokerIntervention)
+	}
 
 	for _, entry := range partyIdOptions.PartyEntries(session) {
 		message.AddNoPartyIDsEntry(entry)

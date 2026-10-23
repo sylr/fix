@@ -158,8 +158,8 @@ func buildMessage(session *config.Session, symbol, side string) (*fix50sp2.Order
 		return nil, err
 	}
 
-	if !session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	clOrdID := optionOrderID

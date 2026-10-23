@@ -143,8 +143,8 @@ func buildMessage(session *config.Session) (*fix50sp2.OrderCancelRequestBuilder,
 		return nil, err
 	}
 
-	if !session.IsFIX50SP2() {
-		return nil, errors.FixVersionNotImplemented
+	if err := session.CheckSupported(); err != nil {
+		return nil, err
 	}
 
 	message := fix50sp2.BuildOrderCancelRequest(session.BeginString).

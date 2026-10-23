@@ -128,6 +128,10 @@ LOOP:
 }
 
 func buildMessage(c *initiator.Client) (session.Outgoing, error) {
+	if err := c.Session.CheckSupported(); err != nil {
+		return nil, err
+	}
+
 	return fix50sp2.BuildSecurityStatusRequest(c.BeginString()).
 		SetSecurityStatusReqID(optionSecurityStatReqID).
 		SetSymbol(optionSymbol).

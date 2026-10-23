@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sylr/fix2/fix/dictionary"
@@ -23,6 +24,8 @@ import (
 	"github.com/sylr/fix2/transport/tcp"
 
 	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix43"
+	"sylr.dev/fix/v2/fix44"
 	"sylr.dev/fix/v2/fix50sp2"
 	"sylr.dev/fix/v2/fixt11"
 )
@@ -142,10 +145,87 @@ func (s *Session) ApplVerID() string {
 	return s.DefaultApplVerID
 }
 
-// IsFIX50SP2 reports whether the session carries FIX 5.0 SP2 application
-// messages, those of package fix50sp2.
-func (s *Session) IsFIX50SP2() bool {
-	return s.BeginString == session.FIXT11 && s.ApplVerID() == fix50sp2.Version.ApplVerID
+// fix4Dictionaries are the built-in dictionaries of the FIX 4.x versions fix
+// supports, by BeginString.
+var fix4Dictionaries = map[string]func() *dictionary.Dict{
+	fix43.BeginString: fix43.Dictionary,
+	fix44.BeginString: fix44.Dictionary,
+}
+
+// Version returns the FIX version of the session's application messages:
+// its BeginString, or for FIXT.1.1 its DefaultApplVerID.
+func (s *Session) Version() string {
+	if s.BeginString != session.FIXT11 {
+		return s.BeginString
+	}
+
+	for name, id := range ApplVerIDs {
+		if id == s.ApplVerID() {
+			return name
+		}
+	}
+
+	return s.DefaultApplVerID
+}
+
+// IsSupported reports whether fix sends and reads the session's application
+// messages: FIX 5.0 SP2 over FIXT.1.1, FIX 4.3 and FIX 4.4. Commands build
+// them with package fix50sp2, whose tags and values FIX 4.3 and 4.4 share.
+func (s *Session) IsSupported() bool {
+	if s.BeginString == session.FIXT11 {
+		return s.ApplVerID() == fix50sp2.Version.ApplVerID
+	}
+
+	_, ok := fix4Dictionaries[s.BeginString]
+	return ok
+}
+
+// CheckSupported returns an error naming the session's FIX version unless
+// IsSupported.
+func (s *Session) CheckSupported() error {
+	if !s.IsSupported() {
+		return fmt.Errorf("%w: %s (supported: FIX.5.0SP2 over FIXT.1.1, FIX.4.3, FIX.4.4)", errors.FixVersionNotImplemented, s.Version())
+	}
+
+	return nil
+}
+
+// Defines reports whether the session's dictionary defines tag in messages
+// of type msgType, as FIX 4.x does not QuoteMsgID (1166) in a QuoteCancel;
+// true without a dictionary, and with fix's built-in FIX 5.0 SP2 one, which
+// lacks what fix does not use (see trimmedDictionary).
+func (s *Session) Defines(msgType string, tag int) bool {
+	_, d, err := s.FIXDictionaries()
+	if err != nil || d == nil || s.trimmedDictionary() {
+		return true
+	}
+
+	return d.Defines(msgType, tag)
+}
+
+// trimmedDictionary reports whether the session uses fix's built-in FIX 5.0
+// SP2 dictionary, which leaves out the components fix does not use, whose
+// tags counterparties may still send.
+func (s *Session) trimmedDictionary() bool {
+	return s.BeginString == session.FIXT11 && s.Dictionaries.App == "" && s.ApplVerID() == fix50sp2.Version.ApplVerID
+}
+
+// Requires reports whether the session's dictionary requires tag in
+// messages of type msgType, as FIX 4.3 does HandlInst (21) in a
+// NewOrderSingle; false without a dictionary.
+func (s *Session) Requires(msgType string, tag int) bool {
+	_, d, err := s.FIXDictionaries()
+	if err != nil || d == nil || d.Messages[msgType] == nil {
+		return false
+	}
+
+	for _, f := range d.Messages[msgType].Fields {
+		if f.Tag == tag {
+			return f.Required
+		}
+	}
+
+	return false
 }
 
 func loadDictionary(path string) (*dictionary.Dict, error) {
@@ -157,11 +237,37 @@ func loadDictionary(path string) (*dictionary.Dict, error) {
 	return d, nil
 }
 
+// loadedDictionaries holds what FIXDictionaries loaded for a session.
+type loadedDictionaries struct {
+	once    sync.Once
+	dicts   session.Dictionaries
+	display *dictionary.Dict
+	err     error
+}
+
+// loadedDictionariesMu guards Session.loaded.
+var loadedDictionariesMu sync.Mutex
+
 // FIXDictionaries returns the dictionaries the session validates messages
 // with, and the one describing every field of its messages, header and
 // trailer included, for printing them. fix's own dictionaries are used
-// unless Dictionaries name others.
+// unless Dictionaries name others. They are loaded once, on first use:
+// the session's configuration must not change after.
 func (s *Session) FIXDictionaries() (session.Dictionaries, *dictionary.Dict, error) {
+	loadedDictionariesMu.Lock()
+	if s.loaded == nil {
+		s.loaded = &loadedDictionaries{}
+	}
+	l := s.loaded
+	loadedDictionariesMu.Unlock()
+
+	l.once.Do(func() { l.dicts, l.display, l.err = s.loadDictionaries() })
+
+	return l.dicts, l.display, l.err
+}
+
+// loadDictionaries loads the dictionaries FIXDictionaries returns.
+func (s *Session) loadDictionaries() (session.Dictionaries, *dictionary.Dict, error) {
 	var dicts session.Dictionaries
 	var err error
 
@@ -170,11 +276,14 @@ func (s *Session) FIXDictionaries() (session.Dictionaries, *dictionary.Dict, err
 		if path == "" {
 			path = s.Dictionaries.Session
 		}
-		if path == "" {
-			return dicts, nil, nil
+
+		switch builtin, ok := fix4Dictionaries[s.BeginString]; {
+		case path != "":
+			dicts.Session, err = loadDictionary(path)
+		case ok:
+			dicts.Session = builtin()
 		}
 
-		dicts.Session, err = loadDictionary(path)
 		return dicts, dicts.Session, err
 	}
 
@@ -204,13 +313,22 @@ func (s *Session) FIXDictionaries() (session.Dictionaries, *dictionary.Dict, err
 	return dicts, dictionary.Compose(dicts.Session, app), nil
 }
 
+// Checks returns the dictionary validations the session runs on the
+// messages it receives.
+func (s *Session) Checks() dictionary.Checks {
+	return dictionary.CheckAll &^ s.skipChecks()
+}
+
+// Skips reports whether the session skips the validations checks.
+func (s *Session) Skips(checks dictionary.Checks) bool {
+	return s.skipChecks()&checks == checks
+}
+
 // skipChecks returns the validations the session skips.
 func (s *Session) skipChecks() dictionary.Checks {
 	var checks dictionary.Checks
 
-	// The built-in FIX 5.0 SP2 dictionary lacks the components fix does not
-	// use, whose tags counterparties may still send.
-	if s.BeginString == session.FIXT11 && s.Dictionaries.App == "" {
+	if s.trimmedDictionary() {
 		checks |= dictionary.CheckUnknownTags
 	}
 

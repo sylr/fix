@@ -42,7 +42,8 @@ func (b broker) FromApp(ctx context.Context, s *session.Session, m *fix.Message,
 			SetOrdStatus(fix50sp2.OrdStatusNew).
 			SetSide(side).
 			SetLeavesQty(1).
-			SetCumQty(0)
+			SetCumQty(0).
+			SetAvgPx(0)
 
 		if _, err := s.Send(ctx, report); err != nil {
 			return err
@@ -100,31 +101,42 @@ func freeAddress(t *testing.T) string {
 	return l.Addr().String()
 }
 
-// serve runs an acceptor whose sessions use handler, and returns the
-// initiator and session configurations to connect to it.
+// serve runs an acceptor of FIX 5.0 SP2 sessions using handler, and returns
+// the initiator and session configurations to connect to it.
 func serve(t *testing.T, handler session.Handler) (*config.Initiator, *config.Session) {
+	return serveVersion(t, handler, "FIX.5.0SP2")
+}
+
+// serveVersion is serve for sessions of FIX version version: FIX.5.0SP2 over
+// FIXT.1.1, or a FIX 4.x BeginString.
+func serveVersion(t *testing.T, handler session.Handler, version string) (*config.Initiator, *config.Session) {
 	t.Helper()
 
 	logger := zerolog.Nop()
 	config.SetLogger(&logger)
 
+	beginString, applVerID := version, ""
+	if version == "FIX.5.0SP2" {
+		beginString, applVerID = session.FIXT11, version
+	}
+
 	address := freeAddress(t)
 	server := &config.Session{
 		Name:             "server",
-		BeginString:      session.FIXT11,
+		BeginString:      beginString,
 		SenderCompID:     "BIGCORP",
 		TargetCompID:     "smallcorp",
 		TargetSubID:      "john",
-		DefaultApplVerID: "FIX.5.0SP2",
+		DefaultApplVerID: applVerID,
 		HeartBtInt:       5 * time.Second,
 	}
 	client := &config.Session{
 		Name:             "client",
-		BeginString:      session.FIXT11,
+		BeginString:      beginString,
 		SenderCompID:     "smallcorp",
 		SenderSubID:      "john",
 		TargetCompID:     "BIGCORP",
-		DefaultApplVerID: "FIX.5.0SP2",
+		DefaultApplVerID: applVerID,
 		HeartBtInt:       5 * time.Second,
 		LogonTimeout:     10 * time.Second,
 		Username:         "john",
@@ -206,6 +218,74 @@ func TestClient(t *testing.T) {
 		t.Fatalf("logged out: %v", c.Err())
 	case <-time.After(5 * time.Second):
 		t.Fatal("no ExecutionReport")
+	}
+}
+
+// TestClientVersions checks an order and its ExecutionReport go through
+// sessions of every FIX version fix supports, both sides validating what
+// they receive with the version's dictionary.
+func TestClientVersions(t *testing.T) {
+	for _, version := range []string{"FIX.5.0SP2", "FIX.4.4", "FIX.4.3"} {
+		t.Run(version, func(t *testing.T) {
+			initiatorConfig, client := serveVersion(t, broker{}, version)
+			ctx := context.Background()
+
+			c, err := initiator.ConnectSession(ctx, initiatorConfig, client, initiator.Options{
+				MsgTypes: []string{string(fix50sp2.MsgTypeExecutionreport)},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer c.Close(true)
+
+			order := newOrder(c.BeginString())
+			if client.Requires(string(fix50sp2.MsgTypeNewordersingle), fix50sp2.TagHandlInst) {
+				order.SetHandlInst(fix50sp2.HandlInstAutomatedExecutionOrderPrivateNoBrokerIntervention)
+			}
+
+			if _, err := c.Send(ctx, order); err != nil {
+				t.Fatal(err)
+			}
+
+			select {
+			case m := <-c.Messages():
+				if string(m.MsgType()) != string(fix50sp2.MsgTypeExecutionreport) {
+					t.Fatalf("received MsgType %s, want an ExecutionReport: %s", m.MsgType(), m.Get(58))
+				}
+				if got := string(m.BeginString()); got != client.BeginString {
+					t.Errorf("BeginString = %s, want %s", got, client.BeginString)
+				}
+			case <-c.Done():
+				t.Fatalf("logged out: %v", c.Err())
+			case <-time.After(5 * time.Second):
+				t.Fatal("no ExecutionReport")
+			}
+		})
+	}
+}
+
+// TestClientSendChecks checks Send refuses a message the session's FIX
+// version does not define, or that lacks what it requires.
+func TestClientSendChecks(t *testing.T) {
+	initiatorConfig, client := serveVersion(t, broker{}, "FIX.4.3")
+	ctx := context.Background()
+
+	c, err := initiator.ConnectSession(ctx, initiatorConfig, client, initiator.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close(true)
+
+	// FIX 4.3 requires HandlInst (21).
+	if _, err := c.Send(ctx, newOrder(c.BeginString())); err == nil || !strings.Contains(err.Error(), "HandlInst(21)") {
+		t.Errorf("Send(NewOrderSingle without HandlInst) = %v, want HandlInst required", err)
+	}
+
+	// OrderOrigination (1724) came with FIX 5.0 SP1.
+	order := newOrder(c.BeginString()).SetHandlInst(fix50sp2.HandlInstAutomatedExecutionOrderPrivateNoBrokerIntervention)
+	order.SetString(fix50sp2.TagOrderOrigination, "1")
+	if _, err := c.Send(ctx, order); err == nil || !strings.Contains(err.Error(), "OrderOrigination") {
+		t.Errorf("Send(NewOrderSingle with OrderOrigination) = %v, want OrderOrigination undefined", err)
 	}
 }
 

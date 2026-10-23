@@ -9,6 +9,7 @@ import (
 	"sylr.dev/fix/v2/config"
 	"sylr.dev/fix/v2/fix50sp2"
 	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/internal/fixmsg/fixmsgtest"
 )
 
 func TestBuildMessage(t *testing.T) {
@@ -19,7 +20,7 @@ func TestBuildMessage(t *testing.T) {
 	SubType = fix50sp2.SubscriptionRequestTypeSnapshotPlusUpdates
 	MDUpdateType = fix50sp2.MDUpdateTypeIncrementalRefresh
 
-	c := &initiator.Client{Session: &config.Session{BeginString: session.FIXT11}}
+	c := &initiator.Client{Session: &config.Session{BeginString: session.FIXT11, DefaultApplVerID: "FIX.5.0SP2"}}
 	b, err := buildMessage(c)
 	if err != nil {
 		t.Fatal(err)
@@ -60,5 +61,27 @@ func TestBuildMessage(t *testing.T) {
 	}
 	if len(symbols) != 2 || symbols[0] != "EURUSD" || symbols[1] != "GBPUSD" {
 		t.Errorf("Symbols = %v, want [EURUSD GBPUSD]", symbols)
+	}
+}
+
+func TestBuildMessageVersions(t *testing.T) {
+	optionMDReqID = "REQ-1"
+	optionMarketDepth = 5
+	optionTypes = []string{"bid", "offer"}
+	optionSymbols = []string{"EURUSD", "GBPUSD"}
+	SubType = fix50sp2.SubscriptionRequestTypeSnapshotPlusUpdates
+	MDUpdateType = fix50sp2.MDUpdateTypeIncrementalRefresh
+
+	for _, version := range fixmsgtest.Versions {
+		t.Run(version, func(t *testing.T) {
+			session := fixmsgtest.Session(version)
+
+			b, err := buildMessage(&initiator.Client{Session: session})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fixmsgtest.Validate(t, session, b)
+		})
 	}
 }

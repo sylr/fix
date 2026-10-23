@@ -20,6 +20,7 @@ import (
 	"sylr.dev/fix/v2/errors"
 	"sylr.dev/fix/v2/fix50sp2"
 	"sylr.dev/fix/v2/fixt11"
+	"sylr.dev/fix/v2/internal/fixmsg"
 )
 
 // Options configure a Client.
@@ -194,8 +195,20 @@ func (c *Client) abort() {
 	c.cancel()
 }
 
-// Send sends m.
+// Send sends m, once checked against the session's dictionary (see
+// fixmsg.Check): a message its FIX version does not define, or that lacks
+// what it requires, is not sent.
 func (c *Client) Send(ctx context.Context, m session.Outgoing) (session.Receipt, error) {
+	if c.Dictionary != nil {
+		msg, err := fixmsg.Message(m, c.Session.BeginString, c.Dictionary)
+		if err != nil {
+			return session.Receipt{}, err
+		}
+		if err := fixmsg.Check(msg, c.Dictionary, c.Session.Checks()); err != nil {
+			return session.Receipt{}, err
+		}
+	}
+
 	return c.session.Send(ctx, m)
 }
 

@@ -40,8 +40,8 @@ func TestTemplate(t *testing.T) {
 	}
 
 	for _, s := range conf.Sessions {
-		if !s.IsFIX50SP2() {
-			t.Errorf("session %s is not FIX 5.0 SP2", s.Name)
+		if !s.IsSupported() {
+			t.Errorf("session %s is not a FIX version fix supports", s.Name)
 		}
 	}
 }
