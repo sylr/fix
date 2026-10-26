@@ -71,10 +71,14 @@ func TestSessionFIXConfig(t *testing.T) {
 		t.Errorf("LogonTimeout = %v, want %v", cfg.LogonTimeout, defaultTimeout)
 	}
 
-	if err := (&Session{Tolerations: []string{"everything"}}).validate(); err == nil {
+	bad := *s
+	bad.Tolerations = []string{"everything"}
+	if err := bad.validate(); err == nil {
 		t.Error("unknown toleration: no error")
 	}
-	if err := (&Session{SkipChecks: []string{"nothing"}}).validate(); err == nil {
+	bad = *s
+	bad.SkipChecks = []string{"nothing"}
+	if err := bad.validate(); err == nil {
 		t.Error("unknown check: no error")
 	}
 }
@@ -90,10 +94,10 @@ func TestConfigValidateStoreType(t *testing.T) {
 	}
 
 	ok := fixConfig{
-		Initiators: []*Initiator{{Name: "i", Store: Store{Type: "sqlite3"}}},
-		Acceptors:  []*Acceptor{{Name: "a"}, {Name: "b", Store: Store{Type: "memory"}}},
+		Initiators: []*Initiator{{Name: "i", Addresses: []string{"localhost:5005"}, Store: Store{Type: "sqlite3"}}},
+		Acceptors:  []*Acceptor{{Name: "a", Address: ":5005"}, {Name: "b", Address: ":5006", Store: Store{Type: "memory"}}},
 	}
-	if err := ok.Validate(); err != nil {
-		t.Errorf("Validate() = %v", err)
+	if err := ok.Validate(); (err == nil) != SQLiteStore {
+		t.Errorf("Validate() = %v, with cgo: %v", err, SQLiteStore)
 	}
 }

@@ -1,10 +1,11 @@
 //go:build validator
-// +build validator
 
 package marketdata
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -14,8 +15,8 @@ import (
 	"github.com/sylr/fix2/fix"
 
 	"sylr.dev/fix/v2/dict"
+	"sylr.dev/fix/v2/errors"
 	"sylr.dev/fix/v2/fix50sp2"
-	"sylr.dev/fix/v2/fixt11"
 )
 
 var (
@@ -75,9 +76,8 @@ func init() {
 }
 
 var (
-	ErrBusinessMessageReject = fmt.Errorf("business message reject received")
-	ErrOrderAlreadyExists    = fmt.Errorf("order already exists")
-	ErrOrderNotFound         = fmt.Errorf("order not found")
+	ErrOrderAlreadyExists = fmt.Errorf("%w: order already exists", errors.ErrFix)
+	ErrOrderNotFound      = fmt.Errorf("%w: order not found", errors.ErrFix)
 )
 
 // Validator maintains the order book of a security from the market data it
@@ -88,43 +88,31 @@ type Validator struct {
 	security string
 	orders   Orders
 	logger   *zerolog.Logger
+	// gauged holds the type and side labels the orders gauge was set for.
+	gauged map[[2]string]bool
 }
 
 func NewValidator(logger *zerolog.Logger, security string) *Validator {
 	v := Validator{
-		orders: Orders{
-			orders:      make([]*Order, 0),
-			typesVolume: make(map[fix50sp2.OrdType]int64),
-			sidesVolume: make(map[fix50sp2.MDEntryType]int64),
-		},
 		security: security,
 		logger:   logger,
+		gauged:   map[[2]string]bool{},
 	}
 
 	// Initialize error vectors so that we we have pre-existing 0 values allowing
 	// to do operations such as delta() when first errors are reported
-	metricMarketDataValidatorErrors.WithLabelValues(security, ErrOrderNotFound.Error()).Add(0)
-	metricMarketDataValidatorErrors.WithLabelValues(security, ErrOrderAlreadyExists.Error()).Add(0)
+	metricMarketDataValidatorErrors.WithLabelValues(security, errorLabel(ErrOrderNotFound)).Add(0)
+	metricMarketDataValidatorErrors.WithLabelValues(security, errorLabel(ErrOrderAlreadyExists)).Add(0)
 
 	return &v
 }
 
-// Handle handles m, a message received from initiator.Client.Messages:
-// ErrBusinessMessageReject is returned for BusinessMessageRejects.
+// Handle handles m, a message initiator.Client.Await hands.
 func (v *Validator) Handle(m *fix.Message) error {
-	if string(m.MsgType()) == string(fixt11.MsgTypeReject) {
-		v.logger.Warn().Msgf("Reject received: %s", m.Get(fixt11.TagText))
-		return nil
-	}
-
 	return fix50sp2.Dispatch(m, v)
 }
 
-func (v *Validator) OnBusinessMessageReject(msg *fix50sp2.BusinessMessageReject) error {
-	text, _ := msg.Text()
-	return fmt.Errorf("%w: %s", ErrBusinessMessageReject, text)
-}
-
+// OnMarketDataSnapshotFullRefresh replaces the book with the snapshot's.
 func (v *Validator) OnMarketDataSnapshotFullRefresh(msg *fix50sp2.MarketDataSnapshotFullRefresh) error {
 	v.logger.Info().Msg("Received snapshot full refresh")
 
@@ -133,6 +121,7 @@ func (v *Validator) OnMarketDataSnapshotFullRefresh(msg *fix50sp2.MarketDataSnap
 		return nil
 	}
 
+	var orders []*Order
 	for i, mdentry := range msg.NoMDEntriesEntries() {
 		entryType, ok := mdentry.MDEntryType()
 		if !ok {
@@ -148,10 +137,12 @@ func (v *Validator) OnMarketDataSnapshotFullRefresh(msg *fix50sp2.MarketDataSnap
 				continue
 			}
 
-			if err := v.orders.AddOrder(order); err != nil {
-				v.logger.Error().Msgf("Error while adding order (%s): %s", order.Id, err)
-				metricMarketDataValidatorErrors.WithLabelValues(v.security, err.Error()).Inc()
+			if slices.ContainsFunc(orders, func(o *Order) bool { return o.matches(order.Id, order.EntryID, order.Side) }) {
+				v.fail(fmt.Sprintf("adding order (%s)", order), ErrOrderAlreadyExists)
+				continue
 			}
+
+			orders = append(orders, order)
 
 		case fix50sp2.MDEntryTypeTrade:
 			metricMarketDataValidatorTradeUpdates.WithLabelValues(v.security, "new").Inc()
@@ -161,7 +152,8 @@ func (v *Validator) OnMarketDataSnapshotFullRefresh(msg *fix50sp2.MarketDataSnap
 		}
 	}
 
-	v.logger.Info().Msgf("Order book: types=%+v sides=%+v", v.orders.typesVolume, v.orders.sidesVolume)
+	v.orders.Replace(orders)
+	v.publish()
 
 	return nil
 }
@@ -179,59 +171,41 @@ func (v *Validator) OnMarketDataIncrementalRefresh(msg *fix50sp2.MarketDataIncre
 	v.logger.Info().Msgf("Received incremental refresh with %d entries", len(mdentries))
 
 	for i, mdentry := range mdentries {
-		entryType, ok := mdentry.MDEntryType()
+		updateAction, ok := mdentry.MDUpdateAction()
 		if !ok {
-			v.logger.Error().Msgf("No entry type in entry %d", i)
+			v.logger.Error().Msgf("No update action in entry %d", i)
 			continue
 		}
 
-		switch entryType {
-		case fix50sp2.MDEntryTypeBid, fix50sp2.MDEntryTypeOffer:
-			order, err := newOrder(&mdentry, entryType)
+		entryType, ok := mdentry.MDEntryType()
+		if !ok {
+			// FIX requires the MDEntryType of new entries only: the others
+			// take the type of the entry they refer to.
+			if updateAction == fix50sp2.MDUpdateActionNew {
+				v.logger.Error().Msgf("No entry type in entry %d", i)
+				continue
+			}
+
+			orderID, entryID, err := refs(&mdentry, updateAction)
 			if err != nil {
 				v.logger.Error().Msgf("%s in entry %d", err, i)
 				continue
 			}
 
-			updateAction, ok := mdentry.MDUpdateAction()
-			if !ok {
-				v.logger.Error().Msgf("No order update action in entry %d", i)
+			stored, err := v.orders.Find(orderID, entryID, "")
+			if err != nil {
+				v.fail(fmt.Sprintf("finding entry %d (%s)", i, cmp.Or(orderID, entryID)), err)
 				continue
 			}
 
-			typeStr := strings.ToLower(dict.OrderTypesReversed[order.Type])
-			sideStr := strings.ToLower(dict.MDEntryTypesReversed[entryType])
+			entryType = stored.Side
+		}
 
-			switch updateAction {
-			case fix50sp2.MDUpdateActionNew:
-				metricMarketDataValidatorOrderUpdates.WithLabelValues(v.security, "new", typeStr, sideStr).Inc()
+		switch entryType {
+		case fix50sp2.MDEntryTypeBid, fix50sp2.MDEntryTypeOffer:
+			v.updateOrder(i, &mdentry, updateAction, entryType)
 
-				if err := v.orders.AddOrder(order); err != nil {
-					v.logger.Error().Msgf("Error while adding order (%s): %s", order.Id, err)
-					metricMarketDataValidatorErrors.WithLabelValues(v.security, err.Error()).Inc()
-				}
-			case fix50sp2.MDUpdateActionChange:
-				metricMarketDataValidatorOrderUpdates.WithLabelValues(v.security, "change", typeStr, sideStr).Inc()
-
-				if err := v.orders.UpdateOrder(order); err != nil {
-					v.logger.Error().Msgf("Error while updating order (%s): %s", order.Id, err)
-					metricMarketDataValidatorErrors.WithLabelValues(v.security, err.Error()).Inc()
-				}
-			case fix50sp2.MDUpdateActionDelete:
-				metricMarketDataValidatorOrderUpdates.WithLabelValues(v.security, "delete", typeStr, sideStr).Inc()
-
-				if err := v.orders.DeleteOrder(order); err != nil {
-					v.logger.Error().Msgf("Error while deleting order (%s): %s", order.Id, err)
-					metricMarketDataValidatorErrors.WithLabelValues(v.security, err.Error()).Inc()
-				}
-			}
 		case fix50sp2.MDEntryTypeTrade:
-			updateAction, ok := mdentry.MDUpdateAction()
-			if !ok {
-				v.logger.Error().Msgf("No trade update action in entry %d", i)
-				continue
-			}
-
 			switch updateAction {
 			case fix50sp2.MDUpdateActionNew:
 				metricMarketDataValidatorTradeUpdates.WithLabelValues(v.security, "new").Inc()
@@ -242,39 +216,160 @@ func (v *Validator) OnMarketDataIncrementalRefresh(msg *fix50sp2.MarketDataIncre
 		}
 	}
 
-	v.logger.Info().Msgf("Order book: types=%#v sides=%#v", v.orders.typesVolume, v.orders.sidesVolume)
+	v.publish()
 
+	return nil
+}
+
+// updateOrder applies to the book mdentry, the i-th entry of an incremental
+// refresh, of side, whose update action is action. The entries changing or
+// deleting an order are counted with its type and side, those it was given.
+func (v *Validator) updateOrder(i int, mdentry *fix50sp2.NoMDEntriesEntry, action fix50sp2.MDUpdateAction, side fix50sp2.MDEntryType) {
+	orderID, entryID, err := refs(mdentry, action)
+	if err != nil {
+		v.logger.Error().Msgf("%s in entry %d", err, i)
+		return
+	}
+
+	switch action {
+	case fix50sp2.MDUpdateActionNew:
+		order, err := newOrder(mdentry, side)
+		if err != nil {
+			v.logger.Error().Msgf("%s in entry %d", err, i)
+			return
+		}
+
+		v.countUpdate("new", order)
+
+		if err := v.orders.AddOrder(order); err != nil {
+			v.fail(fmt.Sprintf("adding order (%s)", order), err)
+		}
+
+	case fix50sp2.MDUpdateActionChange:
+		order, err := v.orders.UpdateOrder(orderID, entryID, side, mdentry)
+		if err != nil {
+			v.fail(fmt.Sprintf("updating order (%s)", cmp.Or(orderID, entryID)), err)
+			return
+		}
+
+		v.countUpdate("change", order)
+
+	case fix50sp2.MDUpdateActionDelete:
+		order, err := v.orders.DeleteOrder(orderID, entryID, side)
+		if err != nil {
+			v.fail(fmt.Sprintf("deleting order (%s)", cmp.Or(orderID, entryID)), err)
+			return
+		}
+
+		v.countUpdate("delete", order)
+
+	default:
+		v.logger.Warn().Msgf("Update action not implemented: %s in entry %d", action, i)
+	}
+}
+
+// countUpdate counts the update of order.
+func (v *Validator) countUpdate(update string, order *Order) {
+	metricMarketDataValidatorOrderUpdates.WithLabelValues(v.security, update, typeLabel(order.Type), sideLabel(order.Side)).Inc()
+}
+
+// fail logs err, which happened while doing what, and counts it.
+func (v *Validator) fail(what string, err error) {
+	v.logger.Error().Msgf("Error while %s: %s", what, err)
+	metricMarketDataValidatorErrors.WithLabelValues(v.security, errorLabel(err)).Inc()
+}
+
+// publish sets the orders gauge to the book's counts: to zero for the types
+// and sides it no longer holds.
+func (v *Validator) publish() {
 	stats := v.orders.Stats()
+
+	v.logger.Info().Msgf("Order book: %v", stats)
+
+	current := map[[2]string]bool{}
 	for ty, sides := range stats {
-		tyStr := strings.ToLower(dict.OrderTypesReversed[ty])
 		for si, count := range sides {
-			siStr := strings.ToLower(dict.MDEntryTypesReversed[si])
-			metricMarketDataValidatorOrders.WithLabelValues(v.security, tyStr, siStr).Set(float64(count))
+			labels := [2]string{typeLabel(ty), sideLabel(si)}
+			current[labels], v.gauged[labels] = true, true
+			metricMarketDataValidatorOrders.WithLabelValues(v.security, labels[0], labels[1]).Set(float64(count))
 		}
 	}
 
-	return nil
+	for labels := range v.gauged {
+		if !current[labels] {
+			metricMarketDataValidatorOrders.WithLabelValues(v.security, labels[0], labels[1]).Set(0)
+		}
+	}
+}
+
+// errorLabel returns the error label of err, one of the book's errors, in
+// the errors metric: its text without the "FIX: " prefix.
+func errorLabel(err error) string {
+	return strings.TrimPrefix(err.Error(), errors.ErrFix.Error()+": ")
+}
+
+func typeLabel(t fix50sp2.OrdType) string {
+	return strings.ToLower(dict.OrderTypesReversed[t])
+}
+
+func sideLabel(s fix50sp2.MDEntryType) string {
+	return strings.ToLower(dict.MDEntryTypesReversed[s])
+}
+
+// ids returns the OrderID and MDEntryID of mdentry, either of which
+// identifies it, an error if it has neither.
+func ids(mdentry *fix50sp2.NoMDEntriesEntry) (orderID, entryID string, err error) {
+	orderID, _ = mdentry.OrderID()
+	entryID, _ = mdentry.MDEntryID()
+	if orderID == "" && entryID == "" {
+		return "", "", fmt.Errorf("no order ID or MDEntryID")
+	}
+
+	return orderID, entryID, nil
+}
+
+// refs returns the OrderID and MDEntryID of the entry mdentry, of action,
+// refers to: the MDEntryRefID of a change, which renames that entry to the
+// MDEntryID of mdentry, mdentry's own IDs otherwise.
+func refs(mdentry *fix50sp2.NoMDEntriesEntry, action fix50sp2.MDUpdateAction) (orderID, entryID string, err error) {
+	if refID, _ := mdentry.MDEntryRefID(); action == fix50sp2.MDUpdateActionChange && refID != "" {
+		return "", refID, nil
+	}
+
+	return ids(mdentry)
+}
+
+// entrySize returns the MDEntrySize of mdentry, false if missing or invalid.
+func entrySize(mdentry *fix50sp2.NoMDEntriesEntry) (decimal.Decimal, bool) {
+	raw, ok := mdentry.MDEntrySizeBytes()
+	if !ok {
+		return decimal.Decimal{}, false
+	}
+
+	size, err := decimal.NewFromString(string(raw))
+	if err != nil {
+		return decimal.Decimal{}, false
+	}
+
+	return size, true
 }
 
 // newOrder returns the order of mdentry, a bid or an offer, its size zero if
 // missing or invalid.
 func newOrder(mdentry *fix50sp2.NoMDEntriesEntry, side fix50sp2.MDEntryType) (*Order, error) {
-	orderID, ok := mdentry.OrderID()
-	if !ok {
-		return nil, fmt.Errorf("no order ID found")
+	orderID, entryID, err := ids(mdentry)
+	if err != nil {
+		return nil, err
 	}
 
 	// FIX 4.3 and 4.4 market data entries have no OrdType: such orders
 	// are counted with an empty type.
 	orderType, _ := mdentry.OrdType()
-
-	var size decimal.Decimal
-	if raw, ok := mdentry.MDEntrySizeBytes(); ok {
-		size, _ = decimal.NewFromString(string(raw))
-	}
+	size, _ := entrySize(mdentry)
 
 	return &Order{
 		Id:            orderID,
+		EntryID:       entryID,
 		Size:          size,
 		RemainingSize: size,
 		Type:          orderType,
@@ -282,21 +377,61 @@ func newOrder(mdentry *fix50sp2.NoMDEntriesEntry, side fix50sp2.MDEntryType) (*O
 	}, nil
 }
 
+// Order is a bid or an offer of the book, identified by its OrderID or its
+// MDEntryID.
 type Order struct {
 	Id            string
+	EntryID       string
 	Size          decimal.Decimal
 	RemainingSize decimal.Decimal
 	Type          fix50sp2.OrdType
 	Side          fix50sp2.MDEntryType
 }
 
-type Orders struct {
-	orders      []*Order
-	typesVolume map[fix50sp2.OrdType]int64
-	sidesVolume map[fix50sp2.MDEntryType]int64
-	mux         sync.RWMutex
+func (o *Order) String() string {
+	return cmp.Or(o.Id, o.EntryID)
 }
 
+// matches reports whether o is identified by orderID or entryID and, unless
+// side is empty, of side: MDEntryIDs may be unique per MDEntryType only.
+func (o *Order) matches(orderID, entryID string, side fix50sp2.MDEntryType) bool {
+	if side != "" && o.Side != side {
+		return false
+	}
+
+	return orderID != "" && o.Id == orderID || entryID != "" && o.EntryID == entryID
+}
+
+// changed returns a copy of o changed by mdentry: what mdentry omits, FIX
+// allowing it to send only what changed, is o's. The MDEntryID of mdentry
+// renames o if mdentry refers to it by MDEntryRefID.
+func (o *Order) changed(mdentry *fix50sp2.NoMDEntriesEntry) *Order {
+	c := *o
+
+	if refID, _ := mdentry.MDEntryRefID(); refID != "" {
+		if entryID, _ := mdentry.MDEntryID(); entryID != "" {
+			c.EntryID = entryID
+		}
+	}
+
+	if orderType, ok := mdentry.OrdType(); ok {
+		c.Type = orderType
+	}
+
+	if size, ok := entrySize(mdentry); ok {
+		c.Size, c.RemainingSize = size, size
+	}
+
+	return &c
+}
+
+// Orders is a book of orders, safe for concurrent use.
+type Orders struct {
+	orders []*Order
+	mux    sync.RWMutex
+}
+
+// Stats returns the number of orders of each type and side.
 func (o *Orders) Stats() map[fix50sp2.OrdType]map[fix50sp2.MDEntryType]int64 {
 	stats := make(map[fix50sp2.OrdType]map[fix50sp2.MDEntryType]int64)
 
@@ -304,109 +439,105 @@ func (o *Orders) Stats() map[fix50sp2.OrdType]map[fix50sp2.MDEntryType]int64 {
 	defer o.mux.RUnlock()
 
 	for _, o := range o.orders {
-		ty := o.Type
-		si := o.Side
-
-		if _, ok := stats[ty]; !ok {
-			stats[ty] = make(map[fix50sp2.MDEntryType]int64)
-			stats[ty][si] = 0
+		if _, ok := stats[o.Type]; !ok {
+			stats[o.Type] = make(map[fix50sp2.MDEntryType]int64)
 		}
 
-		stats[ty][si] = stats[ty][si] + 1
+		stats[o.Type][o.Side]++
 	}
 
 	return stats
 }
 
 func (o *Orders) Len() int {
-	return len(o.orders)
-}
-
-func (o *Orders) GetOrder(id string) (*Order, int, error) {
 	o.mux.RLock()
 	defer o.mux.RUnlock()
 
-	return o.getOrder(id)
+	return len(o.orders)
 }
 
-func (o *Orders) getOrder(id string) (*Order, int, error) {
-	for i, order := range o.orders {
-		if order.Id == id {
-			return order, i, nil
-		}
+// Find returns the order identified by orderID or entryID, of side unless
+// empty.
+func (o *Orders) Find(orderID, entryID string, side fix50sp2.MDEntryType) (*Order, error) {
+	o.mux.RLock()
+	defer o.mux.RUnlock()
+
+	i, err := o.find(orderID, entryID, side)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, 0, ErrOrderNotFound
+	return o.orders[i], nil
 }
 
+func (o *Orders) find(orderID, entryID string, side fix50sp2.MDEntryType) (int, error) {
+	i := slices.IndexFunc(o.orders, func(order *Order) bool { return order.matches(orderID, entryID, side) })
+	if i < 0 {
+		return 0, ErrOrderNotFound
+	}
+
+	return i, nil
+}
+
+// AddOrder adds order, unless the book holds one identified as it is.
 func (o *Orders) AddOrder(order *Order) error {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 
-	_, _, err := o.getOrder(order.Id)
-	if err == nil {
+	if _, err := o.find(order.Id, order.EntryID, order.Side); err == nil {
 		return ErrOrderAlreadyExists
 	}
 
 	o.orders = append(o.orders, order)
 
-	if currVolume, ok := o.typesVolume[order.Type]; ok {
-		o.typesVolume[order.Type] = currVolume + 1
-	} else {
-		o.typesVolume[order.Type] = 1
-	}
-
-	if currVolume, ok := o.sidesVolume[order.Side]; ok {
-		o.sidesVolume[order.Side] = currVolume + 1
-	} else {
-		o.sidesVolume[order.Side] = 1
-	}
-
 	return nil
 }
 
-func (o *Orders) DeleteOrder(order *Order) error {
+// DeleteOrder deletes the order identified by orderID or entryID, of side
+// unless empty, and returns it.
+func (o *Orders) DeleteOrder(orderID, entryID string, side fix50sp2.MDEntryType) (*Order, error) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 
-	_, i, err := o.getOrder(order.Id)
+	i, err := o.find(orderID, entryID, side)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	o.orders = append(o.orders[:i], o.orders[i+1:]...)
+	order := o.orders[i]
+	o.orders = slices.Delete(o.orders, i, i+1)
 
-	if currVolume, ok := o.typesVolume[order.Type]; ok {
-		o.typesVolume[order.Type] = currVolume - 1
-	} else {
-		return fmt.Errorf("something wrong happened")
-	}
-
-	if currVolume, ok := o.sidesVolume[order.Side]; ok {
-		o.sidesVolume[order.Side] = currVolume - 1
-	} else {
-		return fmt.Errorf("something wrong happened")
-	}
-
-	return nil
+	return order, nil
 }
 
-func (o *Orders) UpdateOrder(order *Order) error {
+// UpdateOrder changes by mdentry the order identified by orderID or entryID,
+// of side unless empty, and returns it changed, unless another order is
+// identified as it is then.
+func (o *Orders) UpdateOrder(orderID, entryID string, side fix50sp2.MDEntryType, mdentry *fix50sp2.NoMDEntriesEntry) (*Order, error) {
 	o.mux.Lock()
 	defer o.mux.Unlock()
 
-	_, i, err := o.getOrder(order.Id)
+	i, err := o.find(orderID, entryID, side)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	order := o.orders[i].changed(mdentry)
+	for j, other := range o.orders {
+		if j != i && other.matches(order.Id, order.EntryID, order.Side) {
+			return nil, ErrOrderAlreadyExists
+		}
 	}
 
 	o.orders[i] = order
 
-	return nil
+	return order, nil
 }
 
-type Trade struct {
-	Id            string
-	Size          float32
-	RemainingSize float32
+// Replace replaces the book's orders with orders.
+func (o *Orders) Replace(orders []*Order) {
+	o.mux.Lock()
+	defer o.mux.Unlock()
+
+	o.orders = orders
 }

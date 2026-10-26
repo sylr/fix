@@ -2507,7 +2507,7 @@ func (m *OrderCancelReplaceRequest) ContraOrderOrigination() (ContraOrderOrigina
 func orderCancelReplaceRequest_unknown(tag int) bool {
 	switch tag {
 	case
-		TagAccount, 8, 9, 10,
+		TagAccount, 8, TagBodyLength, 10,
 		TagClOrdID, TagCommission, TagCommType, TagCurrency,
 		TagExecInst, TagHandlInst, TagSecurityIDSource, 34,
 		TagMsgType, TagOrderID, TagOrderQty, TagOrdType,
@@ -2517,7 +2517,7 @@ func orderCancelReplaceRequest_unknown(tag int) bool {
 		TagTimeInForce, TagTransactTime, TagSettlType, TagSettlDate,
 		TagSymbolSfx, TagListID, TagAllocID, TagTradeDate,
 		TagPositionEffect, TagNoAllocs, TagAllocAccount, TagAllocQty,
-		89, 90, 91, 93,
+		TagSignature, TagSecureDataLen, TagSecureData, TagSignatureLength,
 		97, TagStopPx, TagExDestination, TagIssuer,
 		TagSecurityDesc, TagMinQty, TagMaxFloor, TagLocateReqd,
 		115, 116, TagSettlCurrency, TagForexReq,
@@ -2526,7 +2526,7 @@ func orderCancelReplaceRequest_unknown(tag int) bool {
 		TagCashOrderQty, TagSecurityType, TagEffectiveTime, TagOrderQty2,
 		TagSettlDate2, TagMaturityMonthYear, TagPutOrCall, TagStrikePrice,
 		TagCoveredOrUncovered, TagOptAttribute, TagSecurityExchange, TagAllocHandlInst,
-		TagMaxShow, TagPegOffsetValue, 212, 213,
+		TagMaxShow, TagPegOffsetValue, TagXmlDataLen, TagXmlData,
 		TagSpread, TagBenchmarkCurveCurrency, TagBenchmarkCurveName, TagBenchmarkCurvePoint,
 		TagCouponRate, TagCouponPaymentDate, TagIssueDate, TagRepurchaseTerm,
 		TagRepurchaseRate, TagFactor, TagTradeOriginationDate, TagContractMultiplier,

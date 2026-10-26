@@ -104,17 +104,17 @@ func (m *QuoteCancel) SecondaryQuoteID() (string, bool) {
 func quoteCancel_unknown(tag int) bool {
 	switch tag {
 	case
-		TagAccount, 8, 9, 10,
+		TagAccount, 8, TagBodyLength, 10,
 		TagSecurityIDSource, 34, TagMsgType, 43,
 		TagSecurityID, 49, 50, 52,
 		TagSymbol, 56, 57, TagSymbolSfx,
-		89, 90, 91, 93,
+		TagSignature, TagSecureDataLen, TagSecureData, TagSignatureLength,
 		97, TagIssuer, TagSecurityDesc, 115,
 		116, TagQuoteID, 122, 128,
 		129, TagQuoteReqID, 142, 143,
 		144, 145, TagSecurityType, TagMaturityMonthYear,
 		TagPutOrCall, TagStrikePrice, TagOptAttribute, TagSecurityExchange,
-		212, 213, TagCouponRate, TagCouponPaymentDate,
+		TagXmlDataLen, TagXmlData, TagCouponRate, TagCouponPaymentDate,
 		TagIssueDate, TagRepurchaseTerm, TagRepurchaseRate, TagFactor,
 		TagContractMultiplier, TagRepoCollateralSecurityType, TagRedemptionDate, TagCreditRating,
 		TagNoQuoteEntries, TagQuoteCancelType, TagQuoteResponseLevel, TagTradingSessionID,

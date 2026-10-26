@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"io"
 	"slices"
 	"strconv"
@@ -13,22 +12,29 @@ import (
 )
 
 // WriteMessageBodyAsTable writes the body of message as a table, a row per
-// tag, its values joined, named and described by d if not nil.
+// field in the message's order, named and described by d if not nil. The
+// entries of the repeating groups d defines follow their counter, indented,
+// the first field of each marked with "- ".
 func WriteMessageBodyAsTable(w io.Writer, message *fix.Message, d *dictionary.Dict) {
 	table := tablewriter.NewWriter(w)
-	table.SetHeader([]string{"TAG", "DESCRIPTION", "VALUES"})
+	table.SetHeader([]string{"TAG", "DESCRIPTION", "VALUE"})
 	table.SetBorders(tablewriter.Border{Bottom: true})
 	table.SetColumnSeparator(" ")
 	table.SetCenterSeparator("-")
 	table.SetColumnAlignment([]int{tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
+	table.SetAutoWrapText(false)
 
 	var sections []dictionary.Section
+	var groups []dictionary.GroupDef
 	if d != nil {
 		sections = d.Sections(message)
+		if def := d.Messages[string(message.MsgType())]; def != nil {
+			groups = def.Groups
+		}
 	}
 
-	var tags []int
-	values := map[int][]string{}
+	// open are the groups the field read belongs to, the innermost last.
+	var open []*openGroup
 
 	for i, field := range message.Fields() {
 		if sections != nil && sections[i] != dictionary.SectionBody {
@@ -37,50 +43,82 @@ func WriteMessageBodyAsTable(w io.Writer, message *fix.Message, d *dictionary.Di
 			continue
 		}
 
-		value := string(field.Value)
-		if def := fieldDef(d, field.Tag); def != nil {
-			if desc, ok := def.Enums[value]; ok {
-				value += fmt.Sprintf(" (%s)", desc)
+		for len(open) > 0 && !open[len(open)-1].holds(field.Tag) {
+			open = open[:len(open)-1]
+		}
+
+		indent := ""
+		if depth := len(open); depth > 0 {
+			indent = strings.Repeat("  ", depth-1)
+			if open[depth-1].next(field.Tag) {
+				indent += "- "
+			} else {
+				indent += "  "
 			}
 		}
 
-		if !slices.Contains(tags, field.Tag) {
-			tags = append(tags, field.Tag)
-		}
-		values[field.Tag] = append(values[field.Tag], value)
-	}
-
-	for _, tag := range tags {
+		value := string(field.Value)
 		description := "<unknown>"
-		if def := fieldDef(d, tag); def != nil {
-			description = def.Name
+		if d != nil {
+			if def := d.Fields[field.Tag]; def != nil {
+				description = def.Name
+				if desc, ok := def.Enums[value]; ok {
+					value += " (" + desc + ")"
+				}
+			}
 		}
 
-		table.Append([]string{
-			strconv.Itoa(tag),
-			description,
-			strings.Join(values[tag], ", "),
-		})
+		table.Append([]string{strconv.Itoa(field.Tag), indent + description, value})
+
+		// A counter opens its group, among the message's or the entry's.
+		defs := groups
+		if len(open) > 0 {
+			defs = open[len(open)-1].def.Groups
+		}
+		for k := range defs {
+			if defs[k].CounterTag == field.Tag {
+				count, _ := strconv.Atoi(string(field.Value))
+				open = append(open, &openGroup{def: &defs[k], count: count})
+				break
+			}
+		}
 	}
 
 	table.Render()
 }
 
-// FieldName returns the name d gives tag, "<unknown>" if none.
-func FieldName(d *dictionary.Dict, tag int) string {
-	if def := fieldDef(d, tag); def != nil {
-		return def.Name
-	}
-
-	return "<unknown>"
+// openGroup is a repeating group being read.
+type openGroup struct {
+	def *dictionary.GroupDef
+	// count is the number of entries the counter tells, entries the number
+	// read; at is the position in def.Layout of the last field read.
+	count, entries, at int
 }
 
-func fieldDef(d *dictionary.Dict, tag int) *dictionary.FieldDef {
-	if d == nil {
-		return nil
+// holds reports whether a field tag read next belongs to the group: it
+// starts an entry the counter tells, or follows the last field of the entry
+// in the group's layout.
+func (g *openGroup) holds(tag int) bool {
+	switch at := slices.Index(g.def.Layout, tag); {
+	case at < 0:
+		return false
+	case at == 0:
+		return g.entries < g.count
+	default:
+		return g.entries > 0 && at > g.at
+	}
+}
+
+// next records the field tag, which the group holds, and reports whether it
+// starts an entry.
+func (g *openGroup) next(tag int) bool {
+	g.at = slices.Index(g.def.Layout, tag)
+	if g.at == 0 {
+		g.entries++
+		return true
 	}
 
-	return d.Fields[tag]
+	return false
 }
 
 // isEnvelopeTag reports whether tag belongs to the standard header or
@@ -92,14 +130,4 @@ func isEnvelopeTag(tag int) bool {
 	}
 
 	return false
-}
-
-func MapSearch[K comparable, V comparable](m map[K]V, search V) *K {
-	for k, v := range m {
-		if search == v {
-			return &k
-		}
-	}
-
-	return nil
 }

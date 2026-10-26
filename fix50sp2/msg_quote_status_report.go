@@ -2083,14 +2083,14 @@ func (m *QuoteStatusReport) NoTrdRegTimestamps() (int, bool, error) {
 func quoteStatusReport_unknown(tag int) bool {
 	switch tag {
 	case
-		TagAccount, 8, 9, 10,
+		TagAccount, 8, TagBodyLength, 10,
 		TagCommission, TagCommType, TagCurrency, TagSecurityIDSource,
 		34, TagMsgType, TagOrderQty, TagOrdType,
 		43, TagPrice, TagSecurityID, 49,
 		50, 52, TagSide, TagSymbol,
 		56, 57, TagText, TagTransactTime,
 		TagValidUntilTime, TagSettlType, TagSettlDate, TagSymbolSfx,
-		89, 90, 91, 93,
+		TagSignature, TagSecureDataLen, TagSecureData, TagSignatureLength,
 		97, TagExDestination, TagIssuer, TagSecurityDesc,
 		TagMinQty, 115, 116, TagQuoteID,
 		122, TagExpireTime, 128, 129,
@@ -2099,8 +2099,8 @@ func quoteStatusReport_unknown(tag int) bool {
 		145, TagCashOrderQty, TagSettlCurrFxRateCalc, TagSecurityType,
 		TagBidSpotRate, TagBidForwardPoints, TagOfferSpotRate, TagOfferForwardPoints,
 		TagOrderQty2, TagSettlDate2, TagMaturityMonthYear, TagPutOrCall,
-		TagStrikePrice, TagOptAttribute, TagSecurityExchange, 212,
-		213, TagSpread, TagBenchmarkCurveCurrency, TagBenchmarkCurveName,
+		TagStrikePrice, TagOptAttribute, TagSecurityExchange, TagXmlDataLen,
+		TagXmlData, TagSpread, TagBenchmarkCurveCurrency, TagBenchmarkCurveName,
 		TagBenchmarkCurvePoint, TagCouponRate, TagCouponPaymentDate, TagIssueDate,
 		TagRepurchaseTerm, TagRepurchaseRate, TagFactor, TagContractMultiplier,
 		TagNoStipulations, TagStipulationType, TagStipulationValue, TagYieldType,

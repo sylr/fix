@@ -1,14 +1,14 @@
 package initiator
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix"
 
-	"sylr.dev/fix/v2/config"
-	"sylr.dev/fix/v2/errors"
 	"sylr.dev/fix/v2/initiator"
 	"sylr.dev/fix/v2/utils"
 )
@@ -18,61 +18,36 @@ var (
 )
 
 var InitiatorCmd = &cobra.Command{
-	Use:   "initiator",
-	Short: "Launch a FIX initiator",
-	Long:  "Launch a FIX initiator and wait for messages.",
-	RunE:  Execute,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := utils.ValidateRequiredFlags(cmd); err != nil {
-			return err
-		}
-
-		if err := initiator.ValidateOptions(cmd, args); err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				return parent.PersistentPreRunE(parent, args)
-			}
-		}
-
-		return nil
-	},
+	Use:               "initiator",
+	Short:             "Launch a FIX initiator",
+	Long:              "Launch a FIX initiator and wait for messages.",
+	RunE:              Execute,
+	PersistentPreRunE: utils.MakePersistentPreRunE(initiator.ValidateOptions),
 }
 
 func init() {
 	initiator.AddPersistentFlags(InitiatorCmd)
-	initiator.AddPersistentFlagCompletions(InitiatorCmd)
+	if err := initiator.AddPersistentFlagCompletions(InitiatorCmd); err != nil {
+		panic(err)
+	}
 
 	InitiatorCmd.Flags().BoolVar(&optionNoLogout, "no-logout", false, "Do not send FIX logout")
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	logger := config.GetLogger()
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	// A second signal kills.
+	context.AfterFunc(ctx, stop)
 
-	c, err := initiator.Connect(cmd.Context(), initiator.Options{})
+	c, err := initiator.Connect(ctx, initiator.Options{})
 	if err != nil {
 		return err
 	}
 	defer c.Close(!optionNoLogout)
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-LOOP:
-	for {
-		select {
-		case signal := <-interrupt:
-			logger.Debug().Msgf("Received signal: %s", signal)
-			break LOOP
-		case <-c.Done():
-			return errors.FixLogout
-		case msg := <-c.Messages():
-			utils.WriteMessageBodyAsTable(os.Stdout, msg, c.Dictionary)
-		}
-	}
-
-	return nil
+	return c.Await(ctx, initiator.AwaitOptions{What: "messages"}, func(msg *fix.Message) (bool, error) {
+		utils.WriteMessageBodyAsTable(os.Stdout, msg, c.Dictionary)
+		return false, nil
+	})
 }

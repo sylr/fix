@@ -11,14 +11,17 @@ contexts:
 acceptors:
 - name: server
   address: 127.0.0.1:5005
+  # tls: {certFile: server.pem, keyFile: server.key, caFile: ca.pem, clientAuth: true}
   store:
-    type: sqlite3
+    type: {{ .Store }}
 initiators:
 - name: localhost
-  addresses: [127.0.0.1:5005]
+  addresses: [127.0.0.1:5005]  # tried in turn
   dialTimeout: 5s
+  # tls: {serverName: localhost, caFile: ca.pem}
   store:
-    type: sqlite3
+    type: {{ .Store }}
+    # path: ~/.fix/initiator.db
 sessions:
 - name: localhost
   beginString: FIXT.1.1
@@ -27,6 +30,8 @@ sessions:
   senderSubID: john
   targetCompID: BIGCORP
   heartBtInt: 5s
+  # username: john
+  # password: secret
 - name: server
   beginString: FIXT.1.1
   defaultApplVerID: FIX.5.0SP2

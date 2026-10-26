@@ -72,39 +72,45 @@ func parse(r io.Reader) (*node, error) {
 	return root, nil
 }
 
-func write(w *bytes.Buffer, n *node, depth int) {
+func write(w *bytes.Buffer, n *node, depth int) error {
 	indent := strings.Repeat("  ", depth)
 	fmt.Fprintf(w, "%s<%s", indent, n.name)
 	for _, a := range n.attrs {
 		fmt.Fprintf(w, ` %s="`, a.Name.Local)
-		xml.EscapeText(w, []byte(a.Value))
+		if err := xml.EscapeText(w, []byte(a.Value)); err != nil {
+			return err
+		}
 		w.WriteString(`"`)
 	}
 	if len(n.children) == 0 {
 		w.WriteString("/>\n")
-		return
+		return nil
 	}
 	w.WriteString(">\n")
 	for _, c := range n.children {
-		write(w, c, depth+1)
+		if err := write(w, c, depth+1); err != nil {
+			return err
+		}
 	}
 	fmt.Fprintf(w, "%s</%s>\n", indent, n.name)
+	return nil
 }
 
-// collect records the fields and components items reference, recursively.
-func collect(items []*node, components map[string]*node, fields, used map[string]bool) error {
+// collect records the fields and components items reference, recursively,
+// but the components named in dropped.
+func collect(items []*node, components map[string]*node, dropped []string, fields, used map[string]bool) error {
 	for _, it := range items {
 		switch it.name {
 		case "field":
 			fields[it.attr("name")] = true
 		case "group":
 			fields[it.attr("name")] = true
-			if err := collect(it.children, components, fields, used); err != nil {
+			if err := collect(it.children, components, dropped, fields, used); err != nil {
 				return err
 			}
 		case "component":
 			name := it.attr("name")
-			if used[name] {
+			if used[name] || slices.Contains(dropped, name) {
 				continue
 			}
 			c, ok := components[name]
@@ -112,7 +118,7 @@ func collect(items []*node, components map[string]*node, fields, used map[string
 				return fmt.Errorf("unknown component %q", name)
 			}
 			used[name] = true
-			if err := collect(c.children, components, fields, used); err != nil {
+			if err := collect(c.children, components, dropped, fields, used); err != nil {
 				return err
 			}
 		}
@@ -188,7 +194,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	var r io.Reader = f
 	if strings.HasSuffix(*in, ".bz2") {
@@ -196,11 +201,34 @@ func run() error {
 	}
 
 	root, err := parse(r)
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
 	if err != nil {
 		return err
 	}
 
-	keep := strings.Split(*msgs, ",")
+	var dropped []string
+	if *dropComponents != "" {
+		dropped = strings.Split(*dropComponents, ",")
+	}
+
+	if err := trim(root, strings.Split(*msgs, ","), dropped); err != nil {
+		return err
+	}
+
+	buf := bytes.NewBufferString(xml.Header)
+	if err := write(buf, root, 0); err != nil {
+		return err
+	}
+
+	return os.WriteFile(*out, buf.Bytes(), 0o644)
+}
+
+// trim removes from root the messages whose MsgType keep does not list, the
+// references to the components named in dropped, then the components and
+// fields left unused.
+func trim(root *node, keep, dropped []string) error {
 	components := map[string]*node{}
 	if c := root.child("components"); c != nil {
 		for _, comp := range c.children {
@@ -208,13 +236,56 @@ func run() error {
 		}
 	}
 
-	if *dropComponents != "" {
-		dropped := strings.Split(*dropComponents, ",")
-		for _, name := range dropped {
-			if _, ok := components[name]; !ok {
-				return fmt.Errorf("unknown component %q", name)
+	for _, name := range dropped {
+		if _, ok := components[name]; !ok {
+			return fmt.Errorf("unknown component %q", name)
+		}
+	}
+
+	messages := root.child("messages")
+	if messages == nil {
+		return fmt.Errorf("no messages")
+	}
+
+	// Messages first: the components only discarded ones require may be
+	// dropped.
+	messages.children = slices.DeleteFunc(messages.children, func(m *node) bool {
+		return !slices.Contains(keep, m.attr("msgtype"))
+	})
+
+	for _, t := range keep {
+		if !slices.ContainsFunc(messages.children, func(m *node) bool { return m.attr("msgtype") == t }) {
+			return fmt.Errorf("no message with MsgType %q", t)
+		}
+	}
+
+	// MsgType, which no message of a FIX 5.0 application dictionary
+	// references, its header being FIXT 1.1's, is kept for generated code to
+	// name message types. Its enumeration, as every field's, is kept whole,
+	// the discarded messages' types included: fix names any message type
+	// with it, as the RefMsgType of the Rejects it receives.
+	fields := map[string]bool{"MsgType": true}
+	used := map[string]bool{}
+
+	for _, section := range []string{"header", "trailer"} {
+		if s := root.child(section); s != nil {
+			if err := collect(s.children, components, dropped, fields, used); err != nil {
+				return fmt.Errorf("%s: %w", section, err)
 			}
 		}
+	}
+
+	for _, m := range messages.children {
+		if err := collect(m.children, components, dropped, fields, used); err != nil {
+			return fmt.Errorf("message %s: %w", m.attr("name"), err)
+		}
+	}
+
+	if c := root.child("components"); c != nil {
+		c.children = slices.DeleteFunc(c.children, func(n *node) bool { return !used[n.attr("name")] })
+	}
+
+	if len(dropped) > 0 {
 		for _, section := range []string{"header", "trailer", "messages", "components"} {
 			if s := root.child(section); s != nil {
 				children, err := drop(s.children, dropped)
@@ -226,48 +297,18 @@ func run() error {
 		}
 	}
 
-	fields := map[string]bool{"MsgType": true}
-	used := map[string]bool{}
-
-	for _, section := range []string{"header", "trailer"} {
-		if s := root.child(section); s != nil {
-			if err := collect(s.children, components, fields, used); err != nil {
-				return fmt.Errorf("%s: %w", section, err)
-			}
-		}
-	}
-
-	messages := root.child("messages")
-	if messages == nil {
-		return fmt.Errorf("no messages")
-	}
-
-	var kept []*node
-	for _, m := range messages.children {
-		if !slices.Contains(keep, m.attr("msgtype")) {
-			continue
-		}
-		if err := collect(m.children, components, fields, used); err != nil {
-			return fmt.Errorf("message %s: %w", m.attr("name"), err)
-		}
-		kept = append(kept, m)
-	}
-
-	for _, t := range keep {
-		if !slices.ContainsFunc(kept, func(m *node) bool { return m.attr("msgtype") == t }) {
-			return fmt.Errorf("no message with MsgType %q", t)
-		}
-	}
-
-	messages.children = kept
-
-	if c := root.child("components"); c != nil {
-		c.children = slices.DeleteFunc(c.children, func(n *node) bool { return !used[n.attr("name")] })
-	}
-
+	// DATA and LENGTH fields are all kept, those only dropped components use
+	// included: counterparties may still send them, and parsing a DATA field
+	// without its definition would end it at an embedded SOH.
 	types := map[string]string{}
 	if fs := root.child("fields"); fs != nil {
-		fs.children = slices.DeleteFunc(fs.children, func(n *node) bool { return !fields[n.attr("name")] })
+		fs.children = slices.DeleteFunc(fs.children, func(n *node) bool {
+			switch n.attr("type") {
+			case "DATA", "XMLDATA", "LENGTH":
+				return false
+			}
+			return !fields[n.attr("name")]
+		})
 		for _, f := range fs.children {
 			types[f.attr("name")] = f.attr("type")
 		}
@@ -284,10 +325,7 @@ func run() error {
 		}
 	}
 
-	buf := bytes.NewBufferString(xml.Header)
-	write(buf, root, 0)
-
-	return os.WriteFile(*out, buf.Bytes(), 0o644)
+	return nil
 }
 
 func main() {

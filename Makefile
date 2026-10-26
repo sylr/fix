@@ -1,3 +1,5 @@
+export GOWORK := off
+
 GO                ?= $(shell which go)
 GIT_UPDATE_INDEX  := $(shell git update-index --refresh > /dev/null 2>&1)
 GIT_REVISION      ?= $(shell git rev-parse HEAD)
@@ -10,9 +12,10 @@ CGO_ENABLED              ?= 1
 GOOS                     ?= $(GOENV_GOOS)
 GOARCH                   ?= $(GOENV_GOARCH)
 GOARM                    ?= $(GOENV_GOARM)
-GO_BUILD_SRC             := $(shell find . -name \*.go -type f) go.mod go.sum cmd/init/config/templates/*
+GO_BUILD_SRC             := $(shell find . -name \*.go -type f) go.mod go.sum cmd/init/config/templates/* \
+                            $(wildcard fix43/*.xml fix43/*.xml.bz2 fix44/*.xml fix44/*.xml.bz2 fix50sp2/*.xml fix50sp2/*.xml.bz2 fixt11/*.xml fixt11/*.xml.bz2)
 GO_BUILD_EXTLDFLAGS      ?=
-GO_BUILD_TAGS            ?=
+GO_BUILD_TAGS            ?= acceptor,validator
 GO_BUILD_TARGET_DEPS     :=
 GO_BUILD_FLAGS           := -trimpath
 GO_BUILD_LDFLAGS_OPTIMS  ?= -s -w
@@ -57,12 +60,14 @@ ZIG_CROSSBUILD_MACOS_LIB       ?= /Library/Developer/CommandLineTools/SDKs/MacOS
 
 GO_BUILD_EXTLDFLAGS     := $(strip $(GO_BUILD_EXTLDFLAGS))
 GO_BUILD_TAGS           := $(strip $(GO_BUILD_TAGS))
+GO_BUILD_TAGS_FLAG      := $(if $(GO_BUILD_TAGS),-tags $(GO_BUILD_TAGS))
 GO_BUILD_TARGET_DEPS    := $(strip $(GO_BUILD_TARGET_DEPS))
 GO_BUILD_FLAGS          := $(strip $(GO_BUILD_FLAGS))
 GO_BUILD_LDFLAGS_OPTIMS := $(strip $(GO_BUILD_LDFLAGS_OPTIMS))
 GO_BUILD_LDFLAGS        := -ldflags '$(GO_BUILD_LDFLAGS_OPTIMS) -X sylr.dev/fix/v2/cmd.Version=$(GIT_VERSION) -extldflags "$(GO_BUILD_EXTLDFLAGS)"'
 
-GO_TOOLS_GOLANGCI_LINT ?= $(shell $(GO) env GOPATH)/bin/golangci-lint
+GO_TOOLS_GOLANGCI_LINT ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+GO_TOOLS_GOVULNCHECK   ?= $(GO) run golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
 DOCKER_BUILD_IMAGE      ?= ghcr.io/sylr/fix
 DOCKER_BUILD_VERSION    ?= $(GIT_VERSION)
@@ -84,14 +89,14 @@ DOCKER_BUILDX_CACHE     ?= /tmp/.buildx-cache
 
 # ------------------------------------------------------------------------------
 
-.PHONY: all build crossbuild crossbuild-checksums .FORCE
+.PHONY: all build install crossbuild crossbuild-checksums test lint vuln .FORCE
 
 build: $(GO_BUILD_VERSION_TARGET) $(GO_BUILD_TARGET)
 
 all: crossbuild crossbuild-checksums
 
 install:
-	CGO_ENABLED=$(CGO_ENABLED) $(GO) install -tags $(GO_BUILD_TAGS) $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS)
+	CGO_ENABLED=$(CGO_ENABLED) $(GO) install $(GO_BUILD_TAGS_FLAG) $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS)
 
 $(GO_BUILD_FLAGS_TARGET) : .FORCE
 	@(echo "GO_VERSION=$(shell $(GO) version)"; \
@@ -117,8 +122,8 @@ $(GO_BUILD_TARGET): $(GO_BUILD_VERSION_TARGET)
 	@mkdir -p $$(dirname $@)
 	@ln $< $@
 
-$(GO_BUILD_VERSION_TARGET): $(GO_BUILD_SRC) $(GO_GENERATE_TARGET) $(GO_BUILD_FLAGS_TARGET) | $(GO_BUILD_TARGET_DEPS)
-	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) $(GO) build -tags $(GO_BUILD_TAGS) $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
+$(GO_BUILD_VERSION_TARGET): $(GO_BUILD_SRC) $(GO_BUILD_FLAGS_TARGET) | $(GO_BUILD_TARGET_DEPS)
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) $(GO) build $(GO_BUILD_TAGS_FLAG) $(GO_BUILD_FLAGS) $(GO_BUILD_LDFLAGS) -o $@
 
 crossbuild: $(GO_BUILD_VERSION_TARGET) $(GO_CROSSBUILD_TARGETS)
 
@@ -164,8 +169,8 @@ generate-verify: generate
 .PHONY: go-mod-verify go-mod-tidy
 
 go-mod-verify:
-	$(GO) mod download
-	git diff --quiet go.* || git diff --exit-code go.* || exit 1
+	$(GO) mod tidy -diff
+	$(GO) mod verify
 
 go-mod-tidy:
 	$(GO) mod download
@@ -174,19 +179,13 @@ go-mod-tidy:
 # ------------------------------------------------------------------------------
 
 test:
-	$(GO) test -tags acceptor,validator ./...
+	$(GO) test -race $(GO_BUILD_TAGS_FLAG) ./...
 
-lint: $(GO_TOOLS_GOLANGCI_LINT)
-	$(GO_TOOLS_GOLANGCI_LINT) run
+lint:
+	$(GO_TOOLS_GOLANGCI_LINT) run --build-tags '$(GO_BUILD_TAGS)'
 
-# -- tools ---------------------------------------------------------------------
-
-.PHONY: tools
-
-tools: $(GO_TOOLS_GOLANGCI_LINT)
-
-$(GO_TOOLS_GOLANGCI_LINT):
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.36.0
+vuln:
+	$(GO_TOOLS_GOVULNCHECK) $(GO_BUILD_TAGS_FLAG) ./...
 
 # -- docker --------------------------------------------------------------------
 

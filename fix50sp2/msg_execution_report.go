@@ -3651,7 +3651,7 @@ func (m *ExecutionReport) AffiliatedFirmsTradeIndicator() (bool, bool) {
 func executionReport_unknown(tag int) bool {
 	switch tag {
 	case
-		TagAccount, TagAvgPx, 8, 9,
+		TagAccount, TagAvgPx, 8, TagBodyLength,
 		10, TagClOrdID, TagCommission, TagCommType,
 		TagCumQty, TagCurrency, TagExecID, TagExecInst,
 		TagExecRefID, TagHandlInst, TagSecurityIDSource, TagLastCapacity,
@@ -3663,8 +3663,8 @@ func executionReport_unknown(tag int) bool {
 		TagText, TagTimeInForce, TagTransactTime, TagSettlType,
 		TagSettlDate, TagSymbolSfx, TagListID, TagAllocID,
 		TagNoOrders, TagTradeDate, TagPositionEffect, TagNoAllocs,
-		TagAllocAccount, TagAllocQty, TagCxlQty, 89,
-		90, 91, 93, 97,
+		TagAllocAccount, TagAllocQty, TagCxlQty, TagSignature,
+		TagSecureDataLen, TagSecureData, TagSignatureLength, 97,
 		TagStopPx, TagExDestination, TagOrdRejReason, TagIssuer,
 		TagSecurityDesc, TagMinQty, TagMaxFloor, TagReportToExch,
 		115, 116, TagNetMoney, TagSettlCurrAmt,
@@ -3677,7 +3677,7 @@ func executionReport_unknown(tag int) bool {
 		TagSettlDate2, TagLastSpotRate, TagLastForwardPoints, TagSecondaryOrderID,
 		TagMaturityMonthYear, TagPutOrCall, TagStrikePrice, TagOptAttribute,
 		TagSecurityExchange, TagAllocHandlInst, TagMaxShow, TagPegOffsetValue,
-		212, 213, TagSpread, TagBenchmarkCurveCurrency,
+		TagXmlDataLen, TagXmlData, TagSpread, TagBenchmarkCurveCurrency,
 		TagBenchmarkCurveName, TagBenchmarkCurvePoint, TagCouponRate, TagCouponPaymentDate,
 		TagIssueDate, TagRepurchaseTerm, TagRepurchaseRate, TagFactor,
 		TagTradeOriginationDate, TagExDate, TagContractMultiplier, TagNoStipulations,

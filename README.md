@@ -22,7 +22,7 @@ are wrapped in contexts that allow you to switch from one `initiator`/`acceptor`
 with the `--context` option.
 
 ```shell
-# Create a default configuration in $HOME/.fix/
+# Create a default configuration in $HOME/.fix/config, unless it exists
 fix init config
 ```
 
@@ -41,13 +41,19 @@ provided as an option.
 The FIX protocol requires a message sequence number which should be incremented for
 each message sent on the wire. In order to keep track of the sequence numbers across
 runs, initiators and acceptors can keep their sessions in a SQLite database
-(`store.type: sqlite3`); they keep them in memory otherwise (`store.type: memory`, the default).
+(`store.type: sqlite3`, which `fix init config` writes unless `fix` is built without cgo).
+They keep them in memory otherwise (`store.type: memory`, the default): each run then starts
+at sequence number 1, which counterparties refuse unless sequence numbers are reset, as
+`resetOnLogon: true` does.
 
 If you don't provide `store.path` it defaults to `$HOME/.fix/initiator.db` and
-`$HOME/.fix/acceptor.db`. Several sessions can share a database.
+`$HOME/.fix/acceptor.db`. Several initiators and acceptors can share a database.
+
+A database and its tables are created when first used, so this step is optional:
 
 ```shell
-# Create databases for the different initiators and acceptors
+# Create the databases of the initiators and acceptors, with the sessions of their contexts.
+# --overwrite replaces existing ones, starting their sessions afresh at sequence number 1.
 fix init database
 ```
 
@@ -60,7 +66,9 @@ message with an `OrdStatus` set to `0` (New). It is built with the `acceptor` bu
 ## Build from sources
 
 `fix` requires a go toolchain >= 1.27 to be built from sources, and a C toolchain for the
-SQLite store (`CGO_ENABLED=0` builds keep sessions in memory only).
+SQLite store (`CGO_ENABLED=0` builds keep sessions in memory only). The `acceptor` and `validator`
+commands are only built with the `acceptor` and `validator` build tags, which `make` enables by
+default (`GO_BUILD_TAGS`).
 
 ```shell
 # Build locally in the dist/ folder
@@ -72,8 +80,8 @@ make install
 ```
 
 ```shell
-# Or install a released version with the go toolchain
-go install sylr.dev/fix/v2@latest
+# Or install a tagged v2 release with the go toolchain
+go install -tags acceptor,validator sylr.dev/fix/v2@latest
 ```
 
 ### FIX dictionaries
@@ -97,8 +105,11 @@ A session can use other QuickFIX XML dictionaries with `dictionaries.session` an
 ## Configuration
 
 Default configuration is located at `$HOME/.fix/config`. You can specify a custom
-location by using the `--config` option. Values can be encrypted with [age](https://age-encryption.org)
-for your SSH keys.
+location by using the `--config` option. Unknown keys are refused. Values can be encrypted
+with [age](https://age-encryption.org) for your SSH keys (`~/.ssh/id_rsa*`, `~/.ssh/id_ed25519*`)
+and tagged `!crypto/age`; keys protected by a passphrase are only used with `--interactive`,
+the default. Paths (`store.path`, `dictionaries`, `tls` files) may hold environment variables
+and start with `~/`.
 
 ```yaml
 # vim: syntax=yaml :
@@ -121,10 +132,10 @@ initiators:
 - name: localhost
   addresses: [127.0.0.1:5005]  # tried in turn
   dialTimeout: 5s
-  # tls: {serverName: localhost, insecureSkipVerify: false, caFile: ca.pem}
+  # tls: {serverName: localhost, caFile: ca.pem}
   store:
     type: sqlite3
-    # path: $HOME/.fix/initiator.db
+    # path: ~/.fix/initiator.db
 sessions:
 - name: localhost
   beginString: FIXT.1.1
@@ -144,18 +155,47 @@ sessions:
   heartBtInt: 5s
 ```
 
-Sessions also take:
+Contexts take a `name`, an `initiator` or an `acceptor`, and the names of their `sessions`.
+
+Initiators take:
 
 | Key | Description |
 | --- | --- |
-| `senderLocationID`, `targetLocationID` | Location IDs of both sides. |
-| `qualifier` | Tells apart sessions whose identities are the same on the wire. |
-| `dictionaries.session`, `dictionaries.app` | QuickFIX XML dictionaries replacing the built-in ones. |
-| `schedule` | When the session runs, starting afresh at sequence number 1 each window: daily from `start` to `end` (`HH:MM:SS`) on `days` (`mon`, `tuesday`…, every day if empty), or weekly from `startDay` at `start` to `endDay` at `end`; `location` is an IANA time zone, UTC by default. |
+| `name` | Required. |
+| `addresses` | Required: the acceptor's `host:port` addresses, tried in turn. |
+| `dialTimeout` | Bounds each connection attempt: `--timeout` if given, else this, else 5s. |
+| `reconnectMin`, `reconnectMax` | Bound the wait between connection attempts, 1s and 30s by default; `reconnectMin` may not be above `reconnectMax`. |
+| `tls` | Makes connections TLS: `serverName` the acceptor's certificate is checked against (the host dialed by default), `insecureSkipVerify` to accept any, `caFile` holding the authorities trusted (the system's by default), and `certFile` and `keyFile`, a client certificate. |
+| `store` | `type`: `memory` (default) or `sqlite3`, whose database is `path`, `$HOME/.fix/initiator.db` by default. |
+
+Acceptors take:
+
+| Key | Description |
+| --- | --- |
+| `name` | Required. |
+| `address` | Required: the `host:port` address to listen on, `:port` for every interface. |
+| `tls` | Makes connections TLS: `certFile` and `keyFile` are required, and `clientAuth: true` requires client certificates, verified against the authorities in `caFile`, which it requires. |
+| `store` | As for initiators, `$HOME/.fix/acceptor.db` by default. |
+
+Durations are written `5s`, `1m30s`… and may not be negative, but for `maxLatency`.
+
+Sessions take:
+
+| Key | Description |
+| --- | --- |
+| `name`, `senderCompID`, `targetCompID` | Required. |
+| `beginString` | Required: `FIXT.1.1`, `FIX.4.4` or `FIX.4.3`. |
+| `defaultApplVerID` | Required for `FIXT.1.1`, and only for it: `FIX.5.0SP2`, or its ApplVerID `9`. |
+| `senderSubID`, `senderLocationID`, `targetSubID`, `targetLocationID` | Sub and location IDs of both sides. |
+| `qualifier` | Never sent: tells apart, in a store, sessions whose identities on the wire are the same, so that they keep their own sequence numbers. An acceptor refuses two sessions only their qualifier tells apart. |
+| `heartBtInt` | Heartbeat interval an initiator asks for, whole seconds, 30s by default; an acceptor uses the initiator's. |
+| `username`, `password` | Username (553) and Password (554) of the Logons sent. |
+| `dictionaries.session`, `dictionaries.app` | QuickFIX XML dictionaries replacing the built-in ones. A FIX 4.x session has one dictionary: set either, not both. |
+| `schedule` | When the session runs, starting afresh at sequence number 1 each window: daily from `start` to `end` (`HH:MM:SS`), every day or on the `days` (`mon`, `tuesday`…) windows start on, or weekly from `startDay` at `start` to `endDay` at `end`. An `end` before or equal to `start` ends the next day, or the next week for a weekly schedule starting and ending the same day: `start` equal to `end` runs a whole day, or week. `location` is an IANA time zone, UTC by default. |
 | `resetOnLogon`, `resetOnLogout`, `resetOnDisconnect` | Reset sequence numbers. |
-| `logonTimeout`, `logoutTimeout` | Default to 5s, or `--timeout`. |
+| `logonTimeout`, `logoutTimeout` | `--timeout` if given, else these, else 5s. |
 | `timestamps` | Precision of the timestamps sent: `seconds`, `milliseconds` (default), `microseconds`, `nanoseconds`. |
-| `maxLatency` | How far a received SendingTime may be from our clock, 120s by default. |
+| `maxLatency` | How far a received SendingTime may be from our clock, 120s by default; negative disables the check. |
 | `nextExpectedMsgSeqNum`, `lastMsgSeqNumProcessed` | Send and honour NextExpectedMsgSeqNum (789), send LastMsgSeqNumProcessed (369). |
 | `tolerations` | Departures from the FIX specifications to allow: `logonWithoutEncryptMethod`, `unsupportedDefaultApplVerID`, `logoutBeforeGapRecovery`, `sequenceResetWithoutOrigSendingTime`, `resetLogonSeqNumNotOne`, `malformedNextExpectedMsgSeqNum`, `noHeartbeatAwaitingTestRequest`, `tagLeadingZeros`, `finerTimestamps`, `emptyRequiredGroups`, or `quickfix` for those QuickFIX engines need. |
 | `skipChecks` | Dictionary validations to skip: `emptyValues`, `formats`, `repeatedTags`, `order`, `groupCounts`, `unknownTags`, `userDefinedTags`, `groupRequired`, `groupOrder`, `timestampPrecision`, `emptyRequiredGroups`. |
@@ -169,16 +209,34 @@ Sessions also take:
 | `SocketUseSSL`, `SocketServerName`, `SocketInsecureSkipVerify`, `SocketCAFile`, `SocketCertificateFile`, `SocketPrivateKeyFile` | `tls: {serverName, insecureSkipVerify, caFile, certFile, keyFile}` |
 | `SocketTimeout` | `dialTimeout` (initiators), `logonTimeout` / `logoutTimeout` (sessions) |
 | `SQLStoreDriver`, `SQLStoreDataSourceName` | `store: {type: sqlite3, path}` |
-| `ReconnectInterval` | `reconnectMin`, `reconnectMax` (initiators) |
+| `ReconnectInterval` (sessions) | `reconnectMin`, `reconnectMax` (initiators) |
 | `HeartBtInt: 5` | `heartBtInt: 5s` |
 | `TransportDataDictionary`, `AppDataDictionary` | optional `dictionaries: {session, app}` |
 | `StartTime`, `EndTime`, `TimeZone` | `schedule: {start, end, location}`, daily |
 | `StartDay`, `EndDay` | `schedule: {startDay, endDay}`, weekly |
-| `RejectInvalidMessage: false` | `skipChecks: [...]` |
+| `RejectInvalidMessage: false` | `skipChecks: [...]` (sessions) |
+| `SessionQualifier` | `qualifier` |
 | other session keys | same name, lowerCamelCase (`SenderCompID` → `senderCompID`) |
 | `--quickfix-logging` | `--fix-logging` |
 
-`LogLimit` and the `postgres` store are gone.
+`LogLimit`, `UseTCPProxy` and the `postgres` store are gone.
+
+Commands changed too:
+
+| v1 | v2 |
+| --- | --- |
+| `status order --origclordid` | `--clordid`, sent as ClOrdID (11), the order's own; OrigClOrdID (41) is never sent |
+| `--copy-credentials-fom-config` | `--copy-credentials-from-config` |
+| `status tradingsession --trading-session-id`, sent as TradSesReqID (335) | `--request-id`; `--trading-session-id` now sets TradingSessionID (336) |
+| `list security`, SecurityReqID always `4` | a generated SecurityReqID or `--request-id`; `--symbol` for `--type symbol`, whose default is now `all_securities` |
+| `new quote --origination`, `--attribute-type`, `--attribute-value` | gone: a Quote carries neither in any FIX version |
+| `acceptor --no-nats-embeded` | `acceptor --nats-embedded=false` |
+| `--price`, `--quantity` rounded to 2 decimals | sent exactly as given |
+| `--initiator`/`--session` ignored when `current-context` is set | they take precedence over it |
+
+Commands exit with a non-zero status when the counterparty rejects their request (Reject or
+BusinessMessageReject), logs out, or does not answer in time, and log to standard error, standard
+output holding what they received only.
 
 v2 keeps its sessions in tables of its own: v1's sequence numbers, in the same `$HOME/.fix/*.db`
 files, are not carried over, and a v2 session starts at sequence number 1. Unless your

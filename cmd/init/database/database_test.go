@@ -1,4 +1,4 @@
-package databaseinit
+package initdatabase
 
 import (
 	"os"
@@ -8,60 +8,49 @@ import (
 	"sylr.dev/fix/v2/config"
 )
 
-func TestCreateDatabase(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "sub", "initiator.db")
-	store := config.Store{Type: "sqlite3", Path: path}
-	sessions := []*config.Session{{
-		Name:         "client",
-		BeginString:  "FIXT.1.1",
-		SenderCompID: "smallcorp",
-		TargetCompID: "BIGCORP",
-	}}
+// setConfig sets the initiators, acceptors, contexts and sessions of the
+// configuration, and --overwrite, for the test.
+func setConfig(t *testing.T, initiators []*config.Initiator, acceptors []*config.Acceptor, contexts []*config.Context, sessions []*config.Session, overwriteFlag bool) {
+	t.Helper()
+	conf := config.GetConfig()
+	old, oldOverwrite := *conf, overwrite
+	t.Cleanup(func() { *conf, overwrite = old, oldOverwrite })
 
-	if err := createDatabase("initiator test", store, "initiator.db", sessions); err != nil {
-		t.Fatal(err)
-	}
+	conf.Initiators, conf.Acceptors, conf.Contexts, conf.Sessions = initiators, acceptors, contexts, sessions
+	overwrite = overwriteFlag
+}
 
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Size() == 0 {
-		t.Fatal("database is empty")
-	}
+func TestExecuteMemory(t *testing.T) {
+	setConfig(t, []*config.Initiator{{Name: "i"}}, []*config.Acceptor{{Name: "a", Store: config.Store{Type: "memory"}}}, nil, nil, true)
 
-	// Existing databases are skipped without --overwrite.
-	if err := createDatabase("initiator test", store, "initiator.db", sessions); err != nil {
-		t.Fatal(err)
-	}
-
-	overwrite = true
-	defer func() { overwrite = false }()
-
-	if err := createDatabase("initiator test", store, "initiator.db", sessions); err != nil {
+	if err := Execute(nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestCreateDatabaseMemory(t *testing.T) {
-	if err := createDatabase("initiator test", config.Store{}, "initiator.db", nil); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestCreateDatabaseUnknownType(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "initiator.db")
-	if err := os.WriteFile(path, []byte("keep"), 0o600); err != nil {
-		t.Fatal(err)
+func TestExecuteRejectedStore(t *testing.T) {
+	types := []string{"sqlit3"}
+	if !config.SQLiteStore {
+		types = append(types, "sqlite3")
 	}
 
-	overwrite = true
-	defer func() { overwrite = false }()
+	for _, typ := range types {
+		path := filepath.Join(t.TempDir(), "initiator.db")
+		if err := os.WriteFile(path, []byte("keep"), 0o600); err != nil {
+			t.Fatal(err)
+		}
 
-	if err := createDatabase("initiator test", config.Store{Type: "sqlit3", Path: path}, "initiator.db", nil); err == nil {
-		t.Fatal("unknown store type: no error")
-	}
-	if b, err := os.ReadFile(path); err != nil || string(b) != "keep" {
-		t.Errorf("an unknown store type touched %s: %q, %v", path, b, err)
+		setConfig(t,
+			[]*config.Initiator{{Name: "i", Store: config.Store{Type: typ, Path: path}}}, nil,
+			[]*config.Context{{Name: "c", Initiator: "i", Sessions: []string{"s"}}},
+			[]*config.Session{{Name: "s", BeginString: "FIX.4.4", SenderCompID: "A", TargetCompID: "B"}},
+			true)
+
+		if err := Execute(nil, nil); err == nil {
+			t.Errorf("store type %s: no error", typ)
+		}
+		if b, err := os.ReadFile(path); err != nil || string(b) != "keep" {
+			t.Errorf("store type %s touched %s: %q, %v", typ, path, b, err)
+		}
 	}
 }

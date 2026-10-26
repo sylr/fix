@@ -1287,17 +1287,17 @@ func (m *OrderStatusRequest) MarketSegmentID() (string, bool) {
 func orderStatusRequest_unknown(tag int) bool {
 	switch tag {
 	case
-		TagAccount, 8, 9, 10,
+		TagAccount, 8, TagBodyLength, 10,
 		TagClOrdID, TagSecurityIDSource, 34, TagMsgType,
 		TagOrderID, 43, TagSecurityID, 49,
 		50, 52, TagSide, TagSymbol,
-		56, 57, TagSymbolSfx, 89,
-		90, 91, 93, 97,
+		56, 57, TagSymbolSfx, TagSignature,
+		TagSecureDataLen, TagSecureData, TagSignatureLength, 97,
 		TagIssuer, TagSecurityDesc, 115, 116,
 		122, 128, 129, 142,
 		143, 144, 145, TagSecurityType,
 		TagMaturityMonthYear, TagPutOrCall, TagStrikePrice, TagOptAttribute,
-		TagSecurityExchange, 212, 213, TagCouponRate,
+		TagSecurityExchange, TagXmlDataLen, TagXmlData, TagCouponRate,
 		TagCouponPaymentDate, TagIssueDate, TagRepurchaseTerm, TagRepurchaseRate,
 		TagFactor, TagContractMultiplier, TagRepoCollateralSecurityType, TagRedemptionDate,
 		TagCreditRating, 347, TagEncodedIssuerLen, TagEncodedIssuer,

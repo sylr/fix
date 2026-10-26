@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"sylr.dev/fix/v2/errors"
-	"sylr.dev/fix/v2/utils"
 )
 
 var (
@@ -21,6 +21,23 @@ func GetConfig() *fixConfig {
 	return &config
 }
 
+// Load reads and validates the configuration file the options name, and
+// makes it the one GetConfig returns.
+func Load() error {
+	conf, err := ReadYAML(options.Config, options.Interactive)
+	if err != nil {
+		return fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	if err := conf.Validate(); err != nil {
+		return err
+	}
+
+	config = *conf
+
+	return nil
+}
+
 func GetCurrentContext() (*Context, error) {
 	currentContext := config.CurrentContext
 
@@ -29,10 +46,33 @@ func GetCurrentContext() (*Context, error) {
 	}
 
 	if len(currentContext) == 0 {
-		return nil, fmt.Errorf("%w:no current-context set and no --context given", errors.Config)
+		return nil, fmt.Errorf("%w: no current-context set and no --context given", errors.ErrConfig)
 	}
 
 	return GetContext(currentContext)
+}
+
+// CurrentSession returns the session of the current context, which must hold
+// one.
+func CurrentSession() (*Session, error) {
+	cfgContext, err := GetCurrentContext()
+	if err != nil {
+		return nil, err
+	}
+
+	sessions, err := cfgContext.GetSessions()
+	if err != nil {
+		return nil, err
+	}
+
+	switch len(sessions) {
+	case 0:
+		return nil, errors.ErrConfigContextNoSession
+	case 1:
+		return sessions[0], nil
+	default:
+		return nil, errors.ErrConfigContextMultipleSessions
+	}
 }
 
 func GetContext(name string) (*Context, error) {
@@ -42,7 +82,7 @@ func GetContext(name string) (*Context, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigContextNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigContextNotFound, name)
 }
 
 func GetContexts() []*Context {
@@ -56,21 +96,17 @@ func GetAcceptor(name string) (*Acceptor, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigAcceptorNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigAcceptorNotFound, name)
 }
 
 func GetInitiator(name string) (*Initiator, error) {
-	if len(name) == 0 {
-		panic("empty initiator name")
-	}
-
 	for k, initiator := range config.Initiators {
 		if initiator.Name == name {
 			return config.Initiators[k], nil
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigInitiatorNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigInitiatorNotFound, name)
 }
 
 func GetSession(name string) (*Session, error) {
@@ -80,7 +116,7 @@ func GetSession(name string) (*Session, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigSessionNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigSessionNotFound, name)
 }
 
 type cliOptions struct {
@@ -108,41 +144,41 @@ type fixConfig struct {
 }
 
 func (f *fixConfig) Validate() error {
-	err := validateNames(f.Contexts, errors.ConfigDuplicateContextName)
+	err := validateNames("context", f.Contexts, errors.ErrConfigDuplicateContextName)
 	if err != nil {
 		return err
 	}
 
-	err = validateNames(f.Sessions, errors.ConfigDuplicateSessionName)
+	err = validateNames("session", f.Sessions, errors.ErrConfigDuplicateSessionName)
 	if err != nil {
 		return err
 	}
 
-	err = validateNames(f.Initiators, errors.ConfigDuplicateInitiatorName)
+	err = validateNames("initiator", f.Initiators, errors.ErrConfigDuplicateInitiatorName)
 	if err != nil {
 		return err
 	}
 
-	err = validateNames(f.Acceptors, errors.ConfigDuplicateAcceptorName)
+	err = validateNames("acceptor", f.Acceptors, errors.ErrConfigDuplicateAcceptorName)
 	if err != nil {
 		return err
 	}
 
 	for _, initiator := range f.Initiators {
-		if err := initiator.Store.validate(); err != nil {
-			return fmt.Errorf("%w: initiator %s: %w", errors.Config, initiator.Name, err)
+		if err := initiator.validate(); err != nil {
+			return fmt.Errorf("%w: initiator %s: %w", errors.ErrConfig, initiator.Name, err)
 		}
 	}
 
 	for _, acceptor := range f.Acceptors {
-		if err := acceptor.Store.validate(); err != nil {
-			return fmt.Errorf("%w: acceptor %s: %w", errors.Config, acceptor.Name, err)
+		if err := acceptor.validate(); err != nil {
+			return fmt.Errorf("%w: acceptor %s: %w", errors.ErrConfig, acceptor.Name, err)
 		}
 	}
 
 	for _, session := range f.Sessions {
 		if err := session.validate(); err != nil {
-			return fmt.Errorf("%w: session %s: %w", errors.Config, session.Name, err)
+			return fmt.Errorf("%w: session %s: %w", errors.ErrConfig, session.Name, err)
 		}
 	}
 
@@ -153,15 +189,25 @@ type HasName interface {
 	GetName() string
 }
 
-func validateNames[T HasName](slice []T, err error) error {
+// validateNames checks that the items of kind are set, and named uniquely.
+func validateNames[T interface {
+	*E
+	HasName
+}, E any](kind string, slice []T, err error) error {
 	names := make([]string, 0, len(slice))
 	for _, item := range slice {
-		name := item.GetName()
-		if utils.Search(names, name) != -1 {
-			return fmt.Errorf("%w: %s", err, name)
-		} else {
-			names = append(names, name)
+		if item == nil {
+			return fmt.Errorf("%w: empty %s", errors.ErrConfig, kind)
 		}
+
+		name := item.GetName()
+		if name == "" {
+			return fmt.Errorf("%w: %s without a name", errors.ErrConfig, kind)
+		}
+		if slices.Contains(names, name) {
+			return fmt.Errorf("%w: %s", err, name)
+		}
+		names = append(names, name)
 	}
 
 	return nil
@@ -179,16 +225,24 @@ func (c *Context) GetName() string {
 }
 
 func (c Context) GetInitiator() (*Initiator, error) {
+	if c.Initiator == "" {
+		return nil, fmt.Errorf("%w: context %s has none", errors.ErrConfigInitiatorNotFound, c.Name)
+	}
+
 	return GetInitiator(c.Initiator)
 }
 
 func (c Context) GetAcceptor() (*Acceptor, error) {
+	if c.Acceptor == "" {
+		return nil, fmt.Errorf("%w: context %s has none", errors.ErrConfigAcceptorNotFound, c.Name)
+	}
+
 	return GetAcceptor(c.Acceptor)
 }
 
 func (c Context) GetSession(name string) (*Session, error) {
-	if utils.Search(c.Sessions, name) < 0 {
-		return nil, errors.ConfigSessionNotInContext
+	if !slices.Contains(c.Sessions, name) {
+		return nil, errors.ErrConfigSessionNotInContext
 	}
 	return GetSession(name)
 }
@@ -208,17 +262,21 @@ func (c Context) GetSessions() ([]*Session, error) {
 // TLS configures the TLS of an initiator's or an acceptor's connections.
 type TLS struct {
 	// ServerName is the name an initiator checks the acceptor's certificate
-	// against, the host of the address dialed if empty.
-	ServerName         string `yaml:"serverName"`
-	InsecureSkipVerify bool   `yaml:"insecureSkipVerify"`
+	// against, the host of the address dialed if empty. Initiators only.
+	ServerName string `yaml:"serverName"`
+	// InsecureSkipVerify makes an initiator accept any certificate.
+	// Initiators only.
+	InsecureSkipVerify bool `yaml:"insecureSkipVerify"`
 	// CertFile and KeyFile are the certificate presented to the
 	// counterparty, required for an acceptor.
 	CertFile string `yaml:"certFile"`
 	KeyFile  string `yaml:"keyFile"`
-	// CAFile holds the certificates of the authorities trusted, the
-	// system's if empty.
+	// CAFile holds the certificates of the authorities trusted: by an
+	// initiator, to verify the acceptor's, the system's if empty; by an
+	// acceptor, to verify the clients', with ClientAuth only.
 	CAFile string `yaml:"caFile"`
-	// ClientAuth makes an acceptor require and verify client certificates.
+	// ClientAuth makes an acceptor require client certificates, verified
+	// against CAFile, which it requires. Acceptors only.
 	ClientAuth bool `yaml:"clientAuth"`
 }
 
@@ -226,8 +284,8 @@ type TLS struct {
 type Store struct {
 	// Type is "memory", the default, or "sqlite3".
 	Type string `yaml:"type"`
-	// Path is the SQLite database, $HOME/.fix/initiator.db or
-	// $HOME/.fix/acceptor.db if empty.
+	// Path is the SQLite database, ~/.fix/initiator.db or
+	// ~/.fix/acceptor.db if empty.
 	Path string `yaml:"path"`
 }
 
@@ -237,7 +295,8 @@ type Initiator struct {
 	Addresses []string `yaml:"addresses"`
 	// TLS, if set, makes connections TLS.
 	TLS *TLS `yaml:"tls"`
-	// DialTimeout bounds each connection attempt, 5s if 0, --timeout if set.
+	// DialTimeout bounds each connection attempt: --timeout if given, else
+	// 5s if 0.
 	DialTimeout time.Duration `yaml:"dialTimeout"`
 	// ReconnectMin and ReconnectMax bound the wait between connection
 	// attempts, 1s and 30s if 0.
@@ -263,18 +322,19 @@ func (a *Acceptor) GetName() string {
 }
 
 // Dictionaries are QuickFIX XML dictionaries replacing the ones fix is built
-// with.
+// with. Their paths may hold environment variables and start with "~/".
 type Dictionaries struct {
 	// Session is FIXT11.xml for FIXT.1.1 sessions.
 	Session string `yaml:"session"`
-	// App is the application dictionary, FIX50SP2.xml for FIX.5.0SP2.
+	// App is the application dictionary, FIX50SP2.xml for FIX.5.0SP2. FIX
+	// 4.x sessions, which have one dictionary, take either.
 	App string `yaml:"app"`
 }
 
 // Schedule is when a session runs: every day in Days, from Start to End,
-// both "HH:MM:SS"; End before Start runs across midnight. With StartDay and
-// EndDay, it runs once a week instead, from StartDay at Start to EndDay at
-// End.
+// both "HH:MM:SS"; End before or equal to Start ends the next day. With
+// StartDay and EndDay, it runs once a week instead, from StartDay at Start
+// to EndDay at End.
 type Schedule struct {
 	Start string `yaml:"start"`
 	End   string `yaml:"end"`
@@ -297,15 +357,17 @@ type Session struct {
 	TargetCompID     string `yaml:"targetCompID"`
 	TargetSubID      string `yaml:"targetSubID"`
 	TargetLocationID string `yaml:"targetLocationID"`
-	// Qualifier tells apart sessions with the same identities on the wire.
+	// Qualifier, never sent, tells apart in a store sessions with the same
+	// identities on the wire.
 	Qualifier string `yaml:"qualifier"`
 	// DefaultApplVerID is the application version of FIXT.1.1 sessions,
-	// "FIX.5.0SP2" or its ApplVerID "9".
+	// "FIX.5.0SP2" or its ApplVerID "9", and is not set for FIX 4.x ones.
 	DefaultApplVerID string `yaml:"defaultApplVerID"`
 
 	Dictionaries Dictionaries `yaml:"dictionaries"`
 
-	// HeartBtInt is the heartbeat interval, whole seconds, 30s if 0.
+	// HeartBtInt is the heartbeat interval an initiator asks for, whole
+	// seconds, 30s if 0.
 	HeartBtInt time.Duration `yaml:"heartBtInt"`
 	// Username (553) and Password (554) are set on the Logons sent.
 	Username string    `yaml:"username"`
@@ -316,7 +378,7 @@ type Session struct {
 	ResetOnLogout     bool `yaml:"resetOnLogout"`
 	ResetOnDisconnect bool `yaml:"resetOnDisconnect"`
 
-	// LogonTimeout and LogoutTimeout default to 5s, --timeout if set.
+	// LogonTimeout and LogoutTimeout are --timeout if given, else 5s if 0.
 	LogonTimeout  time.Duration `yaml:"logonTimeout"`
 	LogoutTimeout time.Duration `yaml:"logoutTimeout"`
 	// Timestamps is the precision of the timestamps sent: seconds,
@@ -343,4 +405,20 @@ type Session struct {
 
 func (s *Session) GetName() string {
 	return s.Name
+}
+
+// SetCurrentContext adds c to the configuration and makes it the current
+// context, renaming it c.Name#2, #3... if a context of the configuration is
+// named alike, so that that one is not selected instead.
+func SetCurrentContext(c *Context) {
+	name := c.Name
+	for i := 2; ; i++ {
+		if _, err := GetContext(c.Name); err != nil {
+			break
+		}
+		c.Name = fmt.Sprintf("%s#%d", name, i)
+	}
+
+	config.Contexts = append(config.Contexts, c)
+	config.CurrentContext = c.Name
 }

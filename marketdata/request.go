@@ -13,15 +13,20 @@ import (
 
 	"sylr.dev/fix/v2/errors"
 	"sylr.dev/fix/v2/fix50sp2"
-	"sylr.dev/fix/v2/fixt11"
 	"sylr.dev/fix/v2/utils"
 )
 
 const nilstr = "<nil>"
 
+// The layouts of MDEntryDate (272), a UTCDateOnly, and MDEntryTime (273), a
+// UTCTimeOnly.
+const (
+	dateLayout = "20060102"
+	timeLayout = "15:04:05.999999999"
+)
+
 var (
-	ErrRejected        = fmt.Errorf("%w: message rejected", errors.Fix)
-	ErrRequestRejected = fmt.Errorf("%w: market data request rejected", errors.Fix)
+	ErrRequestRejected = fmt.Errorf("%w: market data request rejected", errors.ErrFix)
 )
 
 var (
@@ -43,13 +48,9 @@ type RequestHandler struct {
 	Dictionary *dictionary.Dict
 }
 
-// Handle handles m, a message received from initiator.Client.Messages:
-// Rejects and MarketDataRequestRejects are returned as errors.
+// Handle handles m, a message initiator.Client.Await hands: a
+// MarketDataRequestReject is returned as an error.
 func (h *RequestHandler) Handle(m *fix.Message) error {
-	if string(m.MsgType()) == string(fixt11.MsgTypeReject) {
-		return fmt.Errorf("%w: %s", ErrRejected, m.Get(fixt11.TagText))
-	}
-
 	return fix50sp2.Dispatch(m, h)
 }
 
@@ -113,19 +114,29 @@ func newEntry(e *fix50sp2.NoMDEntriesEntry, d *dictionary.Dict) entry {
 	en.price = valueOrNil(e.MDEntryPxBytes())
 	en.size = valueOrNil(e.MDEntrySizeBytes())
 
-	stringDate, okDate := e.MDEntryDate()
-	stringTime, okTime := e.MDEntryTimeBytes()
+	// Values that do not parse are printed as received.
+	date, okDate := e.MDEntryDate()
+	tim, okTime := e.MDEntryTimeBytes()
 
-	if okDate && okTime {
-		timeDate, _ := time.Parse("20060102", stringDate)
-		timeTime, _ := time.Parse("15:04:05.999999999", string(stringTime))
-		en.tim = utils.CombineDateAndTime(timeDate, timeTime).Format(time.RFC3339Nano)
-	} else if okDate {
-		timeDate, _ := time.Parse("20060102", stringDate)
-		en.tim = timeDate.Format("2006-01-02")
-	} else if okTime {
-		timeTime, _ := time.Parse("15:04:05.999999999", string(stringTime))
-		en.tim = timeTime.Format("15:04:05.999")
+	switch {
+	case okDate && okTime:
+		day, dateErr := time.Parse(dateLayout, date)
+		clock, timeErr := time.Parse(timeLayout, string(tim))
+		if dateErr == nil && timeErr == nil {
+			en.tim = utils.CombineDateAndTime(day, clock).Format(time.RFC3339Nano)
+		} else {
+			en.tim = date + "-" + string(tim)
+		}
+	case okDate:
+		en.tim = date
+		if day, err := time.Parse(dateLayout, date); err == nil {
+			en.tim = day.Format(time.DateOnly)
+		}
+	case okTime:
+		en.tim = string(tim)
+		if clock, err := time.Parse(timeLayout, string(tim)); err == nil {
+			en.tim = clock.Format("15:04:05.999")
+		}
 	}
 
 	return en

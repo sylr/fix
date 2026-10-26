@@ -183,18 +183,18 @@ func (m *SecurityList) SecurityRejectReason() (SecurityRejectReason, bool) {
 func securityList_unknown(tag int) bool {
 	switch tag {
 	case
-		8, 9, 10, TagCurrency,
+		8, TagBodyLength, 10, TagCurrency,
 		TagSecurityIDSource, 34, TagMsgType, TagOrdType,
 		43, TagSecurityID, 49, 50,
 		52, TagSymbol, 56, 57,
 		TagText, TagTimeInForce, TagTransactTime, TagSymbolSfx,
-		89, 90, 91, 93,
+		TagSignature, TagSecureDataLen, TagSecureData, TagSignatureLength,
 		97, TagIssuer, TagSecurityDesc, 115,
 		116, 122, 128, 129,
 		142, 143, 144, 145,
 		TagNoRelatedSym, TagSecurityType, TagMaturityMonthYear, TagPutOrCall,
-		TagStrikePrice, TagOptAttribute, TagSecurityExchange, 212,
-		213, TagSpread, TagBenchmarkCurveCurrency, TagBenchmarkCurveName,
+		TagStrikePrice, TagOptAttribute, TagSecurityExchange, TagXmlDataLen,
+		TagXmlData, TagSpread, TagBenchmarkCurveCurrency, TagBenchmarkCurveName,
 		TagBenchmarkCurvePoint, TagCouponRate, TagCouponPaymentDate, TagIssueDate,
 		TagRepurchaseTerm, TagRepurchaseRate, TagFactor, TagContractMultiplier,
 		TagNoStipulations, TagStipulationType, TagStipulationValue, TagYieldType,

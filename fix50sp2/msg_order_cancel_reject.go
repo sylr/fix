@@ -199,16 +199,16 @@ func (m *OrderCancelReject) OrderRequestID() (int, bool, error) {
 func orderCancelReject_unknown(tag int) bool {
 	switch tag {
 	case
-		TagAccount, 8, 9, 10,
+		TagAccount, 8, TagBodyLength, 10,
 		TagClOrdID, 34, TagMsgType, TagOrderID,
 		TagOrdStatus, TagOrigClOrdID, 43, 49,
 		50, 52, 56, 57,
 		TagText, TagTransactTime, TagListID, TagTradeDate,
-		89, 90, 91, 93,
+		TagSignature, TagSecureDataLen, TagSecureData, TagSignatureLength,
 		97, TagExDestination, TagCxlRejReason, 115,
 		116, 122, 128, 129,
 		142, 143, 144, 145,
-		TagSecondaryOrderID, 212, 213, TagTradeOriginationDate,
+		TagSecondaryOrderID, TagXmlDataLen, TagXmlData, TagTradeOriginationDate,
 		347, TagEncodedTextLen, TagEncodedText, 369,
 		TagCxlRejResponseTo, TagPartyIDSource, TagPartyID, TagPartyRole,
 		TagNoPartyIDs, TagPartySubID, TagSecondaryClOrdID, TagAccountType,

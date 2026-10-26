@@ -3,40 +3,23 @@ package amend
 import (
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/v2/cmd/amend/order"
+	amendorder "sylr.dev/fix/v2/cmd/amend/order"
 	"sylr.dev/fix/v2/initiator"
-	"sylr.dev/fix/v2/utils"
 )
 
-// AmendCmd represents the buy command
+// AmendCmd groups the commands amending orders.
 var AmendCmd = &cobra.Command{
-	Use:   "amend",
-	Short: "Send a cancel/replace FIX message",
-	Long:  "Send a cancel/replace FIX message after initiating a session with a FIX acceptor.",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := utils.ValidateRequiredFlags(cmd); err != nil {
-			return err
-		}
-
-		if err := initiator.ValidateOptions(cmd, args); err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				return parent.PersistentPreRunE(parent, args)
-			}
-		}
-
-		return nil
-	},
+	Use:               "amend",
+	Short:             "Send a cancel/replace FIX message",
+	Long:              "Send a cancel/replace FIX message after initiating a session with a FIX acceptor.",
+	PersistentPreRunE: initiator.ValidateOptions,
 }
 
 func init() {
 	initiator.AddPersistentFlags(AmendCmd)
-	initiator.AddPersistentFlagCompletions(AmendCmd)
-	initiator.AddPersistentFlagCompletions(amendorder.AmendOrderCmd)
+	if err := initiator.AddPersistentFlagCompletions(AmendCmd); err != nil {
+		panic(err)
+	}
 
 	AmendCmd.AddCommand(amendorder.AmendOrderCmd)
 }

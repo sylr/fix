@@ -72,13 +72,13 @@ func (m *MarketDataRequestReject) EncodedText() ([]byte, bool) {
 func marketDataRequestReject_unknown(tag int) bool {
 	switch tag {
 	case
-		8, 9, 10, 34,
+		8, TagBodyLength, 10, 34,
 		TagMsgType, 43, 49, 50,
 		52, 56, 57, TagText,
-		89, 90, 91, 93,
+		TagSignature, TagSecureDataLen, TagSecureData, TagSignatureLength,
 		97, 115, 116, 122,
 		128, 129, 142, 143,
-		144, 145, 212, 213,
+		144, 145, TagXmlDataLen, TagXmlData,
 		TagMDReqID, TagMDReqRejReason, 347, TagEncodedTextLen,
 		TagEncodedText, 369, TagPartyIDSource, TagPartyID,
 		TagPartyRole, TagNoPartyIDs, TagPartySubID, 627,

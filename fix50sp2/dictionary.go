@@ -23,6 +23,11 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagAvgPx,
 				Type: "PRICE",
 			},
+			TagBodyLength: {
+				Name: "BodyLength",
+				Tag:  TagBodyLength,
+				Type: "LENGTH",
+			},
 			TagClOrdID: {
 				Name: "ClOrdID",
 				Tag:  TagClOrdID,
@@ -643,6 +648,36 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagCxlQty,
 				Type: "QTY",
 			},
+			TagSignature: {
+				Name: "Signature",
+				Tag:  TagSignature,
+				Type: "DATA",
+			},
+			TagSecureDataLen: {
+				Name: "SecureDataLen",
+				Tag:  TagSecureDataLen,
+				Type: "LENGTH",
+			},
+			TagSecureData: {
+				Name: "SecureData",
+				Tag:  TagSecureData,
+				Type: "DATA",
+			},
+			TagSignatureLength: {
+				Name: "SignatureLength",
+				Tag:  TagSignatureLength,
+				Type: "LENGTH",
+			},
+			TagRawDataLength: {
+				Name: "RawDataLength",
+				Tag:  TagRawDataLength,
+				Type: "LENGTH",
+			},
+			TagRawData: {
+				Name: "RawData",
+				Tag:  TagRawData,
+				Type: "DATA",
+			},
 			TagStopPx: {
 				Name: "StopPx",
 				Tag:  TagStopPx,
@@ -1212,6 +1247,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "PegOffsetValue",
 				Tag:  TagPegOffsetValue,
 				Type: "FLOAT",
+			},
+			TagXmlDataLen: {
+				Name: "XmlDataLen",
+				Tag:  TagXmlDataLen,
+				Type: "LENGTH",
+			},
+			TagXmlData: {
+				Name: "XmlData",
+				Tag:  TagXmlData,
+				Type: "DATA",
 			},
 			TagNoRoutingIDs: {
 				Name: "NoRoutingIDs",
@@ -2305,6 +2350,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagEncodedSecurityDesc,
 				Type: "DATA",
 			},
+			TagEncodedListExecInstLen: {
+				Name: "EncodedListExecInstLen",
+				Tag:  TagEncodedListExecInstLen,
+				Type: "LENGTH",
+			},
+			TagEncodedListExecInst: {
+				Name: "EncodedListExecInst",
+				Tag:  TagEncodedListExecInst,
+				Type: "DATA",
+			},
 			TagEncodedTextLen: {
 				Name: "EncodedTextLen",
 				Tag:  TagEncodedTextLen,
@@ -2313,6 +2368,56 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 			TagEncodedText: {
 				Name: "EncodedText",
 				Tag:  TagEncodedText,
+				Type: "DATA",
+			},
+			TagEncodedSubjectLen: {
+				Name: "EncodedSubjectLen",
+				Tag:  TagEncodedSubjectLen,
+				Type: "LENGTH",
+			},
+			TagEncodedSubject: {
+				Name: "EncodedSubject",
+				Tag:  TagEncodedSubject,
+				Type: "DATA",
+			},
+			TagEncodedHeadlineLen: {
+				Name: "EncodedHeadlineLen",
+				Tag:  TagEncodedHeadlineLen,
+				Type: "LENGTH",
+			},
+			TagEncodedHeadline: {
+				Name: "EncodedHeadline",
+				Tag:  TagEncodedHeadline,
+				Type: "DATA",
+			},
+			TagEncodedAllocTextLen: {
+				Name: "EncodedAllocTextLen",
+				Tag:  TagEncodedAllocTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedAllocText: {
+				Name: "EncodedAllocText",
+				Tag:  TagEncodedAllocText,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingIssuerLen: {
+				Name: "EncodedUnderlyingIssuerLen",
+				Tag:  TagEncodedUnderlyingIssuerLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingIssuer: {
+				Name: "EncodedUnderlyingIssuer",
+				Tag:  TagEncodedUnderlyingIssuer,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingSecurityDescLen: {
+				Name: "EncodedUnderlyingSecurityDescLen",
+				Tag:  TagEncodedUnderlyingSecurityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingSecurityDesc: {
+				Name: "EncodedUnderlyingSecurityDesc",
+				Tag:  TagEncodedUnderlyingSecurityDesc,
 				Type: "DATA",
 			},
 			TagRefMsgType: {
@@ -2564,6 +2669,11 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagNoContraBrokers,
 				Type: "NUMINGROUP",
 			},
+			TagMaxMessageSize: {
+				Name: "MaxMessageSize",
+				Tag:  TagMaxMessageSize,
+				Type: "LENGTH",
+			},
 			TagNoTradingSessions: {
 				Name: "NoTradingSessions",
 				Tag:  TagNoTradingSessions,
@@ -2699,6 +2809,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "StrikeTime",
 				Tag:  TagStrikeTime,
 				Type: "UTCTIMESTAMP",
+			},
+			TagEncodedListStatusTextLen: {
+				Name: "EncodedListStatusTextLen",
+				Tag:  TagEncodedListStatusTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedListStatusText: {
+				Name: "EncodedListStatusText",
+				Tag:  TagEncodedListStatusText,
+				Type: "DATA",
 			},
 			TagPartyIDSource: {
 				Enums: map[string]string{
@@ -3726,6 +3846,26 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "PreallocMethod",
 				Tag:  TagPreallocMethod,
 				Type: "CHAR",
+			},
+			TagEncodedLegIssuerLen: {
+				Name: "EncodedLegIssuerLen",
+				Tag:  TagEncodedLegIssuerLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegIssuer: {
+				Name: "EncodedLegIssuer",
+				Tag:  TagEncodedLegIssuer,
+				Type: "DATA",
+			},
+			TagEncodedLegSecurityDescLen: {
+				Name: "EncodedLegSecurityDescLen",
+				Tag:  TagEncodedLegSecurityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegSecurityDesc: {
+				Name: "EncodedLegSecurityDesc",
+				Tag:  TagEncodedLegSecurityDesc,
+				Type: "DATA",
 			},
 			TagTradingSessionSubID: {
 				Enums: map[string]string{
@@ -6518,6 +6658,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagApplSeqNum,
 				Type: "SEQNUM",
 			},
+			TagSecurityXMLLen: {
+				Name: "SecurityXMLLen",
+				Tag:  TagSecurityXMLLen,
+				Type: "LENGTH",
+			},
+			TagSecurityXML: {
+				Name: "SecurityXML",
+				Tag:  TagSecurityXML,
+				Type: "XMLDATA",
+			},
 			TagRefreshIndicator: {
 				Name: "RefreshIndicator",
 				Tag:  TagRefreshIndicator,
@@ -6977,6 +7127,36 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagTradingCurrency,
 				Type: "CURRENCY",
 			},
+			TagDerivativeEncodedIssuerLen: {
+				Name: "DerivativeEncodedIssuerLen",
+				Tag:  TagDerivativeEncodedIssuerLen,
+				Type: "LENGTH",
+			},
+			TagDerivativeEncodedIssuer: {
+				Name: "DerivativeEncodedIssuer",
+				Tag:  TagDerivativeEncodedIssuer,
+				Type: "DATA",
+			},
+			TagDerivativeEncodedSecurityDescLen: {
+				Name: "DerivativeEncodedSecurityDescLen",
+				Tag:  TagDerivativeEncodedSecurityDescLen,
+				Type: "LENGTH",
+			},
+			TagDerivativeEncodedSecurityDesc: {
+				Name: "DerivativeEncodedSecurityDesc",
+				Tag:  TagDerivativeEncodedSecurityDesc,
+				Type: "DATA",
+			},
+			TagDerivativeSecurityXMLLen: {
+				Name: "DerivativeSecurityXMLLen",
+				Tag:  TagDerivativeSecurityXMLLen,
+				Type: "LENGTH",
+			},
+			TagDerivativeSecurityXML: {
+				Name: "DerivativeSecurityXML",
+				Tag:  TagDerivativeSecurityXML,
+				Type: "DATA",
+			},
 			TagMarketSegmentID: {
 				Name: "MarketSegmentID",
 				Tag:  TagMarketSegmentID,
@@ -7235,6 +7415,36 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "TradePublishIndicator",
 				Tag:  TagTradePublishIndicator,
 				Type: "INT",
+			},
+			TagEncodedMktSegmDescLen: {
+				Name: "EncodedMktSegmDescLen",
+				Tag:  TagEncodedMktSegmDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedMktSegmDesc: {
+				Name: "EncodedMktSegmDesc",
+				Tag:  TagEncodedMktSegmDesc,
+				Type: "DATA",
+			},
+			TagEncryptedPasswordLen: {
+				Name: "EncryptedPasswordLen",
+				Tag:  TagEncryptedPasswordLen,
+				Type: "LENGTH",
+			},
+			TagEncryptedPassword: {
+				Name: "EncryptedPassword",
+				Tag:  TagEncryptedPassword,
+				Type: "DATA",
+			},
+			TagEncryptedNewPasswordLen: {
+				Name: "EncryptedNewPasswordLen",
+				Tag:  TagEncryptedNewPasswordLen,
+				Type: "LENGTH",
+			},
+			TagEncryptedNewPassword: {
+				Name: "EncryptedNewPassword",
+				Tag:  TagEncryptedNewPassword,
+				Type: "DATA",
 			},
 			TagRefApplExtID: {
 				Name: "RefApplExtID",
@@ -8078,6 +8288,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagThrottleStatus,
 				Type: "INT",
 			},
+			TagInstrumentScopeEncodedSecurityDescLen: {
+				Name: "InstrumentScopeEncodedSecurityDescLen",
+				Tag:  TagInstrumentScopeEncodedSecurityDescLen,
+				Type: "LENGTH",
+			},
+			TagInstrumentScopeEncodedSecurityDesc: {
+				Name: "InstrumentScopeEncodedSecurityDesc",
+				Tag:  TagInstrumentScopeEncodedSecurityDesc,
+				Type: "DATA",
+			},
 			TagFillYieldType: {
 				Name: "FillYieldType",
 				Tag:  TagFillYieldType,
@@ -8498,6 +8718,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "InformationBarrierID",
 				Tag:  TagInformationBarrierID,
 				Type: "STRING",
+			},
+			TagEncodedFirmAllocTextLen: {
+				Name: "EncodedFirmAllocTextLen",
+				Tag:  TagEncodedFirmAllocTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedFirmAllocText: {
+				Name: "EncodedFirmAllocText",
+				Tag:  TagEncodedFirmAllocText,
+				Type: "DATA",
 			},
 			TagObligationType: {
 				Enums: map[string]string{
@@ -9061,6 +9291,26 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagValueCheckAction,
 				Type: "INT",
 			},
+			TagLegSecurityXMLLen: {
+				Name: "LegSecurityXMLLen",
+				Tag:  TagLegSecurityXMLLen,
+				Type: "LENGTH",
+			},
+			TagLegSecurityXML: {
+				Name: "LegSecurityXML",
+				Tag:  TagLegSecurityXML,
+				Type: "XMLDATA",
+			},
+			TagUnderlyingSecurityXMLLen: {
+				Name: "UnderlyingSecurityXMLLen",
+				Tag:  TagUnderlyingSecurityXMLLen,
+				Type: "LENGTH",
+			},
+			TagUnderlyingSecurityXML: {
+				Name: "UnderlyingSecurityXML",
+				Tag:  TagUnderlyingSecurityXML,
+				Type: "XMLDATA",
+			},
 			TagTrdMatchSubID: {
 				Name: "TrdMatchSubID",
 				Tag:  TagTrdMatchSubID,
@@ -9595,6 +9845,26 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagValuationSource,
 				Type: "STRING",
 			},
+			TagEncodedUnderlyingEventTextLen: {
+				Name: "EncodedUnderlyingEventTextLen",
+				Tag:  TagEncodedUnderlyingEventTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingEventText: {
+				Name: "EncodedUnderlyingEventText",
+				Tag:  TagEncodedUnderlyingEventText,
+				Type: "DATA",
+			},
+			TagEncodedLegEventTextLen: {
+				Name: "EncodedLegEventTextLen",
+				Tag:  TagEncodedLegEventTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegEventText: {
+				Name: "EncodedLegEventText",
+				Tag:  TagEncodedLegEventText,
+				Type: "DATA",
+			},
 			TagShortMarkingExemptIndicator: {
 				Name: "ShortMarkingExemptIndicator",
 				Tag:  TagShortMarkingExemptIndicator,
@@ -9604,6 +9874,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "RelatedRegulatoryTradeIDSource",
 				Tag:  TagRelatedRegulatoryTradeIDSource,
 				Type: "STRING",
+			},
+			TagEncodedAttachmentLen: {
+				Name: "EncodedAttachmentLen",
+				Tag:  TagEncodedAttachmentLen,
+				Type: "LENGTH",
+			},
+			TagEncodedAttachment: {
+				Name: "EncodedAttachment",
+				Tag:  TagEncodedAttachment,
+				Type: "DATA",
 			},
 			TagNegotiationMethod: {
 				Enums: map[string]string{
@@ -9667,6 +9947,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagInstrumentRoundingPrecision,
 				Type: "INT",
 			},
+			TagEncodedLegOptionExpirationDescLen: {
+				Name: "EncodedLegOptionExpirationDescLen",
+				Tag:  TagEncodedLegOptionExpirationDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegOptionExpirationDesc: {
+				Name: "EncodedLegOptionExpirationDesc",
+				Tag:  TagEncodedLegOptionExpirationDesc,
+				Type: "DATA",
+			},
 			TagAssetGroup: {
 				Enums: map[string]string{
 					"1": "FINANCIALS",
@@ -9686,6 +9976,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "MiscFeeAmountDue",
 				Tag:  TagMiscFeeAmountDue,
 				Type: "AMT",
+			},
+			TagEncodedUnderlyingOptionExpirationDescLen: {
+				Name: "EncodedUnderlyingOptionExpirationDescLen",
+				Tag:  TagEncodedUnderlyingOptionExpirationDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingOptionExpirationDesc: {
+				Name: "EncodedUnderlyingOptionExpirationDesc",
+				Tag:  TagEncodedUnderlyingOptionExpirationDesc,
+				Type: "DATA",
 			},
 			TagRefRiskLimitCheckID: {
 				Name: "RefRiskLimitCheckID",
@@ -10335,6 +10635,36 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagSettlPriceDeterminationMethod,
 				Type: "INT",
 			},
+			TagEncodedMDStatisticDescLen: {
+				Name: "EncodedMDStatisticDescLen",
+				Tag:  TagEncodedMDStatisticDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedMDStatisticDesc: {
+				Name: "EncodedMDStatisticDesc",
+				Tag:  TagEncodedMDStatisticDesc,
+				Type: "DATA",
+			},
+			TagEncodedLegDocumentationText: {
+				Name: "EncodedLegDocumentationText",
+				Tag:  TagEncodedLegDocumentationText,
+				Type: "DATA",
+			},
+			TagEncodedLegDocumentationTextLen: {
+				Name: "EncodedLegDocumentationTextLen",
+				Tag:  TagEncodedLegDocumentationTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedWarningText: {
+				Name: "EncodedWarningText",
+				Tag:  TagEncodedWarningText,
+				Type: "DATA",
+			},
+			TagEncodedWarningTextLen: {
+				Name: "EncodedWarningTextLen",
+				Tag:  TagEncodedWarningTextLen,
+				Type: "LENGTH",
+			},
 			TagCrossedIndicator: {
 				Enums: map[string]string{
 					"0": "NO_CROSS",
@@ -10940,6 +11270,16 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagEncodedCommissionDesc,
 				Type: "DATA",
 			},
+			TagEncodedAllocCommissionDescLen: {
+				Name: "EncodedAllocCommissionDescLen",
+				Tag:  TagEncodedAllocCommissionDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedAllocCommissionDesc: {
+				Name: "EncodedAllocCommissionDesc",
+				Tag:  TagEncodedAllocCommissionDesc,
+				Type: "DATA",
+			},
 			TagAlgorithmicTradeIndicator: {
 				Enums: map[string]string{
 					"0": "NON_ALGORITHMIC_TRADE",
@@ -11130,6 +11470,26 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagEncodedFinancialInstrumentFullName,
 				Type: "DATA",
 			},
+			TagEncodedLegFinancialInstrumentFullNameLen: {
+				Name: "EncodedLegFinancialInstrumentFullNameLen",
+				Tag:  TagEncodedLegFinancialInstrumentFullNameLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegFinancialInstrumentFullName: {
+				Name: "EncodedLegFinancialInstrumentFullName",
+				Tag:  TagEncodedLegFinancialInstrumentFullName,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingFinancialInstrumentFullNameLen: {
+				Name: "EncodedUnderlyingFinancialInstrumentFullNameLen",
+				Tag:  TagEncodedUnderlyingFinancialInstrumentFullNameLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingFinancialInstrumentFullName: {
+				Name: "EncodedUnderlyingFinancialInstrumentFullName",
+				Tag:  TagEncodedUnderlyingFinancialInstrumentFullName,
+				Type: "DATA",
+			},
 			TagCommissionAmountSubType: {
 				Enums: map[string]string{
 					"0": "RESEARCH_PAYMENT_ACCOUNT",
@@ -11316,6 +11676,46 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "FXBenchmarkRateFix",
 				Tag:  TagFXBenchmarkRateFix,
 				Type: "STRING",
+			},
+			TagEncodedMatchExceptionTextLen: {
+				Name: "EncodedMatchExceptionTextLen",
+				Tag:  TagEncodedMatchExceptionTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedMatchExecptionText: {
+				Name: "EncodedMatchExecptionText",
+				Tag:  TagEncodedMatchExecptionText,
+				Type: "DATA",
+			},
+			TagEncodedReplaceText: {
+				Name: "EncodedReplaceText",
+				Tag:  TagEncodedReplaceText,
+				Type: "DATA",
+			},
+			TagEncodedReplaceTextLen: {
+				Name: "EncodedReplaceTextLen",
+				Tag:  TagEncodedReplaceTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedCancelText: {
+				Name: "EncodedCancelText",
+				Tag:  TagEncodedCancelText,
+				Type: "DATA",
+			},
+			TagEncodedCancelTextLen: {
+				Name: "EncodedCancelTextLen",
+				Tag:  TagEncodedCancelTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedPostTradePaymentDesc: {
+				Name: "EncodedPostTradePaymentDesc",
+				Tag:  TagEncodedPostTradePaymentDesc,
+				Type: "DATA",
+			},
+			TagEncodedPostTradePaymentDescLen: {
+				Name: "EncodedPostTradePaymentDescLen",
+				Tag:  TagEncodedPostTradePaymentDescLen,
+				Type: "LENGTH",
 			},
 			TagCurrentDisplayPrice: {
 				Name: "CurrentDisplayPrice",
@@ -11556,6 +11956,26 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "TertiaryTrdType",
 				Tag:  TagTertiaryTrdType,
 				Type: "INT",
+			},
+			TagEncodedAdditionalTermBondDescLen: {
+				Name: "EncodedAdditionalTermBondDescLen",
+				Tag:  TagEncodedAdditionalTermBondDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedAdditionalTermBondDesc: {
+				Name: "EncodedAdditionalTermBondDesc",
+				Tag:  TagEncodedAdditionalTermBondDesc,
+				Type: "DATA",
+			},
+			TagEncodedAdditionalTermBondIssuerLen: {
+				Name: "EncodedAdditionalTermBondIssuerLen",
+				Tag:  TagEncodedAdditionalTermBondIssuerLen,
+				Type: "LENGTH",
+			},
+			TagEncodedAdditionalTermBondIssuer: {
+				Name: "EncodedAdditionalTermBondIssuer",
+				Tag:  TagEncodedAdditionalTermBondIssuer,
+				Type: "DATA",
 			},
 			TagNoContractualDefinitions: {
 				Name: "NoContractualDefinitions",
@@ -12095,6 +12515,36 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagNoPaymentBusinessCenters,
 				Type: "NUMINGROUP",
 			},
+			TagEncodedLegStreamTextLen: {
+				Name: "EncodedLegStreamTextLen",
+				Tag:  TagEncodedLegStreamTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegStreamText: {
+				Name: "EncodedLegStreamText",
+				Tag:  TagEncodedLegStreamText,
+				Type: "DATA",
+			},
+			TagEncodedLegProvisionTextLen: {
+				Name: "EncodedLegProvisionTextLen",
+				Tag:  TagEncodedLegProvisionTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegProvisionText: {
+				Name: "EncodedLegProvisionText",
+				Tag:  TagEncodedLegProvisionText,
+				Type: "DATA",
+			},
+			TagEncodedStreamTextLen: {
+				Name: "EncodedStreamTextLen",
+				Tag:  TagEncodedStreamTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedStreamText: {
+				Name: "EncodedStreamText",
+				Tag:  TagEncodedStreamText,
+				Type: "DATA",
+			},
 			TagEncodedPaymentTextLen: {
 				Name: "EncodedPaymentTextLen",
 				Tag:  TagEncodedPaymentTextLen,
@@ -12103,6 +12553,26 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 			TagEncodedPaymentText: {
 				Name: "EncodedPaymentText",
 				Tag:  TagEncodedPaymentText,
+				Type: "DATA",
+			},
+			TagEncodedProvisionTextLen: {
+				Name: "EncodedProvisionTextLen",
+				Tag:  TagEncodedProvisionTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedProvisionText: {
+				Name: "EncodedProvisionText",
+				Tag:  TagEncodedProvisionText,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingStreamTextLen: {
+				Name: "EncodedUnderlyingStreamTextLen",
+				Tag:  TagEncodedUnderlyingStreamTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingStreamText: {
+				Name: "EncodedUnderlyingStreamText",
+				Tag:  TagEncodedUnderlyingStreamText,
 				Type: "DATA",
 			},
 			TagPaymentSubType: {
@@ -12122,6 +12592,36 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "PaymentSubType",
 				Tag:  TagPaymentSubType,
 				Type: "INT",
+			},
+			TagEncodedDeliveryStreamCycleDescLen: {
+				Name: "EncodedDeliveryStreamCycleDescLen",
+				Tag:  TagEncodedDeliveryStreamCycleDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedDeliveryStreamCycleDesc: {
+				Name: "EncodedDeliveryStreamCycleDesc",
+				Tag:  TagEncodedDeliveryStreamCycleDesc,
+				Type: "DATA",
+			},
+			TagEncodedMarketDisruptionFallbackUnderlierSecurityDescLen: {
+				Name: "EncodedMarketDisruptionFallbackUnderlierSecurityDescLen",
+				Tag:  TagEncodedMarketDisruptionFallbackUnderlierSecurityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedMarketDisruptionFallbackUnderlierSecurityDesc: {
+				Name: "EncodedMarketDisruptionFallbackUnderlierSecurityDesc",
+				Tag:  TagEncodedMarketDisruptionFallbackUnderlierSecurityDesc,
+				Type: "DATA",
+			},
+			TagEncodedExerciseDescLen: {
+				Name: "EncodedExerciseDescLen",
+				Tag:  TagEncodedExerciseDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedExerciseDesc: {
+				Name: "EncodedExerciseDesc",
+				Tag:  TagEncodedExerciseDesc,
+				Type: "DATA",
 			},
 			TagPaymentUnitOfMeasure: {
 				Enums: map[string]string{
@@ -12255,10 +12755,165 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Tag:  TagPaymentForwardStartType,
 				Type: "INT",
 			},
+			TagEncodedStreamCommodityDescLen: {
+				Name: "EncodedStreamCommodityDescLen",
+				Tag:  TagEncodedStreamCommodityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedStreamCommodityDesc: {
+				Name: "EncodedStreamCommodityDesc",
+				Tag:  TagEncodedStreamCommodityDesc,
+				Type: "DATA",
+			},
 			TagPaymentLegRefID: {
 				Name: "PaymentLegRefID",
 				Tag:  TagPaymentLegRefID,
 				Type: "STRING",
+			},
+			TagEncodedLegAdditionalTermBondDescLen: {
+				Name: "EncodedLegAdditionalTermBondDescLen",
+				Tag:  TagEncodedLegAdditionalTermBondDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegAdditionalTermBondDesc: {
+				Name: "EncodedLegAdditionalTermBondDesc",
+				Tag:  TagEncodedLegAdditionalTermBondDesc,
+				Type: "DATA",
+			},
+			TagEncodedLegAdditionalTermBondIssuerLen: {
+				Name: "EncodedLegAdditionalTermBondIssuerLen",
+				Tag:  TagEncodedLegAdditionalTermBondIssuerLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegAdditionalTermBondIssuer: {
+				Name: "EncodedLegAdditionalTermBondIssuer",
+				Tag:  TagEncodedLegAdditionalTermBondIssuer,
+				Type: "DATA",
+			},
+			TagEncodedLegDeliveryStreamCycleDescLen: {
+				Name: "EncodedLegDeliveryStreamCycleDescLen",
+				Tag:  TagEncodedLegDeliveryStreamCycleDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegDeliveryStreamCycleDesc: {
+				Name: "EncodedLegDeliveryStreamCycleDesc",
+				Tag:  TagEncodedLegDeliveryStreamCycleDesc,
+				Type: "DATA",
+			},
+			TagEncodedLegMarketDisruptionFallbackUnderlierSecurityDescLen: {
+				Name: "EncodedLegMarketDisruptionFallbackUnderlierSecurityDescLen",
+				Tag:  TagEncodedLegMarketDisruptionFallbackUnderlierSecurityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegMarketDisruptionFallbackUnderlierSecurityDesc: {
+				Name: "EncodedLegMarketDisruptionFallbackUnderlierSecurityDesc",
+				Tag:  TagEncodedLegMarketDisruptionFallbackUnderlierSecurityDesc,
+				Type: "DATA",
+			},
+			TagEncodedLegExerciseDescLen: {
+				Name: "EncodedLegExerciseDescLen",
+				Tag:  TagEncodedLegExerciseDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegExerciseDesc: {
+				Name: "EncodedLegExerciseDesc",
+				Tag:  TagEncodedLegExerciseDesc,
+				Type: "DATA",
+			},
+			TagEncodedLegStreamCommodityDescLen: {
+				Name: "EncodedLegStreamCommodityDescLen",
+				Tag:  TagEncodedLegStreamCommodityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedLegStreamCommodityDesc: {
+				Name: "EncodedLegStreamCommodityDesc",
+				Tag:  TagEncodedLegStreamCommodityDesc,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingAdditionalTermBondDescLen: {
+				Name: "EncodedUnderlyingAdditionalTermBondDescLen",
+				Tag:  TagEncodedUnderlyingAdditionalTermBondDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingAdditionalTermBondDesc: {
+				Name: "EncodedUnderlyingAdditionalTermBondDesc",
+				Tag:  TagEncodedUnderlyingAdditionalTermBondDesc,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingDeliveryStreamCycleDescLen: {
+				Name: "EncodedUnderlyingDeliveryStreamCycleDescLen",
+				Tag:  TagEncodedUnderlyingDeliveryStreamCycleDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingDeliveryStreamCycleDesc: {
+				Name: "EncodedUnderlyingDeliveryStreamCycleDesc",
+				Tag:  TagEncodedUnderlyingDeliveryStreamCycleDesc,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingExerciseDescLen: {
+				Name: "EncodedUnderlyingExerciseDescLen",
+				Tag:  TagEncodedUnderlyingExerciseDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingExerciseDesc: {
+				Name: "EncodedUnderlyingExerciseDesc",
+				Tag:  TagEncodedUnderlyingExerciseDesc,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingMarketDisruptionFallbackUnderlierSecurityDescLen: {
+				Name: "EncodedUnderlyingMarketDisruptionFallbackUnderlierSecurityDescLen",
+				Tag:  TagEncodedUnderlyingMarketDisruptionFallbackUnderlierSecurityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingMarketDisruptionFallbackUnderlierSecurityDesc: {
+				Name: "EncodedUnderlyingMarketDisruptionFallbackUnderlierSecurityDesc",
+				Tag:  TagEncodedUnderlyingMarketDisruptionFallbackUnderlierSecurityDesc,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingStreamCommodityDescLen: {
+				Name: "EncodedUnderlyingStreamCommodityDescLen",
+				Tag:  TagEncodedUnderlyingStreamCommodityDescLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingStreamCommodityDesc: {
+				Name: "EncodedUnderlyingStreamCommodityDesc",
+				Tag:  TagEncodedUnderlyingStreamCommodityDesc,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingAdditionalTermBondIssuerLen: {
+				Name: "EncodedUnderlyingAdditionalTermBondIssuerLen",
+				Tag:  TagEncodedUnderlyingAdditionalTermBondIssuerLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingAdditionalTermBondIssuer: {
+				Name: "EncodedUnderlyingAdditionalTermBondIssuer",
+				Tag:  TagEncodedUnderlyingAdditionalTermBondIssuer,
+				Type: "DATA",
+			},
+			TagEncodedUnderlyingProvisionTextLen: {
+				Name: "EncodedUnderlyingProvisionTextLen",
+				Tag:  TagEncodedUnderlyingProvisionTextLen,
+				Type: "LENGTH",
+			},
+			TagEncodedUnderlyingProvisionText: {
+				Name: "EncodedUnderlyingProvisionText",
+				Tag:  TagEncodedUnderlyingProvisionText,
+				Type: "DATA",
+			},
+			TagLegPaymentStreamFormulaImageLength: {
+				Name: "LegPaymentStreamFormulaImageLength",
+				Tag:  TagLegPaymentStreamFormulaImageLength,
+				Type: "LENGTH",
+			},
+			TagLegPaymentStreamFormulaImage: {
+				Name: "LegPaymentStreamFormulaImage",
+				Tag:  TagLegPaymentStreamFormulaImage,
+				Type: "DATA",
+			},
+			TagLegPaymentStreamFormula: {
+				Name: "LegPaymentStreamFormula",
+				Tag:  TagLegPaymentStreamFormula,
+				Type: "XMLDATA",
 			},
 			TagPaymentAmountRelativeTo: {
 				Name: "PaymentAmountRelativeTo",
@@ -12269,6 +12924,36 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "PaymentAmountDeterminationMethod",
 				Tag:  TagPaymentAmountDeterminationMethod,
 				Type: "STRING",
+			},
+			TagPaymentStreamFormulaImageLength: {
+				Name: "PaymentStreamFormulaImageLength",
+				Tag:  TagPaymentStreamFormulaImageLength,
+				Type: "LENGTH",
+			},
+			TagPaymentStreamFormulaImage: {
+				Name: "PaymentStreamFormulaImage",
+				Tag:  TagPaymentStreamFormulaImage,
+				Type: "DATA",
+			},
+			TagPaymentStreamFormula: {
+				Name: "PaymentStreamFormula",
+				Tag:  TagPaymentStreamFormula,
+				Type: "XMLDATA",
+			},
+			TagUnderlyingPaymentStreamFormulaImageLength: {
+				Name: "UnderlyingPaymentStreamFormulaImageLength",
+				Tag:  TagUnderlyingPaymentStreamFormulaImageLength,
+				Type: "LENGTH",
+			},
+			TagUnderlyingPaymentStreamFormulaImage: {
+				Name: "UnderlyingPaymentStreamFormulaImage",
+				Tag:  TagUnderlyingPaymentStreamFormulaImage,
+				Type: "DATA",
+			},
+			TagUnderlyingPaymentStreamFormula: {
+				Name: "UnderlyingPaymentStreamFormula",
+				Tag:  TagUnderlyingPaymentStreamFormula,
+				Type: "XMLDATA",
 			},
 			TagPaymentDesc: {
 				Name: "PaymentDesc",
@@ -12337,6 +13022,21 @@ var Dictionary = sync.OnceValue(func() *dictionary.Dict {
 				Name: "PaymentRateResetFrequencyUnit",
 				Tag:  TagPaymentRateResetFrequencyUnit,
 				Type: "STRING",
+			},
+			TagPaymentStreamFormulaLength: {
+				Name: "PaymentStreamFormulaLength",
+				Tag:  TagPaymentStreamFormulaLength,
+				Type: "LENGTH",
+			},
+			TagLegPaymentStreamFormulaLength: {
+				Name: "LegPaymentStreamFormulaLength",
+				Tag:  TagLegPaymentStreamFormulaLength,
+				Type: "LENGTH",
+			},
+			TagUnderlyingPaymentStreamFormulaLength: {
+				Name: "UnderlyingPaymentStreamFormulaLength",
+				Tag:  TagUnderlyingPaymentStreamFormulaLength,
+				Type: "LENGTH",
 			},
 		},
 		Major: "5",

@@ -7,7 +7,8 @@ package fix50sp2
 // messages fix uses (add a MsgType to -msgtypes to use another one), without
 // the optional components describing legs, underlyings and derivatives terms,
 // which would generate tens of megabytes of code fix never uses. Sessions
-// tolerate the unknown tags counterparties may still send.
+// tolerate the unknown tags counterparties may still send: the DATA fields
+// among them, whose definitions are all kept, parse whole.
 
 //go:generate go run ../internal/dicttrim -in FIX50SP2.full.xml.bz2 -out FIX50SP2.xml -msgtypes D,8,9,F,G,q,r,S,Z,AI,H,x,y,e,f,g,h,V,W,X,Y,j -drop-components UndInstrmtGrp,UnderlyingInstrument,InstrmtLegGrp,InstrmtLegExecGrp,InstrmtLegSecListGrp,LegQuotGrp,LegQuotStatGrp,SecurityXML,ComplexEvents,SecondaryAssetGrp,DateAdjustment,StreamGrp,ProvisionGrp,AdditionalTermGrp,ProtectionTermGrp,CashSettlTermGrp,PhysicalSettlTermGrp,AssetAttributeGrp,PricingDateTime,MarketDisruption,OptionExercise,ExtraordinaryEventGrp
 //go:generate go tool fix2gen tagvalue --dict FIX50SP2.xml --pkg fix50sp2 --out . --dispatch --bytes

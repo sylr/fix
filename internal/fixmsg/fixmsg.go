@@ -34,8 +34,13 @@ const (
 	tagTargetCompID = 56
 )
 
-// ErrNotSupported is the error Check wraps.
-var ErrNotSupported = errors.Fix
+// ErrNotSupported is the error Check wraps for a message its counterparty
+// would reject.
+var ErrNotSupported = fmt.Errorf("%w: not supported", errors.ErrFix)
+
+// userDefinedTagMin is the first user-defined tag, which
+// dictionary.CheckUserDefinedTags checks rather than CheckUnknownTags.
+const userDefinedTagMin = 5000
 
 // Message returns m as a whole message of BeginString beginString, parsed
 // with d's profile if d is not nil. Its header holds the fields a session
@@ -60,26 +65,28 @@ func Message(m session.Outgoing, beginString string, d *dictionary.Dict) (*fix.M
 // would reject it for, but its enumerated values: a counterparty may accept
 // values beyond its dictionary's.
 func Check(msg *fix.Message, d *dictionary.Dict, checks dictionary.Checks) error {
-	msgType := string(msg.MsgType())
-	version := versionOf(d)
-
-	// What a FIX version lacks, told plainly.
-	mdef := d.Messages[msgType]
-	if mdef == nil {
-		return fmt.Errorf("%w: MsgType %s is not part of %s", ErrNotSupported, msgType, version)
+	if d == nil {
+		return fmt.Errorf("%w: no dictionary to check messages with", errors.ErrFix)
 	}
 
-	if checks&dictionary.CheckUnknownTags != 0 {
-		for _, f := range msg.Fields() {
-			if !d.Defines(msgType, f.Tag) {
-				return fmt.Errorf("%w: %s(%d) is not part of %s's %s", ErrNotSupported, fieldName(d, f.Tag), f.Tag, version, mdef.Name)
-			}
+	msgType := string(msg.MsgType())
+	dict := dictName(d)
+
+	// What the dictionary lacks, told plainly.
+	mdef := d.Messages[msgType]
+	if mdef == nil {
+		return fmt.Errorf("%w: %s does not define MsgType %s", ErrNotSupported, dict, msgType)
+	}
+
+	for _, f := range msg.Fields() {
+		if checks&unknownCheck(f.Tag) != 0 && !d.Defines(msgType, f.Tag) {
+			return fmt.Errorf("%w: %s does not define %s(%d) in %s", ErrNotSupported, dict, fieldName(d, f.Tag), f.Tag, mdef.Name)
 		}
 	}
 
 	for _, f := range mdef.Fields {
 		if f.Required && msg.Get(f.Tag) == nil {
-			return fmt.Errorf("%w: %s's %s requires %s(%d)", ErrNotSupported, version, mdef.Name, fieldName(d, f.Tag), f.Tag)
+			return fmt.Errorf("%w: %s requires %s(%d) in %s", ErrNotSupported, dict, fieldName(d, f.Tag), f.Tag, mdef.Name)
 		}
 	}
 
@@ -87,18 +94,30 @@ func Check(msg *fix.Message, d *dictionary.Dict, checks dictionary.Checks) error
 	// fields at every level, formats...
 	valid, err := withValidEnums(msg, d)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s: replacing enumerated values: %w", errors.ErrFix, mdef.Name, err)
 	}
 
 	if err := d.ValidateWith(valid, checks); err != nil {
-		return fmt.Errorf("%w: %s's %s: %w", ErrNotSupported, version, mdef.Name, err)
+		return fmt.Errorf("%w: %s rejects %s: %w", ErrNotSupported, dict, mdef.Name, err)
 	}
 
 	return nil
 }
 
-// withValidEnums returns msg, its values outside their field's enumeration
-// replaced with one inside, so that validating it judges everything else.
+// unknownCheck returns the check rejecting tag where the message does not
+// define it, as dictionary.Dict.ValidateWith chooses it.
+func unknownCheck(tag int) dictionary.Checks {
+	if tag >= userDefinedTagMin {
+		return dictionary.CheckUserDefinedTags
+	}
+
+	return dictionary.CheckUnknownTags
+}
+
+// withValidEnums returns msg, its non-empty values outside their field's
+// enumeration replaced with one inside, so that validating it judges
+// everything else. Empty values are left for validation to report. MsgType
+// and NUMINGROUP fields are left too: they give the message its structure.
 func withValidEnums(msg *fix.Message, d *dictionary.Dict) (*fix.Message, error) {
 	var body []byte
 	var beginString string
@@ -114,8 +133,8 @@ func withValidEnums(msg *fix.Message, d *dictionary.Dict) (*fix.Message, error) 
 		}
 
 		value := f.Value
-		if def := d.Fields[f.Tag]; def != nil && len(def.Enums) > 0 {
-			if v, ok := validEnum(def, string(value)); !ok {
+		if def := d.Fields[f.Tag]; f.Tag != tagMsgType && def != nil && len(def.Enums) > 0 && def.Type != "NUMINGROUP" {
+			if v, ok := validEnum(def, string(value)); ok {
 				value, changed = []byte(v), true
 			}
 		}
@@ -129,30 +148,42 @@ func withValidEnums(msg *fix.Message, d *dictionary.Dict) (*fix.Message, error) 
 	return parse(beginString, body, d)
 }
 
-// validEnum returns value if def's enumeration holds it, every value of it
-// for fields holding several, else one it holds, and false.
+// validEnum returns value, its non-empty values outside def's enumeration
+// replaced with one inside, and whether it replaced any. A multiple-value
+// field's values are separated by single spaces, as fix2 splits them.
 func validEnum(def *dictionary.FieldDef, value string) (string, bool) {
-	first := slices.Sorted(maps.Keys(def.Enums))[0]
+	valid := func(v string) bool {
+		_, ok := def.Enums[v]
+		return ok || v == ""
+	}
 
-	if !strings.HasPrefix(strings.ToUpper(def.Type), "MULTIPLE") {
-		if _, ok := def.Enums[value]; ok {
-			return value, true
+	if !isMultipleValue(def.Type) {
+		if valid(value) {
+			return value, false
 		}
-		return first, false
+		return slices.Min(slices.Collect(maps.Keys(def.Enums))), true
 	}
 
-	tokens := strings.Fields(value)
-	ok := len(tokens) > 0
-	for i, t := range tokens {
-		if _, in := def.Enums[t]; !in {
-			tokens[i], ok = first, false
+	values := strings.Split(value, " ")
+	changed := false
+	for i, v := range values {
+		if !valid(v) {
+			values[i], changed = slices.Min(slices.Collect(maps.Keys(def.Enums))), true
 		}
 	}
-	if len(tokens) == 0 {
-		return first, false
+
+	return strings.Join(values, " "), changed
+}
+
+// isMultipleValue reports whether a field of type fixType holds values
+// separated by spaces, as fix2's dictionary validation tells them.
+func isMultipleValue(fixType string) bool {
+	switch fixType {
+	case "MULTIPLEVALUESTRING", "MULTIPLECHARVALUE", "MULTIPLESTRINGVALUE":
+		return true
 	}
 
-	return strings.Join(tokens, " "), ok
+	return false
 }
 
 // parse returns the message of BeginString beginString and body, which
@@ -186,6 +217,13 @@ func versionOf(d *dictionary.Dict) string {
 	}
 
 	return version
+}
+
+// dictName names d in errors: the session's dictionary, rather than its
+// FIX version, may lack what the version has, as fix's built-in FIX 5.0 SP2
+// one does what fix does not use.
+func dictName(d *dictionary.Dict) string {
+	return "the session's " + versionOf(d) + " dictionary"
 }
 
 // fieldName names tag as d does, or as FIX 5.0 SP2 does a tag d lacks.

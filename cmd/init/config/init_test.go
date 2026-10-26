@@ -1,32 +1,26 @@
-package init_config
+package initconfig
 
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
-	"text/template"
 
 	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/errors"
 )
 
-func TestTemplate(t *testing.T) {
-	tpl, err := template.ParseFS(templates, "templates/config")
-	if err != nil {
+func TestExecute(t *testing.T) {
+	options := config.GetOptions()
+	old := options.Config
+	t.Cleanup(func() { options.Config = old })
+	options.Config = filepath.Join(t.TempDir(), "sub", "config")
+
+	if err := Execute(nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	path := filepath.Join(t.TempDir(), "config")
-	file, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := tpl.ExecuteTemplate(file, "config", nil); err != nil {
-		t.Fatal(err)
-	}
-	file.Close()
-
-	conf, err := config.ReadYAMLNoAge(path)
+	conf, err := config.ReadYAMLNoAge(options.Config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,9 +33,34 @@ func TestTemplate(t *testing.T) {
 		t.Fatalf("unexpected config: %+v", conf)
 	}
 
-	for _, s := range conf.Sessions {
-		if !s.IsSupported() {
-			t.Errorf("session %s is not a FIX version fix supports", s.Name)
-		}
+	if store := conf.Initiators[0].Store; store.IsMemory() == config.SQLiteStore {
+		t.Errorf("store %q, built with sqlite3: %v", store.Type, config.SQLiteStore)
+	}
+
+	if err := os.WriteFile(options.Config, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Execute(nil, nil); !errors.Is(err, errors.ErrConfigAlreadyExists) {
+		t.Errorf("existing configuration: %v", err)
+	}
+	if b, _ := os.ReadFile(options.Config); string(b) != "keep" {
+		t.Errorf("existing configuration overwritten: %q", b)
+	}
+}
+
+// TestREADME checks that the README's example is the configuration written.
+func TestREADME(t *testing.T) {
+	readme, err := os.ReadFile("../../../README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tpl, err := templates.ReadFile("templates/config")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	example := strings.ReplaceAll(string(tpl), "{{ .Store }}", "sqlite3")
+	if !strings.Contains(string(readme), "```yaml\n"+example+"```\n") {
+		t.Error("the README's example is not templates/config")
 	}
 }

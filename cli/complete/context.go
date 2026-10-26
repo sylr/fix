@@ -1,94 +1,72 @@
 package complete
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"sylr.dev/fix/v2/config"
 )
 
+// Context completes with the names of the contexts of the configuration
+// file.
 func Context(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	options := config.GetOptions()
-	fixConfig := config.GetConfig()
-
-	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
-		*fixConfig = *conf
-	} else {
-		if options.Verbose > 0 {
-			fmt.Fprintf(os.Stdout, "%s\n", err)
-		}
-		return nil, cobra.ShellCompDirectiveError
+	conf, err := config.ReadYAMLNoAge(config.GetOptions().Config)
+	if err != nil {
+		return failed(err)
 	}
 
-	contexts := make([]string, 0, len(fixConfig.Contexts))
-	for _, context := range fixConfig.Contexts {
-		contexts = append(contexts, context.Name)
-	}
-
-	return contexts, cobra.ShellCompDirectiveNoFileComp
+	return names(conf.Contexts), cobra.ShellCompDirectiveNoFileComp
 }
 
+// Acceptor completes with the names of the acceptors of the configuration
+// file.
 func Acceptor(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	options := config.GetOptions()
-	fixConfig := config.GetConfig()
-
-	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
-		*fixConfig = *conf
-	} else {
-		if options.Verbose > 0 {
-			fmt.Fprintf(os.Stdout, "%s\n", err)
-		}
-		return nil, cobra.ShellCompDirectiveError
+	conf, err := config.ReadYAMLNoAge(config.GetOptions().Config)
+	if err != nil {
+		return failed(err)
 	}
 
-	acceptors := make([]string, 0, len(fixConfig.Acceptors))
-	for _, acceptor := range fixConfig.Initiators {
-		acceptors = append(acceptors, acceptor.Name)
-	}
-
-	return acceptors, cobra.ShellCompDirectiveNoFileComp
+	return names(conf.Acceptors), cobra.ShellCompDirectiveNoFileComp
 }
 
+// Initiator completes with the names of the initiators of the
+// configuration file.
 func Initiator(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	options := config.GetOptions()
-	fixConfig := config.GetConfig()
-
-	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
-		*fixConfig = *conf
-	} else {
-		if options.Verbose > 0 {
-			fmt.Fprintf(os.Stdout, "%s\n", err)
-		}
-		return nil, cobra.ShellCompDirectiveError
+	conf, err := config.ReadYAMLNoAge(config.GetOptions().Config)
+	if err != nil {
+		return failed(err)
 	}
 
-	initiators := make([]string, 0, len(fixConfig.Initiators))
-	for _, initiator := range fixConfig.Initiators {
-		initiators = append(initiators, initiator.Name)
-	}
-
-	return initiators, cobra.ShellCompDirectiveNoFileComp
+	return names(conf.Initiators), cobra.ShellCompDirectiveNoFileComp
 }
 
+// Session completes with the names of the sessions of the configuration
+// file.
 func Session(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	options := config.GetOptions()
-	fixConfig := config.GetConfig()
+	conf, err := config.ReadYAMLNoAge(config.GetOptions().Config)
+	if err != nil {
+		return failed(err)
+	}
 
-	if conf, err := config.ReadYAMLNoAge(options.Config); err == nil {
-		*fixConfig = *conf
-	} else {
-		if options.Verbose > 0 {
-			fmt.Fprintf(os.Stdout, "%s\n", err)
+	return names(conf.Sessions), cobra.ShellCompDirectiveNoFileComp
+}
+
+// failed reports err on stderr, where the shell completion shows it.
+func failed(err error) ([]string, cobra.ShellCompDirective) {
+	cobra.CompErrorln(err.Error())
+	return nil, cobra.ShellCompDirectiveError
+}
+
+// names returns the names of items, skipping the null ones.
+func names[T any, P interface {
+	*T
+	config.HasName
+}](items []P) []string {
+	names := make([]string, 0, len(items))
+	for _, item := range items {
+		if item != nil {
+			names = append(names, item.GetName())
 		}
-		return nil, cobra.ShellCompDirectiveError
 	}
 
-	sessions := make([]string, 0, len(fixConfig.Sessions))
-	for _, session := range fixConfig.Sessions {
-		sessions = append(sessions, session.Name)
-	}
-
-	return sessions, cobra.ShellCompDirectiveNoFileComp
+	return names
 }

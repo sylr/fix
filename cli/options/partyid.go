@@ -12,10 +12,10 @@ import (
 	"sylr.dev/fix/v2/dict"
 	"sylr.dev/fix/v2/errors"
 	"sylr.dev/fix/v2/fix50sp2"
-	"sylr.dev/fix/v2/utils"
 )
 
-type PartyIdOptions struct {
+// PartyIDOptions are the flags of the Parties component of a message.
+type PartyIDOptions struct {
 	partyIDs              []string
 	partyIDSources        []string
 	partySubIDs           []string
@@ -25,88 +25,81 @@ type PartyIdOptions struct {
 	copyPartyIDFromConfig bool
 }
 
-func NewPartyIdOptions(command *cobra.Command) *PartyIdOptions {
-	opt := &PartyIdOptions{}
+// NewPartyIDOptions adds the party flags to command.
+func NewPartyIDOptions(command *cobra.Command) *PartyIDOptions {
+	opt := &PartyIDOptions{}
 
-	command.Flags().StringSliceVar(&opt.partyIDs, "party-id", []string{}, "Order party ids")
-	command.Flags().StringSliceVar(&opt.partyIDSources, "party-id-source", []string{}, "Order party id sources")
-	command.Flags().StringSliceVar(&opt.partyRoles, "party-role", []string{}, "Order party roles")
-	command.Flags().StringSliceVar(&opt.partyRoleQualifiers, "party-role-qualifier", []string{}, "Order party role qualifiers")
-	command.Flags().StringSliceVar(&opt.partySubIDs, "party-sub-ids", []string{}, "Order party sub ids (space separated)")
-	command.Flags().StringSliceVar(&opt.partySubIDTypes, "party-sub-id-types", []string{}, "Order party sub id types (space separated)")
-	command.Flags().BoolVar(&opt.copyPartyIDFromConfig, "copy-credentials-fom-config", false, "Copy credentials from config in party id fields")
+	flags := command.Flags()
+	flags.StringSliceVar(&opt.partyIDs, "party-id", []string{}, "Party ids")
+	flags.StringSliceVar(&opt.partyIDSources, "party-id-source", []string{}, "Party id sources, one per --party-id")
+	flags.StringSliceVar(&opt.partyRoles, "party-role", []string{}, "Party roles, one per --party-id")
+	flags.StringSliceVar(&opt.partyRoleQualifiers, "party-role-qualifier", []string{}, "Party role qualifiers, one per --party-id if given")
+	flags.StringSliceVar(&opt.partySubIDs, "party-sub-ids", []string{}, "Party sub ids (space separated), one per --party-id if given")
+	flags.StringSliceVar(&opt.partySubIDTypes, "party-sub-id-types", []string{}, "Party sub id types (space separated), one per --party-sub-ids")
+	flags.BoolVar(&opt.copyPartyIDFromConfig, "copy-credentials-from-config", false, "Add the session's username as a customer account party")
+	flags.BoolVar(&opt.copyPartyIDFromConfig, "copy-credentials-fom-config", false, "Add the session's username as a customer account party")
+	Must(flags.MarkDeprecated("copy-credentials-fom-config", "use --copy-credentials-from-config"))
 
-	command.RegisterFlagCompletionFunc("party-id", cobra.NoFileCompletions)
-	command.RegisterFlagCompletionFunc("party-id-source", complete.OrderPartyIDSource)
-	command.RegisterFlagCompletionFunc("party-sub-ids", cobra.NoFileCompletions)
-	command.RegisterFlagCompletionFunc("party-sub-id-types", complete.OrderPartySubIDTypes)
-	command.RegisterFlagCompletionFunc("party-role", complete.OrderPartyIDRole)
-	command.RegisterFlagCompletionFunc("party-role-qualifier", complete.OrderPartyRoleQualifier)
+	Must(command.RegisterFlagCompletionFunc("party-id", cobra.NoFileCompletions))
+	Must(command.RegisterFlagCompletionFunc("party-id-source", complete.OrderPartyIDSource))
+	Must(command.RegisterFlagCompletionFunc("party-sub-ids", cobra.NoFileCompletions))
+	Must(command.RegisterFlagCompletionFunc("party-sub-id-types", complete.OrderPartySubIDTypes))
+	Must(command.RegisterFlagCompletionFunc("party-role", complete.OrderPartyIDRole))
+	Must(command.RegisterFlagCompletionFunc("party-role-qualifier", complete.OrderPartyRoleQualifier))
 
 	return opt
 }
 
-func (o PartyIdOptions) Validate() error {
-	// Parties
-	if len(o.partyIDs) != len(o.partyIDSources) || len(o.partyIDs) != len(o.partyRoles) || len(o.partyIDSources) != len(o.partyRoles) {
-		return fmt.Errorf("%v: you must provide the same number of --party-id, --party-id-source, --party-sub-id and --party-role", errors.OptionsInconsistentValues)
+// Validate checks the party flags are consistent and their values known.
+func (o PartyIDOptions) Validate() error {
+	if len(o.partyIDs) != len(o.partyIDSources) || len(o.partyIDs) != len(o.partyRoles) {
+		return fmt.Errorf("%w: you must provide the same number of --party-id, --party-id-source and --party-role", errors.ErrOptionsInconsistentValues)
 	}
 
 	if len(o.partyRoleQualifiers) > 0 && len(o.partyRoleQualifiers) != len(o.partyIDs) {
-		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-role-qualifier (%d != %d), %#v", errors.OptionsInconsistentValues, len(o.partyIDs), len(o.partyRoleQualifiers), o.partyRoleQualifiers)
+		return fmt.Errorf("%w: you must provide the same number of --party-id and --party-role-qualifier (%d != %d)", errors.ErrOptionsInconsistentValues, len(o.partyIDs), len(o.partyRoleQualifiers))
 	}
 
 	if len(o.partySubIDs) > 0 && len(o.partySubIDs) != len(o.partyIDs) {
-		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-sub-ids", errors.OptionsInconsistentValues)
+		return fmt.Errorf("%w: you must provide the same number of --party-id and --party-sub-ids", errors.ErrOptionsInconsistentValues)
 	}
 
-	if len(o.partySubIDTypes) > 0 && len(o.partySubIDTypes) != len(o.partyIDs) {
-		return fmt.Errorf("%v: you must provide the same number of --party-id and --party-sub-id-types", errors.OptionsInconsistentValues)
+	if len(o.partySubIDTypes) > 0 && len(o.partySubIDs) == 0 {
+		return fmt.Errorf("%w: --party-sub-id-types needs --party-sub-ids", errors.ErrOptions)
 	}
 
-	sources := utils.PrettyOptionValues(dict.PartyIDSources)
-	for k := range o.partyIDSources {
-		if utils.Search(sources, strings.ToLower(o.partyIDSources[k])) < 0 {
-			return fmt.Errorf("%w: `%s`", errors.OptionOrderIDSourceUnknown, o.partyIDSources[k])
+	if len(o.partySubIDTypes) > 0 && len(o.partySubIDTypes) != len(o.partySubIDs) {
+		return fmt.Errorf("%w: you must provide the same number of --party-sub-ids and --party-sub-id-types", errors.ErrOptionsInconsistentValues)
+	}
+
+	for _, v := range o.partyIDSources {
+		if _, ok := Lookup(dict.PartyIDSources, v); !ok {
+			return fmt.Errorf("%w: `%s`", errors.ErrOptionOrderIDSourceUnknown, v)
 		}
 	}
 
-	roles := utils.PrettyOptionValues(dict.PartyRoles)
-	for k := range o.partyRoles {
-		if utils.Search(roles, strings.ToLower(o.partyRoles[k])) < 0 {
-			return fmt.Errorf("%w: `%s`", errors.OptionOrderRoleUnknown, o.partyRoles[k])
+	for _, v := range o.partyRoles {
+		if _, ok := Lookup(dict.PartyRoles, v); !ok {
+			return fmt.Errorf("%w: `%s`", errors.ErrOptionOrderRoleUnknown, v)
 		}
 	}
 
-	roleQualifiers := utils.PrettyOptionValues(dict.PartyRoleQualifiers)
-	for k := range o.partyRoleQualifiers {
-		if utils.Search(roleQualifiers, strings.ToLower(o.partyRoleQualifiers[k])) < 0 {
-			return fmt.Errorf("%w: `%s`", errors.OptionOrderRoleQualifierUnknown, o.partyRoleQualifiers[k])
+	for _, v := range o.partyRoleQualifiers {
+		if _, ok := Lookup(dict.PartyRoleQualifiers, v); !ok {
+			return fmt.Errorf("%w: `%s`", errors.ErrOptionOrderRoleQualifierUnknown, v)
 		}
 	}
 
 	// Sub Parties
-	partySubIDTypes := utils.PrettyOptionValues(dict.PartySubIDTypes)
-	for k := range o.partySubIDs {
-		var subIDs, subIDTypes []string
-
-		if len(o.partySubIDs) > 0 {
-			subIDs = strings.Split(o.partySubIDs[k], " ")
+	for k, types := range o.partySubIDTypes {
+		subIDTypes := strings.Split(types, " ")
+		if len(subIDTypes) != len(strings.Split(o.partySubIDs[k], " ")) {
+			return fmt.Errorf("%w: %s occurrence of --party-sub-ids and --party-sub-id-types do not have same number of elements (space separated)", errors.ErrOptionsInconsistentValues, humanize.Ordinal(k+1))
 		}
 
-		if len(o.partySubIDTypes) > 0 {
-			subIDTypes = strings.Split(o.partySubIDTypes[k], " ")
-		}
-
-		if len(subIDs) > 0 && len(subIDTypes) > 0 && len(subIDs) != len(subIDTypes) {
-			return fmt.Errorf("%v: %s occurence of --party-sub-ids and --party-sub-id-types do not have same number of elements (space separated)", errors.OptionsInconsistentValues, humanize.Ordinal(k))
-		}
-
-		if len(subIDTypes) > 0 {
-			for kk := range subIDTypes {
-				if utils.Search(partySubIDTypes, strings.ToLower(subIDTypes[kk])) < 0 {
-					return fmt.Errorf("%w: `%s`", errors.OptionPartySubIDTypeUnknown, subIDTypes[kk])
-				}
+		for _, v := range subIDTypes {
+			if _, ok := Lookup(dict.PartySubIDTypes, v); !ok {
+				return fmt.Errorf("%w: `%s`", errors.ErrOptionPartySubIDTypeUnknown, v)
 			}
 		}
 	}
@@ -114,42 +107,39 @@ func (o PartyIdOptions) Validate() error {
 	return nil
 }
 
-func (o PartyIdOptions) PartyEntries(session *config.Session) []*fix50sp2.NoPartyIDsEntryBuilder {
+// PartyEntries returns the NoPartyIDs entries of the flags, session telling
+// the username --copy-credentials-from-config adds.
+func (o PartyIDOptions) PartyEntries(session *config.Session) []*fix50sp2.NoPartyIDsEntryBuilder {
 	entries := make([]*fix50sp2.NoPartyIDsEntryBuilder, 0, len(o.partyIDs)+1)
 
 	for i := range o.partyIDs {
+		source, _ := Lookup(dict.PartyIDSources, o.partyIDSources[i])
+		role, _ := Lookup(dict.PartyRoles, o.partyRoles[i])
 		party := fix50sp2.NewNoPartyIDsEntry().
 			SetPartyID(o.partyIDs[i]).
-			SetPartyIDSource(dict.PartyIDSources[strings.ToUpper(o.partyIDSources[i])]).
-			SetPartyRole(dict.PartyRoles[strings.ToUpper(o.partyRoles[i])])
+			SetPartyIDSource(source).
+			SetPartyRole(role)
 
-		// Role Qualifier
 		if len(o.partyRoleQualifiers) > 0 && len(o.partyRoleQualifiers[i]) > 0 {
-			party.SetPartyRoleQualifier(dict.PartyRoleQualifiers[strings.ToUpper(o.partyRoleQualifiers[i])])
+			qualifier, _ := Lookup(dict.PartyRoleQualifiers, o.partyRoleQualifiers[i])
+			party.SetPartyRoleQualifier(qualifier)
 		}
 
-		if len(o.partySubIDs) == len(o.partyIDs) || len(o.partySubIDTypes) == len(o.partyIDs) {
-			var partySubIDs, partySubIDTypes []string
+		if len(o.partySubIDs) > 0 {
+			subIDs := strings.Split(o.partySubIDs[i], " ")
 
-			if len(o.partySubIDs) > 0 {
-				partySubIDs = strings.Split(o.partySubIDs[i], " ")
-			}
-
+			var subIDTypes []string
 			if len(o.partySubIDTypes) > 0 {
-				partySubIDTypes = strings.Split(o.partySubIDTypes[i], " ")
+				subIDTypes = strings.Split(o.partySubIDTypes[i], " ")
 			}
 
-			if len(partySubIDs) > 0 || len(partySubIDTypes) > 0 {
-				for k := range partySubIDs {
-					subID := fix50sp2.NewNoPartySubIDsEntry()
-					if len(partySubIDs) > 0 {
-						subID.SetPartySubID(partySubIDs[k])
-					}
-					if len(partySubIDTypes) > 0 {
-						subID.SetPartySubIDType(dict.PartySubIDTypes[strings.ToUpper(partySubIDTypes[k])])
-					}
-					party.AddNoPartySubIDsEntry(subID)
+			for k := range subIDs {
+				subID := fix50sp2.NewNoPartySubIDsEntry().SetPartySubID(subIDs[k])
+				if len(subIDTypes) > 0 {
+					subIDType, _ := Lookup(dict.PartySubIDTypes, subIDTypes[k])
+					subID.SetPartySubIDType(subIDType)
 				}
+				party.AddNoPartySubIDsEntry(subID)
 			}
 		}
 

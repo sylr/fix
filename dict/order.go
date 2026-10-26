@@ -51,7 +51,7 @@ func OrderSideStringToEnum(side string) (fix50sp2.Side, error) {
 		return e, nil
 	}
 
-	return "", fmt.Errorf("unkown order side")
+	return "", fmt.Errorf("unknown order side")
 }
 
 var OrderTypes = map[string]fix50sp2.OrdType{
@@ -114,7 +114,7 @@ func OrderTypeStringToEnum(order string) (fix50sp2.OrdType, error) {
 		return e, nil
 	}
 
-	return "", fmt.Errorf("unkown order type")
+	return "", fmt.Errorf("unknown order type")
 }
 
 var OrderTimeInForces = map[string]fix50sp2.TimeInForce{
@@ -136,7 +136,7 @@ func OrderTimeInForceStringToEnum(t string) (fix50sp2.TimeInForce, error) {
 		return e, nil
 	}
 
-	return "", fmt.Errorf("unkown time in force")
+	return "", fmt.Errorf("unknown time in force")
 }
 
 var OrderOriginations = map[string]fix50sp2.OrderOrigination{

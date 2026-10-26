@@ -11,7 +11,6 @@ import (
 
 	"sylr.dev/fix/v2/errors"
 	"sylr.dev/fix/v2/fix50sp2"
-	"sylr.dev/fix/v2/fixt11"
 )
 
 func parse(t *testing.T, b interface{ Build() []byte }) *fix.Message {
@@ -101,17 +100,5 @@ func TestRequestHandlerRejects(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "UnknownSymbol") || !strings.Contains(err.Error(), "no such symbol") {
 		t.Errorf("err = %v, want reason and text", err)
-	}
-
-	sessionReject := fixt11.BuildReject(session.FIXT11).
-		SetRefSeqNum(2).
-		SetText("invalid tag")
-
-	err = h.Handle(parse(t, sessionReject))
-	if !errors.Is(err, ErrRejected) {
-		t.Fatalf("err = %v, want %v", err, ErrRejected)
-	}
-	if !strings.Contains(err.Error(), "invalid tag") {
-		t.Errorf("err = %v, want text", err)
 	}
 }

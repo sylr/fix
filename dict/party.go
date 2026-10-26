@@ -71,7 +71,7 @@ var PartyRoles = map[string]fix50sp2.PartyRole{
 	"CONTRA_INVESTMENT_DECISION_MAKER":            fix50sp2.PartyRoleContraInvestmentDecisionMaker,
 	"ORDER_ORIGINATION_FIRM":                      fix50sp2.PartyRoleOrderOriginationFirm,
 	"GIVEUP_CLEARING_FIRM":                        fix50sp2.PartyRoleGiveupClearingFirm,
-	"CORRESPONDANT_CLEARING_FIRM":                 fix50sp2.PartyRoleCorrespondantClearingFirm,
+	"CORRESPONDANT_CLEARING_FIRM":                 fix50sp2.PartyRoleCorrespondantClearingFirm, //nolint:misspell // FIX spells it so.
 	"EXECUTING_SYSTEM":                            fix50sp2.PartyRoleExecutingSystem,
 	"CONTRA_FIRM":                                 fix50sp2.PartyRoleContraFirm,
 	"CONTRA_CLEARING_FIRM":                        fix50sp2.PartyRoleContraClearingFirm,

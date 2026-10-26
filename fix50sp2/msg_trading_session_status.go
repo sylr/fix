@@ -1259,17 +1259,17 @@ func (m *TradingSessionStatus) TransactTime() (time.Time, bool, error) {
 func tradingSessionStatus_unknown(tag int) bool {
 	switch tag {
 	case
-		8, 9, 10, TagSecurityIDSource,
+		8, TagBodyLength, 10, TagSecurityIDSource,
 		34, TagMsgType, 43, TagSecurityID,
 		49, 50, 52, TagSymbol,
 		56, 57, TagText, TagTransactTime,
-		TagSymbolSfx, TagTradeDate, 89, 90,
-		91, 93, 97, TagIssuer,
+		TagSymbolSfx, TagTradeDate, TagSignature, TagSecureDataLen,
+		TagSecureData, TagSignatureLength, 97, TagIssuer,
 		TagSecurityDesc, 115, 116, 122,
 		128, 129, 142, 143,
 		144, 145, TagSecurityType, TagMaturityMonthYear,
 		TagPutOrCall, TagStrikePrice, TagOptAttribute, TagSecurityExchange,
-		212, 213, TagCouponRate, TagCouponPaymentDate,
+		TagXmlDataLen, TagXmlData, TagCouponRate, TagCouponPaymentDate,
 		TagIssueDate, TagRepurchaseTerm, TagRepurchaseRate, TagFactor,
 		TagContractMultiplier, TagRepoCollateralSecurityType, TagRedemptionDate, TagCreditRating,
 		TagUnsolicitedIndicator, TagTradSesReqID, TagTradingSessionID, TagTradSesMethod,

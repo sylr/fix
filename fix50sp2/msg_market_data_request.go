@@ -148,17 +148,17 @@ func (m *MarketDataRequest) FastMarketIndicator() (bool, bool) {
 func marketDataRequest_unknown(tag int) bool {
 	switch tag {
 	case
-		8, 9, 10, TagCurrency,
+		8, TagBodyLength, 10, TagCurrency,
 		TagSecurityIDSource, 34, TagMsgType, 43,
 		TagSecurityID, 49, 50, 52,
 		TagSymbol, 56, 57, TagSettlType,
-		TagSettlDate, TagSymbolSfx, 89, 90,
-		91, 93, 97, TagIssuer,
+		TagSettlDate, TagSymbolSfx, TagSignature, TagSecureDataLen,
+		TagSecureData, TagSignatureLength, 97, TagIssuer,
 		TagSecurityDesc, 115, 116, 122,
 		128, 129, 142, 143,
 		144, 145, TagNoRelatedSym, TagSecurityType,
 		TagMaturityMonthYear, TagPutOrCall, TagStrikePrice, TagOptAttribute,
-		TagSecurityExchange, 212, 213, TagSpread,
+		TagSecurityExchange, TagXmlDataLen, TagXmlData, TagSpread,
 		TagBenchmarkCurveCurrency, TagBenchmarkCurveName, TagBenchmarkCurvePoint, TagCouponRate,
 		TagCouponPaymentDate, TagIssueDate, TagRepurchaseTerm, TagRepurchaseRate,
 		TagFactor, TagContractMultiplier, TagRepoCollateralSecurityType, TagRedemptionDate,

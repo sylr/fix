@@ -1435,19 +1435,19 @@ func (m *OrderCancelRequest) OrderRequestID() (int, bool, error) {
 func orderCancelRequest_unknown(tag int) bool {
 	switch tag {
 	case
-		TagAccount, 8, 9, 10,
+		TagAccount, 8, TagBodyLength, 10,
 		TagClOrdID, TagSecurityIDSource, 34, TagMsgType,
 		TagOrderID, TagOrderQty, TagOrigClOrdID, 43,
 		TagSecurityID, 49, 50, 52,
 		TagSide, TagSymbol, 56, 57,
 		TagText, TagTransactTime, TagSymbolSfx, TagListID,
-		89, 90, 91, 93,
+		TagSignature, TagSecureDataLen, TagSecureData, TagSignatureLength,
 		97, TagExDestination, TagIssuer, TagSecurityDesc,
 		115, 116, 122, 128,
 		129, 142, 143, 144,
 		145, TagCashOrderQty, TagSecurityType, TagMaturityMonthYear,
 		TagPutOrCall, TagStrikePrice, TagOptAttribute, TagSecurityExchange,
-		212, 213, TagCouponRate, TagCouponPaymentDate,
+		TagXmlDataLen, TagXmlData, TagCouponRate, TagCouponPaymentDate,
 		TagIssueDate, TagRepurchaseTerm, TagRepurchaseRate, TagFactor,
 		TagContractMultiplier, TagRepoCollateralSecurityType, TagRedemptionDate, TagCreditRating,
 		347, TagEncodedIssuerLen, TagEncodedIssuer, TagEncodedSecurityDescLen,
