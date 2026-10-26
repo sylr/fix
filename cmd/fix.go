@@ -2,42 +2,51 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	"sylr.dev/fix/cmd/amend"
-	"sylr.dev/fix/cmd/cancel"
-	initcmd "sylr.dev/fix/cmd/init"
-	"sylr.dev/fix/cmd/initiator"
-	"sylr.dev/fix/cmd/list"
-	"sylr.dev/fix/cmd/marketdata"
-	"sylr.dev/fix/cmd/new"
-	"sylr.dev/fix/cmd/probe"
-	"sylr.dev/fix/cmd/status"
-	"sylr.dev/fix/config"
+	"sylr.dev/fix/v2/cmd/amend"
+	"sylr.dev/fix/v2/cmd/cancel"
+	initcmd "sylr.dev/fix/v2/cmd/init"
+	"sylr.dev/fix/v2/cmd/initiator"
+	"sylr.dev/fix/v2/cmd/list"
+	"sylr.dev/fix/v2/cmd/marketdata"
+	"sylr.dev/fix/v2/cmd/new"
+	"sylr.dev/fix/v2/cmd/probe"
+	"sylr.dev/fix/v2/cmd/status"
+	"sylr.dev/fix/v2/config"
 )
 
 var Version = "dev"
 
-// rootCmd represents the base command when called without any subcommands
+// FixCmd is the root command.
 var FixCmd = &cobra.Command{
 	Use:          "fix",
 	SilenceUsage: true,
 	Version:      Version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		InitHTTP(cmd, args)
-		return InitLogger(cmd, args)
+		if err := InitLogger(cmd, args); err != nil {
+			return err
+		}
+		return InitHTTP(cmd, args)
 	},
 }
 
 func init() {
+	// Every command's PersistentPreRunE runs, the root's first: the logger
+	// is set up, then the parents load the configuration, before the
+	// commands validate their options.
+	cobra.EnableTraverseRunHooks = true
+
 	options := config.GetOptions()
 
 	FixCmd.AddCommand(amend.AmendCmd)
@@ -50,9 +59,10 @@ func init() {
 	FixCmd.AddCommand(probe.ProbeCmd)
 	FixCmd.AddCommand(status.StatusCmd)
 
-	configPath := filepath.Join("$HOME", ".fix", "config")
+	home, _ := os.UserHomeDir()
+	configPath := filepath.Join(home, ".fix", "config")
 
-	FixCmd.PersistentFlags().StringVar(&options.Config, "config", os.ExpandEnv(configPath), "Config file")
+	FixCmd.PersistentFlags().StringVar(&options.Config, "config", configPath, "Config file")
 	FixCmd.PersistentFlags().CountVarP(&options.Verbose, "verbose", "v", "Increase verbosity")
 	FixCmd.PersistentFlags().BoolVar(&options.LogCaller, "log-caller", false, "Add caller info to log lines")
 	FixCmd.PersistentFlags().BoolVar(&options.Interactive, "interactive", true, "Enable interactive mode")
@@ -63,22 +73,17 @@ func init() {
 	FixCmd.PersistentFlags().IntVar(&options.HTTPPort, "port", 8080, "HTTP port")
 }
 
+// ANSI colours of the log levels.
 const (
-	colorBlack = iota + 30
-	colorRed
-	colorGreen
-	colorYellow
-	colorBlue
-	colorMagenta
-	colorCyan
-	colorWhite
-
-	colorBold     = 1
-	colorDarkGray = 90
+	colorRed     = 31
+	colorGreen   = 32
+	colorYellow  = 33
+	colorMagenta = 35
+	colorCyan    = 36
 )
 
 func consoleDefaultFormatMessage() zerolog.Formatter {
-	return func(i interface{}) string {
+	return func(i any) string {
 		if i == nil || i == "" {
 			return ""
 		}
@@ -87,6 +92,8 @@ func consoleDefaultFormatMessage() zerolog.Formatter {
 	}
 }
 
+// InitLogger sets up the logger, which writes to stderr, apart from the
+// commands' output.
 func InitLogger(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
 	zerolog.TimeFieldFormat = time.RFC3339Nano
@@ -100,7 +107,7 @@ func InitLogger(cmd *cobra.Command, args []string) error {
 		zerolog.PanicLevel: colorRed,
 	}
 	consoleWriter := zerolog.ConsoleWriter{
-		Out:           os.Stdout,
+		Out:           os.Stderr,
 		TimeFormat:    "Jan 2 15:04:05.000-0700",
 		FormatMessage: consoleDefaultFormatMessage(),
 	}
@@ -114,6 +121,7 @@ func InitLogger(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// InitHTTP serves the metrics and pprof endpoints, if enabled, on --port.
 func InitHTTP(cmd *cobra.Command, args []string) error {
 	options := config.GetOptions()
 
@@ -134,7 +142,17 @@ func InitHTTP(cmd *cobra.Command, args []string) error {
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	}
 
-	go http.ListenAndServe(fmt.Sprintf(":%d", options.HTTPPort), mux)
+	listener, err := net.Listen("tcp", net.JoinHostPort("", strconv.Itoa(options.HTTPPort)))
+	if err != nil {
+		return fmt.Errorf("metrics and pprof endpoints: %w", err)
+	}
+
+	server := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	go func() {
+		if err := server.Serve(listener); err != nil {
+			config.GetLogger().Error().Err(err).Msg("Metrics and pprof endpoints stopped")
+		}
+	}()
 
 	return nil
 }

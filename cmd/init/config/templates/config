@@ -10,34 +10,32 @@ contexts:
   sessions: [server]
 acceptors:
 - name: server
-  SocketAcceptHost: 127.0.0.1
-  SocketAcceptPort: 5005
-  SQLStoreDriver: sqlite3
+  address: 127.0.0.1:5005
+  # tls: {certFile: server.pem, keyFile: server.key, caFile: ca.pem, clientAuth: true}
+  store:
+    type: {{ .Store }}
 initiators:
 - name: localhost
-  SocketConnectHost: 127.0.0.1
-  SocketConnectPort: 5005
-  SocketServerName: localhost
-  SocketUseSSL: false
-  SocketInsecureSkipVerify: false
-  SocketTimeout: 5s
-  SQLStoreDriver: sqlite3
+  addresses: [127.0.0.1:5005]  # tried in turn
+  dialTimeout: 5s
+  # tls: {serverName: localhost, caFile: ca.pem}
+  store:
+    type: {{ .Store }}
+    # path: ~/.fix/initiator.db
 sessions:
 - name: localhost
-  HeartBtInt: 5
-  SenderCompID: smallcorp
-  SenderSubID: john
-  TargetCompID: BIGCORP
-  BeginString: FIXT.1.1
-  DefaultApplVerID: FIX.5.0SP2
-  TransportDataDictionary: {{ .ConfigDir }}/FIXT11.xml
-  AppDataDictionary: {{ .ConfigDir }}/FIX50SP2.xml
+  beginString: FIXT.1.1
+  defaultApplVerID: FIX.5.0SP2
+  senderCompID: smallcorp
+  senderSubID: john
+  targetCompID: BIGCORP
+  heartBtInt: 5s
+  # username: john
+  # password: secret
 - name: server
-  HeartBtInt: 5
-  SenderCompID: BIGCORP
-  TargetCompID: smallcorp
-  TargetSubID: john
-  BeginString: FIXT.1.1
-  DefaultApplVerID: FIX.5.0SP2
-  TransportDataDictionary: {{ .ConfigDir }}/FIXT11.xml
-  AppDataDictionary: {{ .ConfigDir }}/FIX50SP2.xml
+  beginString: FIXT.1.1
+  defaultApplVerID: FIX.5.0SP2
+  senderCompID: BIGCORP
+  targetCompID: smallcorp
+  targetSubID: john
+  heartBtInt: 5s

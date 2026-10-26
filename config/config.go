@@ -2,21 +2,13 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strconv"
+	"slices"
 	"time"
 
-	"github.com/quickfixgo/quickfix"
-	qconfig "github.com/quickfixgo/quickfix/config"
-	"github.com/quickfixgo/quickfix/datadictionary"
-
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/errors"
 )
 
 var (
-	fixDict = make(map[string]*datadictionary.DataDictionary)
 	options = cliOptions{}
 	config  = fixConfig{}
 )
@@ -29,6 +21,23 @@ func GetConfig() *fixConfig {
 	return &config
 }
 
+// Load reads and validates the configuration file the options name, and
+// makes it the one GetConfig returns.
+func Load() error {
+	conf, err := ReadYAML(options.Config, options.Interactive)
+	if err != nil {
+		return fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	if err := conf.Validate(); err != nil {
+		return err
+	}
+
+	config = *conf
+
+	return nil
+}
+
 func GetCurrentContext() (*Context, error) {
 	currentContext := config.CurrentContext
 
@@ -37,10 +46,33 @@ func GetCurrentContext() (*Context, error) {
 	}
 
 	if len(currentContext) == 0 {
-		return nil, fmt.Errorf("%w:no current-context set and no --context given", errors.Config)
+		return nil, fmt.Errorf("%w: no current-context set and no --context given", errors.ErrConfig)
 	}
 
 	return GetContext(currentContext)
+}
+
+// CurrentSession returns the session of the current context, which must hold
+// one.
+func CurrentSession() (*Session, error) {
+	cfgContext, err := GetCurrentContext()
+	if err != nil {
+		return nil, err
+	}
+
+	sessions, err := cfgContext.GetSessions()
+	if err != nil {
+		return nil, err
+	}
+
+	switch len(sessions) {
+	case 0:
+		return nil, errors.ErrConfigContextNoSession
+	case 1:
+		return sessions[0], nil
+	default:
+		return nil, errors.ErrConfigContextMultipleSessions
+	}
 }
 
 func GetContext(name string) (*Context, error) {
@@ -50,7 +82,7 @@ func GetContext(name string) (*Context, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigContextNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigContextNotFound, name)
 }
 
 func GetContexts() []*Context {
@@ -64,47 +96,43 @@ func GetAcceptor(name string) (*Acceptor, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigAcceptorNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigAcceptorNotFound, name)
 }
 
 func GetInitiator(name string) (*Initiator, error) {
-	if len(name) == 0 {
-		panic("empty initiator name")
-	}
-
 	for k, initiator := range config.Initiators {
 		if initiator.Name == name {
 			return config.Initiators[k], nil
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigInitiatorNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigInitiatorNotFound, name)
 }
 
 func GetSession(name string) (*Session, error) {
-	for k, acceptor := range config.Sessions {
-		if acceptor.Name == name {
+	for k, session := range config.Sessions {
+		if session.Name == name {
 			return config.Sessions[k], nil
 		}
 	}
 
-	return nil, fmt.Errorf("%w: %s", errors.ConfigSessionNotFound, name)
+	return nil, fmt.Errorf("%w: %s", errors.ErrConfigSessionNotFound, name)
 }
 
 type cliOptions struct {
-	Config          string
-	Context         string
-	Session         string
-	Acceptor        string
-	Initiator       string
-	Timeout         time.Duration
-	Verbose         int
-	Interactive     bool
-	LogCaller       bool
-	QuickFixLogging bool
-	Metrics         bool
-	PProf           bool
-	HTTPPort        int
+	Config      string
+	Context     string
+	Session     string
+	Acceptor    string
+	Initiator   string
+	Timeout     time.Duration
+	Verbose     int
+	Interactive bool
+	LogCaller   bool
+	FixLogging  bool
+	Metrics     bool
+	PProf       bool
+	HTTPPort    int
 }
 
 type fixConfig struct {
@@ -116,19 +144,42 @@ type fixConfig struct {
 }
 
 func (f *fixConfig) Validate() error {
-	err := validateNames(f.Contexts, errors.ConfigDuplicateContextName)
+	err := validateNames("context", f.Contexts, errors.ErrConfigDuplicateContextName)
 	if err != nil {
 		return err
 	}
 
-	err = validateNames(f.Sessions, errors.ConfigDuplicateSessionName)
+	err = validateNames("session", f.Sessions, errors.ErrConfigDuplicateSessionName)
 	if err != nil {
 		return err
 	}
 
-	err = validateNames(f.Initiators, errors.ConfigDuplicateInitiatorName)
+	err = validateNames("initiator", f.Initiators, errors.ErrConfigDuplicateInitiatorName)
 	if err != nil {
 		return err
+	}
+
+	err = validateNames("acceptor", f.Acceptors, errors.ErrConfigDuplicateAcceptorName)
+	if err != nil {
+		return err
+	}
+
+	for _, initiator := range f.Initiators {
+		if err := initiator.validate(); err != nil {
+			return fmt.Errorf("%w: initiator %s: %w", errors.ErrConfig, initiator.Name, err)
+		}
+	}
+
+	for _, acceptor := range f.Acceptors {
+		if err := acceptor.validate(); err != nil {
+			return fmt.Errorf("%w: acceptor %s: %w", errors.ErrConfig, acceptor.Name, err)
+		}
+	}
+
+	for _, session := range f.Sessions {
+		if err := session.validate(); err != nil {
+			return fmt.Errorf("%w: session %s: %w", errors.ErrConfig, session.Name, err)
+		}
 	}
 
 	return nil
@@ -138,15 +189,25 @@ type HasName interface {
 	GetName() string
 }
 
-func validateNames[T HasName](slice []T, err error) error {
+// validateNames checks that the items of kind are set, and named uniquely.
+func validateNames[T interface {
+	*E
+	HasName
+}, E any](kind string, slice []T, err error) error {
 	names := make([]string, 0, len(slice))
 	for _, item := range slice {
-		name := item.GetName()
-		if utils.Search(names, name) != -1 {
-			return fmt.Errorf("%w: %s", err, name)
-		} else {
-			names = append(names, name)
+		if item == nil {
+			return fmt.Errorf("%w: empty %s", errors.ErrConfig, kind)
 		}
+
+		name := item.GetName()
+		if name == "" {
+			return fmt.Errorf("%w: %s without a name", errors.ErrConfig, kind)
+		}
+		if slices.Contains(names, name) {
+			return fmt.Errorf("%w: %s", err, name)
+		}
+		names = append(names, name)
 	}
 
 	return nil
@@ -163,142 +224,25 @@ func (c *Context) GetName() string {
 	return c.Name
 }
 
-type SQLStoreConfig interface {
-	GetSQLStoreDriver() string
-	GetSQLStoreDataSourceName() string
-}
-
-type common struct {
-	Name                     string        `yaml:"name"`
-	SocketUseSSL             bool          `yaml:"SocketUseSSL"`
-	SocketInsecureSkipVerify bool          `yaml:"SocketInsecureSkipVerify"`
-	SocketPrivateKeyFile     string        `yaml:"SocketPrivateKeyFile"`
-	SocketCertificateFile    string        `yaml:"SocketCertificateFile"`
-	SocketCAFile             string        `yaml:"SocketCAFile"`
-	SocketTimeout            time.Duration `yaml:"SocketTimeout"`
-	SQLStoreDriver           string        `yaml:"SQLStoreDriver"`
-	SQLStoreDataSourceName   string        `yaml:"SQLStoreDataSourceName"`
-	RejectInvalidMessage     *bool         `yaml:"RejectInvalidMessage,omitempty"`
-	LogLimit                 int           `yaml:"LogLimit"`
-}
-
-func (c *common) GetName() string {
-	return c.Name
-}
-
-func (c *common) GetSQLStoreDriver() string {
-	return c.SQLStoreDriver
-}
-
-func (c *common) GetSQLStoreDataSourceName() string {
-	return c.SQLStoreDataSourceName
-}
-
-func (c *common) setQuickFixGlobalSettings(globalSettings *quickfix.SessionSettings, session *quickfix.SessionSettings) {
-	session.Set(qconfig.SocketUseSSL, FixBoolString(c.SocketUseSSL))
-	session.Set(qconfig.SocketInsecureSkipVerify, FixBoolString(c.SocketInsecureSkipVerify))
-
-	if c.RejectInvalidMessage != nil {
-		session.Set(qconfig.RejectInvalidMessage, FixBoolString(*c.RejectInvalidMessage))
-	}
-
-	if len(c.SQLStoreDriver) > 0 {
-		globalSettings.Set(qconfig.SQLStoreDriver, c.SQLStoreDriver)
-	}
-
-	if len(c.SQLStoreDataSourceName) > 0 {
-		globalSettings.Set(qconfig.SQLStoreDataSourceName, c.SQLStoreDataSourceName)
-	}
-
-	if c.LogLimit > 0 {
-		globalSettings.Set("LogLimit", FixIntString(c.LogLimit))
-	}
-
-	if len(c.SocketPrivateKeyFile) != 0 {
-		session.Set(qconfig.SocketPrivateKeyFile, c.SocketPrivateKeyFile)
-	}
-	if len(c.SocketCertificateFile) != 0 {
-		session.Set(qconfig.SocketCertificateFile, c.SocketCertificateFile)
-	}
-	if len(c.SocketCAFile) != 0 {
-		session.Set(qconfig.SocketCAFile, c.SocketCAFile)
-	}
-
-	if options.Timeout != time.Duration(0) {
-		session.Set(qconfig.SocketTimeout, options.Timeout.String())
-	} else if c.SocketTimeout != time.Duration(0) {
-		session.Set(qconfig.SocketTimeout, c.SocketTimeout.String())
-	} else {
-		session.Set(qconfig.SocketTimeout, "5s")
-	}
-}
-
-type Acceptor struct {
-	common `yaml:",inline"`
-
-	SocketAcceptHost string `yaml:"SocketAcceptHost"`
-	SocketAcceptPort int    `yaml:"SocketAcceptPort"`
-	UseTCPProxy      string `yaml:"UseTCPProxy"`
-}
-
-func (a *Acceptor) GetSQLStoreDriver() string {
-	return a.common.GetSQLStoreDriver()
-}
-
-func (a *Acceptor) GetSQLStoreDataSourceName() string {
-	return a.common.GetSQLStoreDataSourceName()
-}
-
-type Initiator struct {
-	common `yaml:",inline"`
-
-	SocketConnectHost string `yaml:"SocketConnectHost"`
-	SocketConnectPort int    `yaml:"SocketConnectPort"`
-	SocketServerName  string `yaml:"SocketServerName"`
-}
-
-type Session struct {
-	Name                    string `yaml:"name"`
-	BeginString             string `yaml:"BeginString"`
-	DefaultApplVerID        string `yaml:"DefaultApplVerID"`
-	HeartBtInt              int    `yaml:"HeartBtInt"`
-	SenderCompID            string `yaml:"SenderCompID"`
-	SenderSubID             string `yaml:"SenderSubID"`
-	SenderLocationID        string `yaml:"SenderLocationID"`
-	TargetCompID            string `yaml:"TargetCompID"`
-	TargetSubID             string `yaml:"TargetSubID"`
-	TargetLocationID        string `yaml:"TargetLocationID"`
-	SessionQualifier        string `yaml:"SessionQualifier"`
-	Username                string `yaml:"Username"`
-	Password                string `yaml:"Password"`
-	StartTime               string `yaml:"StartTime"`
-	EndTime                 string `yaml:"EndTime"`
-	StartDay                string `yaml:"StartDay"`
-	EndDay                  string `yaml:"EndDay"`
-	TimeZone                string `yaml:"TimeZone"`
-	TransportDataDictionary string `yaml:"TransportDataDictionary"`
-	AppDataDictionary       string `yaml:"AppDataDictionary"`
-	ResetOnLogon            bool   `yaml:"ResetOnLogon"`
-	ResetOnLogout           bool   `yaml:"ResetOnLogout"`
-	ResetOnDisconnect       bool   `yaml:"ResetOnDisconnect"`
-	ReconnectInterval       int    `yaml:"ReconnectInterval"`
-}
-
-func (s *Session) GetName() string {
-	return s.Name
-}
-
 func (c Context) GetInitiator() (*Initiator, error) {
+	if c.Initiator == "" {
+		return nil, fmt.Errorf("%w: context %s has none", errors.ErrConfigInitiatorNotFound, c.Name)
+	}
+
 	return GetInitiator(c.Initiator)
 }
 
 func (c Context) GetAcceptor() (*Acceptor, error) {
+	if c.Acceptor == "" {
+		return nil, fmt.Errorf("%w: context %s has none", errors.ErrConfigAcceptorNotFound, c.Name)
+	}
+
 	return GetAcceptor(c.Acceptor)
 }
 
 func (c Context) GetSession(name string) (*Session, error) {
-	if utils.Search(c.Sessions, name) < 0 {
-		return nil, errors.ConfigSessionNotInContext
+	if !slices.Contains(c.Sessions, name) {
+		return nil, errors.ErrConfigSessionNotInContext
 	}
 	return GetSession(name)
 }
@@ -315,221 +259,166 @@ func (c Context) GetSessions() ([]*Session, error) {
 	return sessions, nil
 }
 
-func (c Context) ToQuickFixInitiatorSettings() (*quickfix.Settings, error) {
-	settings := quickfix.NewSettings()
-	globalSettings := settings.GlobalSettings()
-
-	initiator, err := GetInitiator(c.Initiator)
-	if err != nil {
-		return nil, err
-	}
-
-	sessions, err := c.GetSessions()
-	if err != nil {
-		return nil, err
-	} else if len(sessions) != 1 {
-		return nil, errors.ConfigContextMultipleSessions
-	}
-
-	// Configure SQLStore
-	if len(initiator.SQLStoreDriver) > 0 {
-		if initiator.SQLStoreDriver == "sqlite3" {
-			if len(initiator.SQLStoreDataSourceName) == 0 {
-				initiator.SQLStoreDataSourceName = os.ExpandEnv(filepath.Join("$HOME", ".fix", "initiator.db"))
-			}
-		}
-	}
-
-	// Session settings
-	session := sessions[0]
-
-	sessionSettings := quickfix.NewSessionSettings()
-	initiator.setQuickFixGlobalSettings(globalSettings, sessionSettings)
-
-	setSessionSetting(sessionSettings, qconfig.SocketConnectHost, initiator.SocketConnectHost)
-	setSessionSetting(sessionSettings, qconfig.SocketConnectPort, initiator.SocketConnectPort)
-	setSessionSetting(sessionSettings, qconfig.SocketServerName, initiator.SocketServerName)
-	setSessionSetting(sessionSettings, qconfig.HeartBtInt, session.HeartBtInt)
-	if session.ReconnectInterval > 0 {
-		setSessionSetting(sessionSettings, qconfig.ReconnectInterval, session.ReconnectInterval)
-	}
-	setSessionSetting(sessionSettings, qconfig.BeginString, session.BeginString)
-	setSessionSetting(sessionSettings, qconfig.DefaultApplVerID, session.DefaultApplVerID)
-	setSessionSetting(sessionSettings, qconfig.SenderCompID, session.SenderCompID)
-	setSessionSetting(sessionSettings, qconfig.SenderSubID, session.SenderSubID)
-	setSessionSetting(sessionSettings, qconfig.SenderLocationID, session.SenderLocationID)
-	setSessionSetting(sessionSettings, qconfig.TargetCompID, session.TargetCompID)
-	setSessionSetting(sessionSettings, qconfig.TargetSubID, session.TargetSubID)
-	setSessionSetting(sessionSettings, qconfig.TargetLocationID, session.TargetLocationID)
-	setSessionSetting(sessionSettings, qconfig.SessionQualifier, session.SessionQualifier)
-	setSessionSetting(sessionSettings, qconfig.BeginString, session.BeginString)
-	setSessionSetting(sessionSettings, "Username", session.Username)
-	setSessionSetting(sessionSettings, "Password", session.Password)
-	setSessionSetting(sessionSettings, qconfig.StartTime, session.StartTime)
-	setSessionSetting(sessionSettings, qconfig.EndTime, session.EndTime)
-	setSessionSetting(sessionSettings, qconfig.StartDay, session.StartDay)
-	setSessionSetting(sessionSettings, qconfig.EndDay, session.EndDay)
-	setSessionSetting(sessionSettings, qconfig.TimeZone, session.TimeZone)
-	setSessionSetting(sessionSettings, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
-	setSessionSetting(sessionSettings, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
-	setSessionSetting(sessionSettings, qconfig.ResetOnLogon, session.ResetOnLogon)
-	setSessionSetting(sessionSettings, qconfig.ResetOnLogout, session.ResetOnLogout)
-	setSessionSetting(sessionSettings, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
-	setSessionSetting(sessionSettings, qconfig.SQLStoreDriver, initiator.SQLStoreDriver)
-	setSessionSetting(sessionSettings, qconfig.SQLStoreDataSourceName, os.ExpandEnv(initiator.SQLStoreDataSourceName))
-	setSessionSetting(sessionSettings, qconfig.RejectInvalidMessage, initiator.RejectInvalidMessage)
-
-	if options.Timeout != time.Duration(0) {
-		sessionSettings.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
-		sessionSettings.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
-	} else if initiator.SocketTimeout != time.Duration(0) {
-		sessionSettings.Set(qconfig.LogonTimeout, FixIntString(int(initiator.SocketTimeout.Seconds())))
-		sessionSettings.Set(qconfig.LogoutTimeout, FixIntString(int(initiator.SocketTimeout.Seconds())))
-	} else {
-		sessionSettings.Set(qconfig.LogonTimeout, "5")
-		sessionSettings.Set(qconfig.LogoutTimeout, "5")
-	}
-
-	_, err = settings.AddSession(sessionSettings)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return settings, nil
+// TLS configures the TLS of an initiator's or an acceptor's connections.
+type TLS struct {
+	// ServerName is the name an initiator checks the acceptor's certificate
+	// against, the host of the address dialed if empty. Initiators only.
+	ServerName string `yaml:"serverName"`
+	// InsecureSkipVerify makes an initiator accept any certificate.
+	// Initiators only.
+	InsecureSkipVerify bool `yaml:"insecureSkipVerify"`
+	// CertFile and KeyFile are the certificate presented to the
+	// counterparty, required for an acceptor.
+	CertFile string `yaml:"certFile"`
+	KeyFile  string `yaml:"keyFile"`
+	// CAFile holds the certificates of the authorities trusted: by an
+	// initiator, to verify the acceptor's, the system's if empty; by an
+	// acceptor, to verify the clients', with ClientAuth only.
+	CAFile string `yaml:"caFile"`
+	// ClientAuth makes an acceptor require client certificates, verified
+	// against CAFile, which it requires. Acceptors only.
+	ClientAuth bool `yaml:"clientAuth"`
 }
 
-func setSessionSetting(session *quickfix.SessionSettings, key string, value interface{}) {
-	switch v := value.(type) {
-	case *bool:
-		if v != nil {
-			session.Set(key, FixBoolString(*v))
-		}
-	case bool:
-		session.Set(key, FixBoolString(v))
-	case time.Duration:
-		if v.Seconds() > 0 {
-			session.Set(key, FixIntString(int(v.Seconds())))
-		}
-	case int:
-		session.Set(key, FixIntString(v))
-	case string:
-		if len(v) > 0 {
-			session.Set(key, v)
-		}
-	default:
-		panic("unknown type")
-	}
+// Store configures where sessions keep their sequence numbers and messages.
+type Store struct {
+	// Type is "memory", the default, or "sqlite3".
+	Type string `yaml:"type"`
+	// Path is the SQLite database, ~/.fix/initiator.db or
+	// ~/.fix/acceptor.db if empty.
+	Path string `yaml:"path"`
 }
 
-func (c Context) ToQuickFixAcceptorSettings() (*quickfix.Settings, error) {
-	settings := quickfix.NewSettings()
-	globalSettings := settings.GlobalSettings()
-
-	acceptor, err := GetAcceptor(c.Acceptor)
-	if err != nil {
-		return nil, err
-	}
-
-	sessions, err := c.GetSessions()
-	if err != nil {
-		return nil, err
-	}
-
-	// Tune SQLStore
-	if len(acceptor.SQLStoreDriver) > 0 {
-		if acceptor.SQLStoreDriver == "sqlite3" {
-			if len(acceptor.SQLStoreDataSourceName) == 0 {
-				acceptor.SQLStoreDataSourceName = os.ExpandEnv(filepath.Join("$HOME", ".fix", "acceptor.db"))
-			}
-		}
-	}
-
-	for _, session := range sessions {
-		sessionSettings := quickfix.NewSessionSettings()
-		acceptor.setQuickFixGlobalSettings(globalSettings, sessionSettings)
-
-		sessionSettings.Set(qconfig.SocketAcceptHost, acceptor.SocketAcceptHost)
-		sessionSettings.Set(qconfig.SocketAcceptPort, strconv.Itoa(acceptor.SocketAcceptPort))
-
-		setSessionSetting(sessionSettings, qconfig.HeartBtInt, session.HeartBtInt)
-		setSessionSetting(sessionSettings, qconfig.BeginString, session.BeginString)
-		setSessionSetting(sessionSettings, qconfig.DefaultApplVerID, session.DefaultApplVerID)
-		setSessionSetting(sessionSettings, qconfig.SenderCompID, session.SenderCompID)
-		setSessionSetting(sessionSettings, qconfig.SenderSubID, session.SenderSubID)
-		setSessionSetting(sessionSettings, qconfig.TargetCompID, session.TargetCompID)
-		setSessionSetting(sessionSettings, qconfig.TargetSubID, session.TargetSubID)
-		setSessionSetting(sessionSettings, qconfig.BeginString, session.BeginString)
-		setSessionSetting(sessionSettings, qconfig.StartTime, session.StartTime)
-		setSessionSetting(sessionSettings, qconfig.EndTime, session.EndTime)
-		setSessionSetting(sessionSettings, qconfig.StartDay, session.StartDay)
-		setSessionSetting(sessionSettings, qconfig.EndDay, session.EndDay)
-		setSessionSetting(sessionSettings, qconfig.TimeZone, session.TimeZone)
-		setSessionSetting(sessionSettings, qconfig.TransportDataDictionary, os.ExpandEnv(session.TransportDataDictionary))
-		setSessionSetting(sessionSettings, qconfig.AppDataDictionary, os.ExpandEnv(session.AppDataDictionary))
-		setSessionSetting(sessionSettings, qconfig.ResetOnLogon, session.ResetOnLogon)
-		setSessionSetting(sessionSettings, qconfig.ResetOnLogout, session.ResetOnLogout)
-		setSessionSetting(sessionSettings, qconfig.ResetOnDisconnect, session.ResetOnDisconnect)
-		setSessionSetting(sessionSettings, qconfig.SQLStoreDriver, acceptor.SQLStoreDriver)
-		setSessionSetting(sessionSettings, qconfig.SQLStoreDataSourceName, os.ExpandEnv(acceptor.SQLStoreDataSourceName))
-		setSessionSetting(sessionSettings, qconfig.RejectInvalidMessage, acceptor.RejectInvalidMessage)
-
-		if options.Timeout != time.Duration(0) {
-			sessionSettings.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
-			sessionSettings.Set(qconfig.LogonTimeout, FixIntString(int(options.Timeout.Seconds())))
-		} else if acceptor.SocketTimeout != time.Duration(0) {
-			sessionSettings.Set(qconfig.LogonTimeout, FixIntString(int(acceptor.SocketTimeout.Seconds())))
-			sessionSettings.Set(qconfig.LogoutTimeout, FixIntString(int(acceptor.SocketTimeout.Seconds())))
-		} else {
-			sessionSettings.Set(qconfig.LogonTimeout, "5")
-			sessionSettings.Set(qconfig.LogoutTimeout, "5")
-		}
-
-		_, err = settings.AddSession(sessionSettings)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return settings, nil
+type Initiator struct {
+	Name string `yaml:"name"`
+	// Addresses are the acceptor's "host:port" addresses, tried in turn.
+	Addresses []string `yaml:"addresses"`
+	// TLS, if set, makes connections TLS.
+	TLS *TLS `yaml:"tls"`
+	// DialTimeout bounds each connection attempt: --timeout if given, else
+	// 5s if 0.
+	DialTimeout time.Duration `yaml:"dialTimeout"`
+	// ReconnectMin and ReconnectMax bound the wait between connection
+	// attempts, 1s and 30s if 0.
+	ReconnectMin time.Duration `yaml:"reconnectMin"`
+	ReconnectMax time.Duration `yaml:"reconnectMax"`
+	Store        Store         `yaml:"store"`
 }
 
-func (s Session) GetFIXDictionaries() (*datadictionary.DataDictionary, *datadictionary.DataDictionary, error) {
-	var err error
-	var ok bool
-
-	if len(s.TransportDataDictionary) > 0 {
-		if _, ok = fixDict[s.TransportDataDictionary]; !ok {
-			path := os.ExpandEnv(s.TransportDataDictionary)
-			fixDict[s.TransportDataDictionary], err = datadictionary.Parse(path)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-	}
-
-	if len(s.AppDataDictionary) > 0 {
-		if _, ok = fixDict[s.AppDataDictionary]; !ok {
-			path := os.ExpandEnv(s.AppDataDictionary)
-			fixDict[s.AppDataDictionary], err = datadictionary.Parse(path)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-	}
-
-	return fixDict[s.TransportDataDictionary], fixDict[s.AppDataDictionary], nil
+func (i *Initiator) GetName() string {
+	return i.Name
 }
 
-func FixBoolString(b bool) string {
-	if b {
-		return "Y"
-	}
-
-	return "N"
+type Acceptor struct {
+	Name string `yaml:"name"`
+	// Address is the "host:port" address to listen on.
+	Address string `yaml:"address"`
+	TLS     *TLS   `yaml:"tls"`
+	Store   Store  `yaml:"store"`
 }
 
-func FixIntString(i int) string {
-	return strconv.Itoa(i)
+func (a *Acceptor) GetName() string {
+	return a.Name
+}
+
+// Dictionaries are QuickFIX XML dictionaries replacing the ones fix is built
+// with. Their paths may hold environment variables and start with "~/".
+type Dictionaries struct {
+	// Session is FIXT11.xml for FIXT.1.1 sessions.
+	Session string `yaml:"session"`
+	// App is the application dictionary, FIX50SP2.xml for FIX.5.0SP2. FIX
+	// 4.x sessions, which have one dictionary, take either.
+	App string `yaml:"app"`
+}
+
+// Schedule is when a session runs: every day in Days, from Start to End,
+// both "HH:MM:SS"; End before or equal to Start ends the next day. With
+// StartDay and EndDay, it runs once a week instead, from StartDay at Start
+// to EndDay at End.
+type Schedule struct {
+	Start string `yaml:"start"`
+	End   string `yaml:"end"`
+	// Days are the week days the session starts on, every day if empty.
+	Days []string `yaml:"days"`
+	// StartDay and EndDay make the schedule weekly.
+	StartDay string `yaml:"startDay"`
+	EndDay   string `yaml:"endDay"`
+	// Location is the IANA time zone Start and End are in, UTC if empty.
+	Location string `yaml:"location"`
+}
+
+type Session struct {
+	Name string `yaml:"name"`
+
+	BeginString      string `yaml:"beginString"`
+	SenderCompID     string `yaml:"senderCompID"`
+	SenderSubID      string `yaml:"senderSubID"`
+	SenderLocationID string `yaml:"senderLocationID"`
+	TargetCompID     string `yaml:"targetCompID"`
+	TargetSubID      string `yaml:"targetSubID"`
+	TargetLocationID string `yaml:"targetLocationID"`
+	// Qualifier, never sent, tells apart in a store sessions with the same
+	// identities on the wire.
+	Qualifier string `yaml:"qualifier"`
+	// DefaultApplVerID is the application version of FIXT.1.1 sessions,
+	// "FIX.5.0SP2" or its ApplVerID "9", and is not set for FIX 4.x ones.
+	DefaultApplVerID string `yaml:"defaultApplVerID"`
+
+	Dictionaries Dictionaries `yaml:"dictionaries"`
+
+	// HeartBtInt is the heartbeat interval an initiator asks for, whole
+	// seconds, 30s if 0.
+	HeartBtInt time.Duration `yaml:"heartBtInt"`
+	// Username (553) and Password (554) are set on the Logons sent.
+	Username string    `yaml:"username"`
+	Password string    `yaml:"password"`
+	Schedule *Schedule `yaml:"schedule"`
+
+	ResetOnLogon      bool `yaml:"resetOnLogon"`
+	ResetOnLogout     bool `yaml:"resetOnLogout"`
+	ResetOnDisconnect bool `yaml:"resetOnDisconnect"`
+
+	// LogonTimeout and LogoutTimeout are --timeout if given, else 5s if 0.
+	LogonTimeout  time.Duration `yaml:"logonTimeout"`
+	LogoutTimeout time.Duration `yaml:"logoutTimeout"`
+	// Timestamps is the precision of the timestamps sent: seconds,
+	// milliseconds (the default), microseconds or nanoseconds.
+	Timestamps string `yaml:"timestamps"`
+	// MaxLatency is how far a received SendingTime (52) may be from our
+	// clock, 120s if 0; negative disables the check.
+	MaxLatency time.Duration `yaml:"maxLatency"`
+
+	NextExpectedMsgSeqNum  bool `yaml:"nextExpectedMsgSeqNum"`
+	LastMsgSeqNumProcessed bool `yaml:"lastMsgSeqNumProcessed"`
+
+	// Tolerations name the departures from the FIX specifications the
+	// session allows (see Tolerations).
+	Tolerations []string `yaml:"tolerations"`
+	// SkipChecks name the dictionary validations not run (see Checks).
+	// "unknownTags" is skipped with the built-in FIX.5.0SP2 dictionary,
+	// which leaves out the components fix does not use.
+	SkipChecks []string `yaml:"skipChecks"`
+
+	// loaded holds the dictionaries FIXDictionaries loaded.
+	loaded *loadedDictionaries
+}
+
+func (s *Session) GetName() string {
+	return s.Name
+}
+
+// SetCurrentContext adds c to the configuration and makes it the current
+// context, renaming it c.Name#2, #3... if a context of the configuration is
+// named alike, so that that one is not selected instead.
+func SetCurrentContext(c *Context) {
+	name := c.Name
+	for i := 2; ; i++ {
+		if _, err := GetContext(c.Name); err != nil {
+			break
+		}
+		c.Name = fmt.Sprintf("%s#%d", name, i)
+	}
+
+	config.Contexts = append(config.Contexts, c)
+	config.CurrentContext = c.Name
 }

@@ -1,13 +1,13 @@
-package init
+package initcmd
 
 import (
 	"github.com/spf13/cobra"
 
-	init_config "sylr.dev/fix/cmd/init/config"
-	init_database "sylr.dev/fix/cmd/init/database"
+	initconfig "sylr.dev/fix/v2/cmd/init/config"
+	initdatabase "sylr.dev/fix/v2/cmd/init/database"
 )
 
-// ConfigCmd represents the buy command
+// InitCmd groups the commands creating fix's configuration and databases.
 var InitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize fix configurations",
@@ -15,6 +15,6 @@ var InitCmd = &cobra.Command{
 }
 
 func init() {
-	InitCmd.AddCommand(init_config.InitConfigCmd)
-	InitCmd.AddCommand(init_database.InitDatabaseCmd)
+	InitCmd.AddCommand(initconfig.InitConfigCmd)
+	InitCmd.AddCommand(initdatabase.InitDatabaseCmd)
 }

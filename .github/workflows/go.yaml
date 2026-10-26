@@ -1,48 +1,87 @@
 ---
 name: Go
-on: 
+on:
   pull_request:
   push:
     branches:
     - master
+
+permissions:
+  contents: read
+
+env:
+  GOWORK: "off"
+
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        go: ["1.22"]
+  check:
+    name: Check
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
-    - name: actions/setup-go@v5 ${{ matrix.go }}
-      uses: actions/setup-go@v5
+    - uses: actions/setup-go@v6
       with:
-        go-version: ${{ matrix.go }}
-        cache: false
-      id: go
-
-    - uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/.cache/golangci-lint
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+        go-version-file: go.mod
 
     - name: Verify go mod
       run: make go-mod-verify
 
+    - name: Verify generated code
+      run: make generate-verify
+
+    - name: Vet
+      run: go vet -tags acceptor,validator ./...
+
+    - name: Vuln check
+      run: make vuln
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+
+    - uses: golangci/golangci-lint-action@v9
+      with:
+        version: v2.15.0
+        args: --build-tags acceptor,validator
+
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+
     - name: Test
       run: make test
-      env:
-        GO_BUILD_TAGS: acceptor,validator
+
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
 
     - name: Build
       run: make build
-      env:
-        GO_BUILD_TAGS: acceptor,validator
+
+    - name: Build without cgo
+      run: CGO_ENABLED=0 go build -tags acceptor,validator ./...
+
+    - name: Build without tags
+      run: go build ./...

@@ -3,44 +3,28 @@ package status
 import (
 	"github.com/spf13/cobra"
 
-	status_order "sylr.dev/fix/cmd/status/order"
-	status_security "sylr.dev/fix/cmd/status/security"
-	status_tradingsession "sylr.dev/fix/cmd/status/tradingsession"
-	"sylr.dev/fix/pkg/initiator"
+	statusorder "sylr.dev/fix/v2/cmd/status/order"
+	statussecurity "sylr.dev/fix/v2/cmd/status/security"
+	statustradingsession "sylr.dev/fix/v2/cmd/status/tradingsession"
+	"sylr.dev/fix/v2/initiator"
 )
 
+// StatusCmd groups the commands requesting the status of orders,
+// securities and trading sessions.
 var StatusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Send a TradingSessionStatus FIX message",
-	Long:  "Send a TradingSessionStatus FIX message after initiating a session with a FIX acceptor.",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := initiator.ValidateOptions(cmd, args)
-		if err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				err = parent.PersistentPreRunE(parent, args)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	},
+	Use:               "status",
+	Short:             "Send a status request FIX message",
+	Long:              "Send a status request FIX message after initiating a session with a FIX acceptor.",
+	PersistentPreRunE: initiator.ValidateOptions,
 }
 
 func init() {
 	initiator.AddPersistentFlags(StatusCmd)
-	initiator.AddPersistentFlagCompletions(StatusCmd)
-	initiator.AddPersistentFlagCompletions(status_order.StatusOrderCmd)
-	initiator.AddPersistentFlagCompletions(status_security.StatusSecurityCmd)
-	initiator.AddPersistentFlagCompletions(status_tradingsession.StatusTradingSessionCmd)
+	if err := initiator.AddPersistentFlagCompletions(StatusCmd); err != nil {
+		panic(err)
+	}
 
-	StatusCmd.AddCommand(status_order.StatusOrderCmd)
-	StatusCmd.AddCommand(status_security.StatusSecurityCmd)
-	StatusCmd.AddCommand(status_tradingsession.StatusTradingSessionCmd)
+	StatusCmd.AddCommand(statusorder.StatusOrderCmd)
+	StatusCmd.AddCommand(statussecurity.StatusSecurityCmd)
+	StatusCmd.AddCommand(statustradingsession.StatusTradingSessionCmd)
 }

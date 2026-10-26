@@ -1,21 +1,17 @@
 package acceptor
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
-
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix/session"
 
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/acceptor"
-	"sylr.dev/fix/pkg/acceptor/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/acceptor"
+	"sylr.dev/fix/v2/acceptor/application"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/utils"
 )
 
 var (
-	optionNatsEmbeded      bool
+	optionNatsEmbedded     bool
 	optionNatsURL          string
 	optionNatsOrderSubject string
 )
@@ -31,38 +27,19 @@ var AcceptorCmd = &cobra.Command{
 func init() {
 	AcceptorCmd.Flags().StringVar(&optionNatsURL, "nats-url", "nats://127.0.0.1:4222", "NATS URL used to forward FIX messages")
 	AcceptorCmd.Flags().StringVar(&optionNatsOrderSubject, "nats-order-subject", "orders.{{.Symbol}}.{{.Side}}.{{.Type}}", "NATS order subject")
-	utils.AddBothBoolFlags(AcceptorCmd.Flags(), &optionNatsEmbeded, "nats-embeded", "", true, "Launch embeded NATS server")
+	AcceptorCmd.Flags().BoolVar(&optionNatsEmbedded, "nats-embedded", true, "Launch an embedded NATS server")
 
 	acceptor.AddPersistentFlags(AcceptorCmd)
-	acceptor.AddPersistentFlagCompletions(AcceptorCmd)
+	if err := acceptor.AddPersistentFlagCompletions(AcceptorCmd); err != nil {
+		panic(err)
+	}
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
 	logger := config.GetLogger()
 
-	context, err := config.GetCurrentContext()
-	if err != nil {
-		return err
-	}
-
-	sessions, err := context.GetSessions()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixAcceptorSettings()
-	if err != nil {
-		return err
-	}
-
-	transportDict, appDict, err := sessions[0].GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
 	acceptorOptions := application.AcceptorOptions{
-		NATSEmbeded:      optionNatsEmbeded,
+		NATSEmbedded:     optionNatsEmbedded,
 		NATSURL:          optionNatsURL,
 		NATSOrderSubject: optionNatsOrderSubject,
 	}
@@ -71,36 +48,11 @@ func Execute(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	defer app.Close()
 
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
 	app.Logger = logger
 
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	acceptor, err := acceptor.NewAcceptor(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	if err = acceptor.Start(); err != nil {
-		return err
-	}
-
-	defer func() {
-		acceptor.Stop()
-	}()
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-	<-interrupt
-	acceptor.Stop()
-	os.Exit(0)
-
-	return nil
+	return acceptor.Serve(cmd.Context(), func(*config.Session) (session.Handler, error) {
+		return app, nil
+	})
 }

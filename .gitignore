@@ -1,7 +1,7 @@
-.vscode
-.go-build-flags
-go.work*
+/.vscode
+/.go-build-flags
+/go.work*
 *.conf
-fix
-vendor/
-dist/
+/fix
+/vendor/
+/dist/

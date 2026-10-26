@@ -1,0 +1,43 @@
+version: "2"
+
+run:
+  build-tags:
+    - acceptor
+    - validator
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - unused
+  settings:
+    errcheck:
+      # Closing on a path that already failed or is cleaning up has no
+      # error left to report.
+      exclude-functions:
+        - (io.Closer).Close
+        - (net.Conn).Close
+        - (net.Listener).Close
+        - (*os.File).Close
+        - (*database/sql.DB).Close
+        - (*database/sql.Rows).Close
+        - (github.com/sylr/fix2/fix/session/store.Store).Close
+  exclusions:
+    generated: lax
+    paths:
+      - fix50sp2
+      - fixt11
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - fix50sp2
+      - fixt11

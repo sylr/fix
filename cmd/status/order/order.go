@@ -1,303 +1,217 @@
-package status_order
+package statusorder
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/quickfixgo/enum"
-	"github.com/quickfixgo/field"
-	"github.com/quickfixgo/fixt11"
-	"github.com/quickfixgo/quickfix"
-	"github.com/quickfixgo/tag"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/sylr/fix2/fix"
+	"github.com/sylr/fix2/fix/dictionary"
 
-	"sylr.dev/fix/config"
-	"sylr.dev/fix/pkg/cli/complete"
-	"sylr.dev/fix/pkg/cli/options"
-	"sylr.dev/fix/pkg/dict"
-	"sylr.dev/fix/pkg/errors"
-	"sylr.dev/fix/pkg/initiator"
-	"sylr.dev/fix/pkg/initiator/application"
-	"sylr.dev/fix/pkg/utils"
+	"sylr.dev/fix/v2/cli/complete"
+	"sylr.dev/fix/v2/cli/options"
+	"sylr.dev/fix/v2/config"
+	"sylr.dev/fix/v2/errors"
+	"sylr.dev/fix/v2/fix50sp2"
+	"sylr.dev/fix/v2/initiator"
+	"sylr.dev/fix/v2/utils"
 )
 
 var (
 	optionOrderID            string
-	optionOrigClOrdID        string
+	optionClOrdID            string
 	optionSymbol             string
 	optionSide               string
-	partyIdOptions           *options.PartyIdOptions
+	partyIDOptions           *options.PartyIDOptions
 	optionExecReportsTimeout time.Duration
+
+	// statusReqID is the OrdStatusReqID of the request, sent if the
+	// session's FIX version defines it.
+	statusReqID string
 )
 
 var StatusOrderCmd = &cobra.Command{
 	Use:               "order",
-	Short:             "order status",
-	Long:              "Send an Order Status Request after initiating a session with a FIX acceptor.",
+	Short:             "Order status",
+	Long:              "Send an order status request after initiating a session with a FIX acceptor.",
 	Args:              cobra.ExactArgs(0),
 	ValidArgsFunction: cobra.NoFileCompletions,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		err := Validate(cmd, args)
-		if err != nil {
-			return err
-		}
-
-		if cmd.HasParent() {
-			parent := cmd.Parent()
-			if parent.PersistentPreRunE != nil {
-				err = parent.PersistentPreRunE(parent, args)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	},
-	RunE: Execute,
+	PersistentPreRunE: Validate,
+	RunE:              Execute,
 }
 
 func init() {
-	StatusOrderCmd.Flags().StringVar(&optionOrderID, "id", "", "Order id (required if origclordid empty)")
-	StatusOrderCmd.Flags().StringVar(&optionOrigClOrdID, "origclordid", "", "Client order id (required if id empty)")
-	StatusOrderCmd.Flags().StringVar(&optionSide, "side", "", "Order side (buy, sell ... etc)")
-	StatusOrderCmd.Flags().StringVar(&optionSymbol, "symbol", "", "Order symbol")
+	flags := StatusOrderCmd.Flags()
+	flags.StringVar(&optionOrderID, "id", "", "Order id (required if clordid empty)")
+	flags.StringVar(&optionClOrdID, "clordid", "", "Client order id of the order (required if id empty, and by FIX 4.x)")
+	flags.StringVar(&optionClOrdID, "origclordid", "", "Client order id of the order")
+	options.Must(flags.MarkDeprecated("origclordid", "use --clordid"))
+	flags.StringVar(&optionSide, "side", "", "Order side (buy, sell ... etc)")
+	flags.StringVar(&optionSymbol, "symbol", "", "Order symbol")
 
-	partyIdOptions = options.NewPartyIdOptions(StatusOrderCmd)
+	partyIDOptions = options.NewPartyIDOptions(StatusOrderCmd)
 
-	StatusOrderCmd.Flags().DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Log out if execution reports not received within timeout (0s wait indefinitely)")
+	flags.DurationVar(&optionExecReportsTimeout, "exec-reports-timeout", 5*time.Second, "Fail if the execution report is not received within timeout (0s wait indefinitely)")
 
-	StatusOrderCmd.MarkFlagRequired("side")
-	StatusOrderCmd.MarkFlagRequired("symbol")
+	options.Must(StatusOrderCmd.MarkFlagRequired("side"))
+	options.Must(StatusOrderCmd.MarkFlagRequired("symbol"))
 
-	StatusOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide)
-	StatusOrderCmd.RegisterFlagCompletionFunc("type", complete.OrderType)
-	StatusOrderCmd.RegisterFlagCompletionFunc("expiry", complete.OrderTimeInForce)
-	StatusOrderCmd.RegisterFlagCompletionFunc("symbol", cobra.NoFileCompletions)
+	options.Must(StatusOrderCmd.RegisterFlagCompletionFunc("side", complete.OrderSide))
+	options.Must(StatusOrderCmd.RegisterFlagCompletionFunc("symbol", cobra.NoFileCompletions))
 }
 
+// Validate checks the options, then that the request fits the session,
+// before connecting.
 func Validate(cmd *cobra.Command, args []string) error {
-	if len(optionSymbol) == 0 {
-		return fmt.Errorf("%w: --symbol can not be empty", errors.Options)
+	if err := validateOptions(); err != nil {
+		return err
 	}
 
-	return partyIdOptions.Validate()
+	s, err := config.CurrentSession()
+	if err != nil {
+		return err
+	}
+
+	request, err := buildMessage(s)
+	if err != nil {
+		return err
+	}
+
+	return s.Check(request)
+}
+
+func validateOptions() error {
+	if _, err := options.Side(optionSide); err != nil {
+		return err
+	}
+
+	if len(optionSymbol) == 0 {
+		return errors.ErrOptionsNoSymbolGiven
+	}
+
+	if len(optionOrderID) == 0 && len(optionClOrdID) == 0 {
+		return fmt.Errorf("%w: --id or --clordid required", errors.ErrOptions)
+	}
+
+	statusReqID = uuid.NewString()
+
+	return partyIDOptions.Validate()
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	options := config.GetOptions()
-	logger := config.GetLogger()
+	ctx := cmd.Context()
 
-	context, err := config.GetCurrentContext()
+	c, err := initiator.Connect(ctx, initiator.Options{
+		MsgTypes: []string{string(fix50sp2.MsgTypeExecutionreport)},
+	})
+	if err != nil {
+		return err
+	}
+	defer c.Close(true)
+
+	request, err := buildMessage(c.Session)
 	if err != nil {
 		return err
 	}
 
-	sessions, err := context.GetSessions()
-	if err != nil {
+	if _, err := c.Send(ctx, request); err != nil {
 		return err
 	}
 
-	session := sessions[0]
-	initiatorConfig, err := context.GetInitiator()
-	if err != nil {
-		return err
-	}
+	h := &handler{out: cmd.OutOrStdout(), dictionary: c.Dictionary, logger: config.GetLogger(), byStatusReqID: definesStatusReqID(c.Session)}
 
-	transportDict, appDict, err := session.GetFIXDictionaries()
-	if err != nil {
-		return err
-	}
-
-	settings, err := context.ToQuickFixInitiatorSettings()
-	if err != nil {
-		return err
-	}
-
-	app := application.NewNewOrder()
-	app.Logger = logger
-	app.Settings = settings
-	app.TransportDataDictionary = transportDict
-	app.AppDataDictionary = appDict
-
-	var quickfixLogger *zerolog.Logger
-	if options.QuickFixLogging {
-		quickfixLogger = logger
-	}
-
-	// Choose right timeout cli option > config > default value (5s)
-	var timeout time.Duration
-	if options.Timeout != time.Duration(0) {
-		timeout = options.Timeout
-	} else if initiatorConfig.SocketTimeout != time.Duration(0) {
-		timeout = initiatorConfig.SocketTimeout
-	} else {
-		timeout = 5 * time.Second
-	}
-
-	init, err := initiator.Initiate(app, settings, quickfixLogger)
-	if err != nil {
-		return err
-	}
-
-	// Start session
-	if err = init.Start(); err != nil {
-		return err
-	}
-
-	defer func() {
-		app.Stop()
-		init.Stop()
-	}()
-
-	// Wait for session connection
-	select {
-	case <-time.After(timeout):
-		return errors.ConnectionTimeout
-	case _, ok := <-app.Connected:
-		if !ok {
-			return errors.FixLogout
-		}
-	}
-
-	// Prepare order
-	order, err := buildMessage(*session)
-	if err != nil {
-		return err
-	}
-
-	// Send the order
-	err = quickfix.Send(order)
-	if err != nil {
-		return err
-	}
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-	var waitTimeout <-chan time.Time
-	if optionExecReportsTimeout > 0 {
-		waitTimeout = time.After(optionExecReportsTimeout)
-	} else {
-		waitTimeout = make(<-chan time.Time)
-	}
-
-LOOP:
-	for {
-		select {
-		case signal := <-interrupt:
-			logger.Debug().Msgf("Received signal: %s", signal)
-			break LOOP
-
-		case <-waitTimeout:
-			logger.Warn().Msgf("Timeout while expecting execution report")
-			break LOOP
-
-		case msg, ok := <-app.FromAppMessages:
-			if !ok {
-				break LOOP
-			}
-
-			if err := processResponse(app, msg); err != nil {
-				if errors.Is(err, quickfix.InvalidMessageType()) {
-					continue LOOP
-				}
-
-				return err
-			}
-		}
-
-		logger.Debug().Msgf("Exiting response loop")
-		break LOOP
-	}
-
-	return nil
+	return c.Await(ctx, initiator.AwaitOptions{What: "execution report", Timeout: optionExecReportsTimeout}, h.handle)
 }
 
-func buildMessage(session config.Session) (quickfix.Messagable, error) {
-	eSide, err := dict.OrderSideStringToEnum(optionSide)
+// definesStatusReqID reports whether s's FIX version defines OrdStatusReqID
+// in an OrderStatusRequest: FIX 4.3 does not.
+func definesStatusReqID(s *config.Session) bool {
+	return s.Defines(string(fix50sp2.MsgTypeOrderstatusrequest), fix50sp2.TagOrdStatusReqID)
+}
+
+func buildMessage(s *config.Session) (*fix50sp2.OrderStatusRequestBuilder, error) {
+	if err := s.CheckSupported(); err != nil {
+		return nil, err
+	}
+
+	// FIX 4.3 and 4.4 require ClOrdID.
+	if len(optionClOrdID) == 0 && s.Requires(string(fix50sp2.MsgTypeOrderstatusrequest), fix50sp2.TagClOrdID) {
+		return nil, fmt.Errorf("%w: %s requires --clordid", errors.ErrOptions, s.Version())
+	}
+
+	side, err := options.Side(optionSide)
 	if err != nil {
 		return nil, err
 	}
 
-	// Message
-	message := quickfix.NewMessage()
-	header := fixt11.NewHeader(&message.Header)
-
-	switch session.BeginString {
-	case quickfix.BeginStringFIXT11:
-		switch session.DefaultApplVerID {
-		case "FIX.5.0SP2":
-			header.Set(field.NewMsgType(enum.MsgType_ORDER_STATUS_REQUEST))
-			message.Body.Set(field.NewClOrdID(uuid.NewString()))
-			if len(optionOrderID) > 0 {
-				message.Body.Set(field.NewOrderID(optionOrderID))
-			}
-			if len(optionOrigClOrdID) > 0 {
-				message.Body.Set(field.NewOrigClOrdID(optionOrigClOrdID))
-			}
-			message.Body.Set(field.NewSide(eSide))
-			message.Body.Set(field.NewSymbol(optionSymbol))
-			partyIdOptions.EnrichMessageBody(&message.Body, session)
-
-		default:
-			return nil, errors.FixVersionNotImplemented
-		}
-	default:
-		return nil, errors.FixVersionNotImplemented
+	message := fix50sp2.BuildOrderStatusRequest(s.BeginString).
+		SetSide(side).
+		SetSymbol(optionSymbol)
+	if len(optionClOrdID) > 0 {
+		message.SetClOrdID(optionClOrdID)
 	}
-
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetCompID, field.NewTargetCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.TargetSubID, field.NewTargetSubID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderCompID, field.NewSenderCompID)
-	utils.QuickFixMessagePartSetString(&message.Header, session.SenderSubID, field.NewSenderSubID)
+	if len(optionOrderID) > 0 {
+		message.SetOrderID(optionOrderID)
+	}
+	if definesStatusReqID(s) {
+		message.SetOrdStatusReqID(statusReqID)
+	}
+	for _, entry := range partyIDOptions.PartyEntries(s) {
+		message.AddNoPartyIDsEntry(entry)
+	}
 
 	return message, nil
 }
 
-func processResponse(app *application.NewOrder, msg *quickfix.Message) error {
-	msgType := field.MsgTypeField{}
-	ordStatus := field.OrdStatusField{}
-	text := field.TextField{}
+// handler waits for the execution report answering the request.
+type handler struct {
+	out        io.Writer
+	dictionary *dictionary.Dict
+	logger     *zerolog.Logger
+	// byStatusReqID tells the report is matched by the request's
+	// OrdStatusReqID, rather than by the order's ClOrdID or OrderID.
+	byStatusReqID bool
+}
 
-	// Text
-	if msg.Body.Has(tag.Text) {
-		if err := msg.Body.GetField(tag.Text, &text); err != nil {
-			return err
+// handle handles an execution report: it is done with the first that
+// answers the request, and fails if it tells the order is unknown.
+func (h *handler) handle(m *fix.Message) (bool, error) {
+	if !h.matches(m) {
+		h.logger.Debug().Msgf("Ignoring execution report of another request: %s", m.Get(fix50sp2.TagClOrdID))
+		return false, initiator.ErrSkip
+	}
+
+	utils.WriteMessageBodyAsTable(h.out, m, h.dictionary)
+
+	report := fix50sp2.WrapExecutionReport(m)
+	ordStatus, ok := report.OrdStatus()
+	if !ok {
+		return true, fmt.Errorf("%w: missing OrdStatus", errors.ErrFix)
+	}
+
+	if reason, _ := report.OrdRejReason(); ordStatus == fix50sp2.OrdStatusRejected && reason == fix50sp2.OrdRejReasonUnknownOrder {
+		return true, options.WithText(fmt.Errorf("%w: unknown order", errors.ErrFixOrderRejected), m)
+	}
+
+	return true, nil
+}
+
+// matches reports whether m answers the request: its OrdStatusReqID is the
+// request's if sent and in m, otherwise its ClOrdID or OrderID is the
+// order's.
+func (h *handler) matches(m *fix.Message) bool {
+	if h.byStatusReqID {
+		if reqID := m.Get(fix50sp2.TagOrdStatusReqID); reqID != nil {
+			return string(reqID) == statusReqID
 		}
 	}
 
-	makeError := func(errType error) error {
-		if len(text.String()) > 0 {
-			return fmt.Errorf("%w: %s", errType, text.String())
-		} else {
-			return errType
-		}
+	if len(optionClOrdID) > 0 {
+		return string(m.Get(fix50sp2.TagClOrdID)) == optionClOrdID
 	}
 
-	// MsgType
-	err := msg.Header.GetField(tag.MsgType, &msgType)
-	if err != nil {
-		return err
-	} else if msgType.Value() == enum.MsgType_REJECT ||
-		msgType.Value() == enum.MsgType_BUSINESS_MESSAGE_REJECT ||
-		msgType.Value() == enum.MsgType_ORDER_CANCEL_REJECT {
-		return makeError(errors.FixOrderRejected)
-	} else if msgType.Value() != enum.MsgType_EXECUTION_REPORT {
-		return quickfix.InvalidMessageType()
-	}
-
-	// OrdStatus
-	err = msg.Body.GetField(tag.OrdStatus, &ordStatus)
-	if err != nil {
-		return err
-	}
-
-	app.WriteMessageBodyAsTable(os.Stdout, msg)
-	return nil
+	return string(m.Get(fix50sp2.TagOrderID)) == optionOrderID
 }
